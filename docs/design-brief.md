@@ -60,7 +60,7 @@ Use `frontend-design` to drive the conversation. I'd like:
 ### Reference material
 
 - The full system spec is at `docs/superpowers/specs/2026-05-08-setvault-design.md` in the repo. Read sections **§2 (feature catalog)**, **§4 (data model)**, **§6 (catalog management UX)**, **§7 (playback)**, and **§8 (frontend routes)** for the screens and data shapes you'll be designing around.
-- Phasing in **§9** — Phase 1 is the MVP set of screens. Design for Phase 1 first; later phases add screens (listen-together rooms, smart-playlist editor, Sonos onboarding) but don't change the design language.
+- Phasing in **§9** — **this work IS Phase 1.** No backend/app code yet; this phase produces the design language, the top-5 mockups, and the landing-page direction that subsequent phases (Core vault, Tracklist & enrichment, etc.) build against. Output should land in `frontend/design/` as committed HTML/CSS prototypes that can be referenced from implementation phases.
 
 ### Inspiration starting points (not requirements — push back if they're wrong)
 

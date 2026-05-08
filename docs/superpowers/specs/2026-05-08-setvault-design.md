@@ -456,18 +456,26 @@ State: TanStack Query (server state) + Svelte store (player/queue). One multiple
 
 ## 9. Phasing
 
-Implementation broken into phases. Each phase ships something usable.
+Phases ordered to maximize the value of each subsequent phase. Each phase produces concrete artifacts that unblock the next.
 
-1. **Phase 1 — Core vault.** Auth (local) + SMTP basics (invite + password reset, with copy-paste fallback), upload, transcode/normalize/waveform pipeline, manual catalog (artist/party/venue/set), in-app player, Postgres FTS basic search. **MVP.**
-2. **Phase 2 — Tracklist & enrichment.** Tracklist editor (live + paste), Track DB, provider plugin framework, MusicBrainz + Discogs + AcoustID, comments, bookmarks, `@mention` notifications (in-app + email).
-3. **Phase 3 — Ingest & distribution.** yt-dlp URL rip, RSS feeds, embeddable player, mobile PWA polish.
-4. **Phase 4 — Compatibility.** Subsonic API + scrobbling.
-5. **Phase 5 — Casting.** DLNA, Chromecast, listen-together rooms.
-6. **Phase 6 — Sonos.** SMAPI sidecar (heaviest single subsystem).
-7. **Phase 7 — Polish.** Smart playlists, pgvector "similar sets", BPM/key detection, Snapcast.
-8. **Phase 8 — OIDC, full admin polish, README/landing-page release.**
+1. **Phase 1 — Design & visual identity.** No backend or app code in this phase. Deliverables:
+   - Design language: CSS-variable token set (color, type, spacing, radius, motion) with dark + light palettes.
+   - High-fidelity mockups (HTML/CSS) for the top 5 screens: **set detail / player**, **tracklist editor**, **library / browse**, **home / activity**, **artist or party detail**.
+   - Mobile breakpoints for the player view.
+   - Component sketch list (buttons, inputs, dialogs, tabs, status badges, tracklist row, filter sidebar, mini-player) — pattern-level, not built yet.
+   - Landing-page direction (separate aesthetic but harmonious with in-app).
+   - Driven by `docs/design-brief.md` in a fresh `frontend-design` Claude session (likely a separate worktree). Output is HTML/CSS prototypes committed to `frontend/design/` for reference during implementation.
+   - **Done when:** mockups review well with the crew and the design language reads as coherent across the 5 screens.
+2. **Phase 2 — Core vault.** Auth (local) + SMTP basics (invite + password reset, with copy-paste fallback), upload, transcode/normalize/waveform pipeline, manual catalog (artist/party/venue/set), in-app player matching the Phase-1 design, Postgres FTS basic search. **First runnable build / MVP.**
+3. **Phase 3 — Tracklist & enrichment.** Tracklist editor (live + paste), Track DB, provider plugin framework, MusicBrainz + Discogs + AcoustID, comments, bookmarks, `@mention` notifications (in-app + email).
+4. **Phase 4 — Ingest & distribution.** yt-dlp URL rip, RSS feeds, embeddable player, mobile PWA polish.
+5. **Phase 5 — Compatibility.** Subsonic API + scrobbling.
+6. **Phase 6 — Casting.** DLNA, Chromecast, listen-together rooms.
+7. **Phase 7 — Sonos.** SMAPI sidecar (heaviest single subsystem).
+8. **Phase 8 — Polish.** Smart playlists, pgvector "similar sets", BPM/key detection, Snapcast.
+9. **Phase 9 — OIDC, full admin polish, README + GitHub Pages landing page release.**
 
-Each phase becomes its own implementation plan after this spec is approved. Phase 1 will be the next plan written.
+Each phase becomes its own implementation plan after this spec is approved. Phase 1 (Design) is driven by `docs/design-brief.md` in a separate `frontend-design` session; Phases 2–9 each get a `writing-plans`-produced plan in this repo.
 
 ## 10. Out of scope (v1)
 
