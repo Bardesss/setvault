@@ -110,8 +110,8 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 - **K5.** Stem separation (Demucs) — out of scope.
 
 ### L. Project deliverables
-- **L1.** README at repo root: hero, screenshots, Docker quickstart, env reference, per-provider walkthroughs (Discogs/MB/Beatport/Spotify/AcoustID/LLM), reverse-proxy examples (Caddy/Traefik/nginx), Sonos SMAPI setup, backup/restore, upgrade path, troubleshooting.
-- **L2.** Landing page in `/site/`: SvelteKit static-adapter build, deployed to GitHub Pages via `.github/workflows/deploy-site.yml` on push to `main`. Sections: hero, what-is, feature gallery, screenshots, quickstart, link to repo, link to docs. CNAME file for custom domain.
+- **L1.** README at repo root: hero, screenshots, **system requirements** (see §12), Docker quickstart, env reference, per-provider walkthroughs (Discogs/MB/Beatport/Spotify/AcoustID/LLM), reverse-proxy examples (Caddy/Traefik/nginx), Sonos SMAPI setup, backup/restore, upgrade path, troubleshooting.
+- **L2.** Landing page in `/site/`: SvelteKit static-adapter build, deployed to GitHub Pages via `.github/workflows/deploy-site.yml` on push to `main`. Sections: hero, what-is, feature gallery, screenshots, **system requirements**, quickstart, link to repo, link to docs. CNAME file for custom domain.
 
 ### M. Release & distribution
 - **M1.** GitHub Releases on `v*` tag push: lint + test → multi-arch buildx (`linux/amd64`, `linux/arm64`) → push to GHCR as `ghcr.io/<owner>/setvault-{web,worker,sonos}:{vX.Y.Z, X.Y, X, latest}`.
@@ -461,3 +461,50 @@ Each phase becomes its own implementation plan after this spec is approved. Phas
 ## 11. Open questions
 
 None at spec sign-off. Implementation plans (one per phase) will surface task-level questions as they arise.
+
+## 12. Recommended system requirements
+
+These appear (in shorter form) on both the README and the GitHub Pages landing page so users can self-qualify before installing.
+
+### Minimum (works, but slow)
+
+- **CPU:** 2 cores (x86_64 or ARM64). Raspberry Pi 4 / Pi 5 OK; ARM SBCs with hardware float OK.
+- **RAM:** 2 GB.
+- **Disk:** 2 GB for the app + DB + caches; **plus** your audio library. Live sets are typically 60–120 min Opus 128k ≈ 60–120 MB each. ~1k sets ≈ 100 GB.
+- **OS:** any Linux distro that runs Docker 24+ and Docker Compose v2. macOS via Docker Desktop works for evaluation.
+- **Network:** local network (LAN access from devices that play sets). HTTPS only required if you want Sonos SMAPI (F8) or external clients (Subsonic, RSS) reaching it remotely.
+
+At minimum, a single ingest job (yt-dlp + transcode + normalize + waveform) for a 90-minute set takes roughly 5–15 minutes on a Pi 4 — usable, but you'll feel it.
+
+### Recommended (good experience)
+
+- **CPU:** 4 cores x86_64 (modern Intel/AMD), or Apple Silicon if running natively. NUC-class or higher.
+- **RAM:** 8 GB.
+- **Disk:** SSD for the app/DB volume; SSD or fast HDD for audio. **Audio storage:** budget on actual library size — see Minimum note.
+- **OS:** Debian/Ubuntu/Fedora/Alpine on bare metal or VM. Docker 24+, Compose v2.
+- **Network:** HTTPS terminated at a reverse proxy (Caddy bundled, or your own Traefik/nginx). Public DNS A/AAAA record if you want Sonos SMAPI or external client access; LAN-only deployments don't need this.
+
+A typical ingest job here runs in ~30–90 seconds for a 90-minute set. Multiple users browse, search, and play simultaneously without contention.
+
+### Heavy / power-user
+
+- **CPU:** 6+ cores. Multiple worker replicas can chew through batch enrichment / re-fingerprint runs in parallel.
+- **RAM:** 16 GB. Helpful when running BPM/key analysis (K1) on large back-catalogs, or pgvector similarity over many thousands of sets.
+- **Disk:** NVMe SSD for the DB/cache volume, dedicated bulk disk (HDD or NAS) for audio. Multi-TB libraries OK.
+- **GPU:** not used. Reserved for a possible future Demucs (K5, currently out of scope).
+
+### Software prerequisites (all tiers)
+
+- Docker Engine 24+ and Docker Compose v2.
+- A reverse proxy with HTTPS if you expose the app outside your LAN — bundled Caddy works out of the box, or bring your own.
+- For ARM64 hosts: nothing extra; multi-arch images (M1) cover you.
+- For Sonos SMAPI specifically: a publicly reachable HTTPS endpoint (Sonos's cloud must reach it). LAN-only deployments still get DLNA browse on Sonos via F2 without this requirement.
+
+### Storage planning rule of thumb
+
+```
+disk_needed ≈ (avg_set_minutes × 1 MB/min × set_count × 2)
+              ↑ original copy + Opus stream copy combined ≈ 2× streaming size in practice
+```
+
+For 1000 sets averaging 90 min each: ~180 GB. The app, DB, caches, waveforms, and thumbs add <5 GB.
