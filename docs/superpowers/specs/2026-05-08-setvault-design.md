@@ -103,6 +103,13 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 - **J4.** Per-user API tokens (scoped: `subsonic`, `rss`, `sonos`).
 - **J5.** OIDC SSO (Authelia/Authentik/Keycloak/Pocket-ID compatible).
 - **J6.** **SMTP outbound email** — admin-configured (host, port, username, password, encryption [STARTTLS/SSL/none], from address, from name, reply-to). Used for: account invites, password reset, email verification, `@mention` notifications, optional weekly activity digest. **Test-email button** in admin. **Graceful fallback when SMTP is not configured:** invite and password-reset flows show the one-time link in the admin UI for manual copy-paste — the app stays fully functional without an SMTP server. Per-user **notification preferences** (email vs in-app vs off) for each notification kind. Outbound mail goes through the worker queue so SMTP timeouts never block web requests.
+- **J7.** **Configurable storage paths (sonarr/radarr/lidarr-style root folders).** Two distinct concerns:
+  - **App-internal volumes** (`db`, `redis`, `cache`, `config`) — each independently bind-mountable to any host path via per-volume env override. Expected on local fast storage; small.
+  - **Audio root folders** — admin-managed in the UI, **one or more**. Each entry: name, host path, optional max-bytes cap, default-for-ingest flag. New `LiveSet`s are assigned to a root folder at ingest (admin-set default when multiple); the per-set on-disk layout (`originals/`, `stream/`, `waveform/`, `thumbs/`) is rooted within whichever root folder the set lives in. Common shape: bulk audio on a mounted NAS / SMB / NFS / ZFS share as a root folder, DB and config on local SSD.
+  - **Health checks** — periodic read/write probe per root folder; admin Storage tab surfaces unreachable / read-only / near-full roots prominently and the `/admin/system` view shows aggregate state.
+  - **Remote path mappings** — when a worker container sees a different host path than the web container (e.g., worker on a different host that mounts the NAS at a different point), admin can configure source-path → app-path mappings, analogous to *arr's "Remote Path Mappings."
+  - **Watch folders** (A3) are admin-managed alongside root folders, with the same path-config UX and may live on a different mount than any root folder.
+  - **No paths hard-coded** in the image. Moving an existing deployment to new mount points is a stop-edit-start operation, not a rebuild.
 
 ### K. Spicy nice-to-haves
 - **K1.** BPM/key detection on ingest (essentia or aubio).
@@ -142,7 +149,7 @@ Single `docker-compose.yml` orchestrating:
 
 ### Volumes
 
-- `audio` — the music. Largest. Layout:
+- **Audio (multi-root, *arr-style)** — the music. Largest. Implemented as one or more **MediaRoot** entries (admin-managed, see J7); each `LiveSet` belongs to exactly one root. Layout under each root:
   - `originals/<set_id>/<filename>` — untouched source
   - `stream/<set_id>.opus` — streaming copy
   - `waveform/<set_id>.json` — peaks for wavesurfer
@@ -151,7 +158,9 @@ Single `docker-compose.yml` orchestrating:
 - `db` — Postgres data
 - `redis` — Redis data
 - `cache` — derived artifacts (regenerable but slow)
-- `config` — provider keys, encrypted at rest with key derived from `SECRET_KEY` env
+- `config` — provider keys, encrypted at rest with key derived from `SECRET_KEY`
+
+Each app-internal volume above (`db`, `redis`, `cache`, `config`) is independently bind-mountable to any host path via env override (`SETVAULT_<NAME>_PATH`); root folders are managed at runtime in the admin UI rather than baked into compose. env
 
 ### Repo layout
 
@@ -210,7 +219,7 @@ All entities are Postgres tables. `*` = nullable. `jsonb` for provider blobs.
 - **Venue** — id, name, slug, kind(`club`|`concert_hall`|`arena`|`outdoor`|`warehouse`|`boat`|`studio`|`online`|`other`), city_or_area*, country*, lat*, lon*, capacity*, website* — `city_or_area` accepts both city names ("Amsterdam") and named outdoor sites ("Recreatiegebied Spaarnwoude"); `country` and geo are nullable so radio/online venues don't need them; `kind` drives icon/filter UX
 - **Series** — id, name, slug, description, image_url
 - **Party** — id, name, slug, series_id*, venue_id*, date*, description
-- **LiveSet** — id, slug, title, party_id*, venue_id*, date*, set_type, duration_seconds, source_type, source_url*, audio_path, streaming_path, waveform_path, normalized_lufs*, description, uploaded_by, duplicate_of*
+- **LiveSet** — id, slug, title, party_id*, venue_id*, date*, set_type, duration_seconds, source_type, source_url*, media_root_id, audio_path, streaming_path, waveform_path, normalized_lufs*, description, uploaded_by, duplicate_of* — `audio_path` etc. are root-relative and resolved against `MediaRoot.host_path` at read time, so a root folder can be remounted at a different host path without DB rewrites
 - **LiveSetArtist** — m2m: live_set_id, artist_id, position, role(main|b2b|support|vs)
 - **Tag** — id, name, slug, kind(genre|mood|vibe|custom)
 - **LiveSetTag** — m2m
@@ -236,6 +245,9 @@ All entities are Postgres tables. `*` = nullable. `jsonb` for provider blobs.
 - **ProviderConfig** — id, provider_kind, name, enabled, priority, encrypted_config jsonb, created_at, updated_at
 - **ProviderResponse** — id, provider_kind, query_key (text), response jsonb, fetched_at, expires_at — cache for upstream calls
 - **SetFingerprint** — id, live_set_id, fingerprint_hash, duration_seconds — for dedup
+- **MediaRoot** — id, name, host_path, enabled, default_for_ingest bool, max_bytes*, last_health_check_at*, last_health_status (`ok`|`unreachable`|`readonly`|`near_full`|`unknown`), created_at — *arr-style audio root folder; one or more, admin-managed in UI
+- **WatchFolder** — id, name, host_path, target_media_root_id, enabled, created_at — admin-managed ingest source paths (A3), each pointing at a target root folder for the imported set
+- **RemotePathMapping** — id, scope (`worker`|`watch`|`other`), from_path, to_path, created_at — translates host paths between the web container and worker/watch contexts when their mounts differ
 
 ### Indexes & search
 
@@ -417,14 +429,15 @@ In-app notifications and email notifications share the same trigger logic; the c
 
 ### Admin (`/admin`)
 
-Tabs: Users • Providers • OIDC • Email • Jobs • Storage • Backup • System.
+Tabs: Users • Providers • OIDC • Email • Jobs • Storage • Watch folders • Backup • System.
 
 - **Users** — list, invite, deactivate, set quota, force-logout, reset password. When SMTP is not configured, invite/reset modals show the one-time link to copy and send manually.
 - **Providers** — list, enable/disable, edit config, test connection, drag-order priority.
 - **OIDC** — issuers, add/edit/remove, auto-provision toggle.
 - **Email** — SMTP host/port/encryption/auth/from. **Send test email** button. Last test result + timestamp shown inline.
 - **Jobs** — last 500 cross-user, filter by status/kind, view payload + log, retry failed.
-- **Storage** — per-user usage, total volume, breakdown by file type, orphan cleanup.
+- **Storage** — **Root folders** (add/edit/remove, host path, free-space, last health probe, default-for-ingest toggle, optional max-size cap), **Remote path mappings** (when worker mounts differ from web), per-user usage, total volume, breakdown by file type, orphan cleanup.
+- **Watch folders** — list of admin-configured ingest source paths (A3), each bound to a target root folder; per-folder enable/disable and last-scan status.
 - **Backup** — one-click DB dump + audio tarball; configurable schedule. CLI restore.
 - **System** — version, queue depth, Redis stats, environment summary (no secrets).
 
