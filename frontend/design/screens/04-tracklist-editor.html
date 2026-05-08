@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — Editing tracklist · Spectrum 250</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="../assets/components.css">
+<style>
+  /* ===== editor topbar (replaces page hero with editing context) ===== */
+  .editor-topbar {
+    padding: var(--sp-4) var(--sp-8);
+    border-bottom: 1px solid var(--border-default);
+    display: flex; align-items: center; gap: var(--sp-4);
+    background: var(--bg-surface);
+  }
+  .editor-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-muted); font-size: var(--ts-md);
+  }
+  .editor-back:hover { color: var(--text-default); }
+  .editor-title-block { display: grid; gap: 2px; }
+  .editor-title-block .label { font-family: var(--font-mono); font-size: var(--ts-xs); color: var(--accent); text-transform: uppercase; letter-spacing: var(--ls-uppercase); }
+  .editor-title-block .name { font-size: var(--ts-lg); font-weight: 700; color: var(--text-strong); }
+  .saved-indicator {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-muted);
+    margin-left: var(--sp-3);
+    padding: 4px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+  }
+  .saved-indicator .live-dot { background: var(--accent); width: 6px; height: 6px; }
+  .editor-actions { margin-left: auto; display: flex; gap: var(--sp-2); }
+
+  /* ===== mode tabs ===== */
+  .mode-tabs {
+    display: flex;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+    padding: 0 var(--sp-8);
+    gap: 0;
+  }
+  .mode-tab {
+    flex: 1;
+    max-width: 280px;
+    padding: var(--sp-4) var(--sp-5);
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all var(--dur-fast);
+  }
+  .mode-tab:hover { background: var(--bg-elevated); color: var(--text-default); }
+  .mode-tab.active {
+    background: var(--bg-surface);
+    color: var(--text-strong);
+    border-bottom-color: var(--accent);
+    box-shadow: 0 -2px 0 0 var(--accent) inset, 0 0 32px rgba(0, 255, 178, 0.08) inset;
+  }
+  .mode-tab .tab-num {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    margin-bottom: 4px;
+    display: block;
+  }
+  .mode-tab.active .tab-num { color: var(--accent); }
+  .mode-tab .tab-name {
+    font-family: var(--font-sans);
+    font-size: var(--ts-base);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .mode-tab .tab-desc {
+    font-family: var(--font-sans);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    line-height: var(--lh-snug);
+  }
+  .mode-tab .tab-kbd {
+    margin-left: 8px;
+  }
+
+  /* ===== layout: tools rail + editor ===== */
+  .editor-body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+  }
+  .editor-main {
+    border-right: 1px solid var(--border-subtle);
+  }
+
+  /* ===== mini waveform / playhead context ===== */
+  .editor-wave {
+    padding: var(--sp-4) var(--sp-8);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+  }
+  .editor-wave-strip {
+    height: 56px;
+    position: relative;
+  }
+  .editor-wave-strip svg { width: 100%; height: 100%; display: block; }
+  .editor-wave-playhead {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 38%;
+    width: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+    z-index: 2;
+  }
+  .editor-wave-playhead::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -4px;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: var(--accent-glow);
+  }
+  .editor-wave-time {
+    position: absolute;
+    top: -16px;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .editor-tracks-on-wave {
+    position: absolute;
+    bottom: -8px; left: 0; right: 0;
+    height: 16px;
+  }
+  .editor-tracks-on-wave .pin {
+    position: absolute;
+    width: 1px;
+    height: 8px;
+    background: var(--text-faint);
+    top: 0;
+  }
+  .editor-tracks-on-wave .pin.now { background: var(--accent); height: 12px; }
+
+  /* the "MARK NOW" big affordance for live mode */
+  .live-bar {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-left: 3px solid var(--accent);
+    padding: var(--sp-3) var(--sp-5);
+    margin: var(--sp-4) var(--sp-8);
+    border-radius: var(--r-md);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--sp-4);
+    align-items: center;
+  }
+  .mark-button {
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-md);
+    padding: 0 var(--sp-4);
+    height: 40px;
+    font-weight: 700;
+    font-size: var(--ts-base);
+    cursor: pointer;
+    box-shadow: var(--accent-glow);
+    font-family: var(--font-sans);
+  }
+  .mark-button .kbd {
+    background: rgba(8,9,12,0.25);
+    color: var(--text-on-accent);
+    border-color: transparent;
+    font-weight: 700;
+  }
+  .mark-info { color: var(--text-muted); font-size: var(--ts-md); line-height: var(--lh-snug); }
+  .mark-info b { color: var(--text-default); font-family: var(--font-mono); font-size: var(--ts-base); }
+  .last-marked {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .last-marked b { color: var(--accent); }
+
+  /* ===== entries list ===== */
+  .entries {
+    padding: 0 0 var(--sp-12);
+  }
+  .entries-header {
+    display: flex; align-items: center;
+    padding: var(--sp-3) var(--sp-8);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky; top: 0;
+    z-index: 1;
+    gap: var(--sp-3);
+  }
+  .entries-header .meta {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+  }
+  .entries-header .meta b { color: var(--text-default); }
+
+  .entry-row {
+    display: grid;
+    grid-template-columns: 24px 64px 32px 1fr 100px auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: var(--sp-3) var(--sp-8);
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    transition: background var(--dur-fast);
+  }
+  .entry-row:hover { background: var(--bg-elevated); }
+  .entry-row.editing {
+    background: var(--accent-softer);
+    border-left: 2px solid var(--accent);
+    padding-left: calc(var(--sp-8) - 2px);
+  }
+  .entry-row.recently-added {
+    background: var(--bg-now);
+  }
+  .entry-row.recently-added::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+  .drag-handle {
+    color: var(--text-faintest);
+    cursor: grab;
+  }
+  .entry-row .ts {
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    font-feature-settings: 'tnum';
+  }
+  .entry-row .pos {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faintest);
+  }
+  .entry-row .tn {
+    font-weight: 600;
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    line-height: var(--lh-snug);
+  }
+  .entry-row .ta {
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .entry-row .ta b { color: var(--text-default); font-weight: 500; }
+  .entry-row .raw-label {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .entry-row .raw-label::before { content: 'raw: '; color: var(--text-faintest); font-style: normal; }
+  .entry-row .bpm-key {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .entry-row .bpm-key b { color: var(--text-default); font-weight: 500; }
+  .entry-row .actions {
+    display: flex; gap: 4px;
+    opacity: 0;
+    transition: opacity var(--dur-fast);
+  }
+  .entry-row:hover .actions, .entry-row.editing .actions { opacity: 1; }
+
+  /* inline edit form for the editing row */
+  .inline-edit {
+    display: grid;
+    grid-template-columns: 1fr 1fr 130px;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+  .inline-edit input {
+    height: 30px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-strong);
+    border-radius: var(--r-sm);
+    padding: 0 10px;
+    font-size: var(--ts-md);
+  }
+  .inline-edit input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+  .inline-edit input::placeholder { color: var(--text-faintest); }
+
+  .inline-edit-actions {
+    grid-column: 1 / -1;
+    display: flex; gap: var(--sp-2); margin-top: 4px;
+    align-items: center;
+  }
+  .inline-edit-help {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .inline-edit-help .kbd { font-size: var(--ts-xxs); }
+
+  /* paste mode panel preview */
+  .paste-preview {
+    margin: var(--sp-5) var(--sp-8);
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    color: var(--text-muted);
+    font-size: var(--ts-md);
+  }
+  .paste-preview .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-3);
+  }
+  .paste-textarea {
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    padding: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--ts-sm);
+    color: var(--text-default);
+    line-height: var(--lh-relaxed);
+    height: 140px;
+    overflow: auto;
+    white-space: pre-wrap;
+  }
+
+  /* right rail: tools */
+  .tools-rail {
+    background: var(--bg-surface);
+    padding: var(--sp-5);
+  }
+  .tool-group {
+    margin-bottom: var(--sp-6);
+  }
+  .tool-group h4 {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    margin-bottom: var(--sp-3);
+    font-weight: 500;
+  }
+  .tool-row {
+    display: flex; align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+    cursor: pointer;
+    color: var(--text-default);
+    font-size: var(--ts-md);
+  }
+  .tool-row:hover { color: var(--accent); }
+  .tool-row .icon { color: var(--text-muted); }
+  .tool-row:hover .icon { color: var(--accent); }
+  .tool-row .kbd { margin-left: auto; }
+
+  .progress-callout {
+    background: var(--accent-softer);
+    border: 1px solid rgba(0,255,178,0.2);
+    border-radius: var(--r-md);
+    padding: var(--sp-3) var(--sp-4);
+    margin-top: var(--sp-2);
+  }
+  .progress-callout h5 {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+    margin-bottom: var(--sp-2);
+    font-weight: 600;
+  }
+  .progress-line {
+    margin-bottom: var(--sp-2);
+  }
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--bg-base);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+    border-radius: var(--r-pill);
+  }
+  .progress-line .label { font-size: var(--ts-md); color: var(--text-default); display: flex; justify-content: space-between; }
+  .progress-line .label b { color: var(--accent); font-family: var(--font-mono); }
+
+  /* time-shift dialog (visible inline as a callout) */
+  .time-shift-dialog {
+    margin: var(--sp-4) var(--sp-8) 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent-secondary);
+    border-radius: var(--r-md);
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .time-shift-dialog h4 {
+    font-family: var(--font-sans);
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .time-shift-dialog .icon-wrap {
+    width: 22px; height: 22px;
+    border-radius: var(--r-sm);
+    background: rgba(108, 212, 255, 0.15);
+    color: var(--accent-secondary);
+    display: grid; place-items: center;
+  }
+  .time-shift-dialog .body { color: var(--text-default); font-size: var(--ts-md); line-height: var(--lh-relaxed); margin-top: 6px; }
+  .time-shift-dialog .body b { color: var(--accent-secondary); font-family: var(--font-mono); font-feature-settings: 'tnum'; }
+  .time-shift-dialog .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+  .time-shift-dialog .preview {
+    background: var(--bg-base);
+    border-radius: var(--r-sm);
+    padding: var(--sp-2) var(--sp-3);
+    margin-top: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--ts-sm);
+    color: var(--text-muted);
+  }
+  .time-shift-dialog .preview .arrow { color: var(--accent-secondary); padding: 0 8px; }
+
+  /* AcoustID candidate dropdown (shown inline when "ID this" is clicked) */
+  .acoustid-results {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    padding: var(--sp-3);
+    margin-top: var(--sp-2);
+    grid-column: 1 / -1;
+  }
+  .acoustid-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-2);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    align-items: center;
+  }
+  .acoustid-row:hover { background: var(--bg-overlay); }
+  .acoustid-row .name { color: var(--text-strong); font-weight: 500; font-size: var(--ts-md); }
+  .acoustid-row .meta { color: var(--text-muted); font-size: var(--ts-sm); margin-top: 1px; }
+  .acoustid-row .conf {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--accent);
+    font-feature-settings: 'tnum';
+  }
+  .acoustid-row .conf.med { color: var(--accent-secondary); }
+  .acoustid-row .conf.low { color: var(--accent-warning); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <a class="brand" href="../index.html"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+    <button class="search-trigger">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>
+      <span>Search artists, sets, parties…</span>
+      <span class="kbd">⌘&nbsp;K</span>
+    </button>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6a4 4 0 1 1 8 0v3l1 2H3l1-2V6z"/></svg></button>
+      <div style="width:32px;height:32px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:var(--ts-md);">B</div>
+    </div>
+  </header>
+
+  <nav class="rail">
+    <div class="rail-section">
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7l6-5 6 5v7H2z"/><path d="M6 14V9h4v5"/></svg> Home</div>
+      <div class="rail-link active" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/></svg> Library<span class="count">847</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M3 14a5 5 0 0 1 10 0"/></svg> Artists<span class="count">214</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2z"/><path d="M5 4v8M11 4v8"/></svg> Parties<span class="count">63</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13V7l5-4 5 4v6"/></svg> Venues<span class="count">38</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg> Tracks<span class="count">11.2k</span></div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- editor topbar -->
+    <header class="editor-topbar">
+      <a class="editor-back">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9,3 4,8 9,13"/><line x1="4" y1="8" x2="14" y2="8"/></svg>
+        Back
+      </a>
+      <div class="editor-title-block">
+        <span class="label">Editing tracklist</span>
+        <span class="name">Spectrum 250 — Joris Voorn @ Awakenings 2024</span>
+      </div>
+      <span class="saved-indicator">
+        <span class="live-dot"></span>
+        all changes saved · 12s ago
+      </span>
+      <div class="editor-actions">
+        <button class="btn btn-sm">
+          <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 7,12 13,4"/></svg>
+          Bulk resolve <span class="kbd">⇧R</span>
+        </button>
+        <button class="btn btn-sm">
+          <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="6,8 7.5,9.5 11,6"/></svg>
+          Auto-ID all unknowns
+        </button>
+        <button class="btn btn-sm btn-ghost">
+          <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h10l-1 7H4z"/></svg>
+          Export
+        </button>
+        <button class="btn btn-primary btn-sm">
+          Done <span class="kbd" style="background:rgba(8,9,12,0.25);color:var(--text-on-accent);border-color:transparent">⏎</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active">
+        <span class="tab-num">01 · Live mode</span>
+        <span class="tab-name">Mark playhead while listening<span class="kbd tab-kbd">M</span></span>
+        <span class="tab-desc">Hit M during playback to insert an entry at the current time.</span>
+      </button>
+      <button class="mode-tab">
+        <span class="tab-num">02 · Paste &amp; parse</span>
+        <span class="tab-name">From forum text<span class="kbd tab-kbd">P</span></span>
+        <span class="tab-desc">Drop messy tracklist text. LLM parses to structured rows; review and accept.</span>
+      </button>
+      <button class="mode-tab">
+        <span class="tab-num">03 · Import URL</span>
+        <span class="tab-name">From 1001tracklists<span class="kbd tab-kbd">U</span></span>
+        <span class="tab-desc">Paste a URL. Scraper builds the tracklist for you.</span>
+      </button>
+    </div>
+
+    <div class="editor-body">
+      <div class="editor-main">
+
+        <!-- mini waveform with playhead -->
+        <div class="editor-wave">
+          <div class="editor-wave-strip">
+            <svg viewBox="0 0 1200 56" preserveAspectRatio="none">
+              <path d="M0,28 L20,18 L40,30 L60,12 L80,32 L100,16 L120,28 L140,8 L160,32 L180,14 L200,34 L220,18 L240,30 L260,12 L280,28 L300,18 L320,38 L340,22 L360,40 L380,18 L400,30 L420,12 L440,30 L460,22" stroke="var(--waveform-played)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+              <path d="M0,28 L20,38 L40,26 L60,44 L80,24 L100,40 L120,28 L140,48 L160,24 L180,42 L200,22 L220,38 L240,26 L260,44 L280,28 L300,38 L320,18 L340,34 L360,16 L380,38 L400,26 L420,44 L440,26 L460,34" stroke="var(--waveform-played)" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.6"/>
+              <path d="M460,28 L480,18 L500,28 L520,12 L540,32 L560,16 L580,28 L600,8 L620,32 L640,14 L660,34 L680,18 L700,30 L720,12 L740,28 L760,18 L780,38 L800,22 L820,40 L840,18 L860,30 L880,22 L900,30 L920,12 L940,28 L960,18 L980,38 L1000,22 L1020,40 L1040,18 L1060,30 L1080,12 L1100,28 L1120,22 L1140,30 L1160,12 L1180,28 L1200,22" stroke="var(--waveform-unplayed)" stroke-width="1" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div class="editor-tracks-on-wave">
+              <div class="pin" style="left: 0%"></div>
+              <div class="pin" style="left: 4%"></div>
+              <div class="pin" style="left: 9%"></div>
+              <div class="pin" style="left: 13%"></div>
+              <div class="pin" style="left: 16%"></div>
+              <div class="pin" style="left: 20%"></div>
+              <div class="pin" style="left: 24%"></div>
+              <div class="pin" style="left: 28%"></div>
+              <div class="pin" style="left: 33%"></div>
+              <div class="pin now" style="left: 38%"></div>
+              <div class="pin" style="left: 43%"></div>
+              <div class="pin" style="left: 47%"></div>
+              <div class="pin" style="left: 51%"></div>
+              <div class="pin" style="left: 56%"></div>
+              <div class="pin" style="left: 61%"></div>
+              <div class="pin" style="left: 66%"></div>
+              <div class="pin" style="left: 70%"></div>
+              <div class="pin" style="left: 75%"></div>
+              <div class="pin" style="left: 81%"></div>
+              <div class="pin" style="left: 86%"></div>
+              <div class="pin" style="left: 92%"></div>
+              <div class="pin" style="left: 96%"></div>
+            </div>
+          </div>
+          <div class="editor-wave-playhead">
+            <span class="editor-wave-time">43:18.412</span>
+          </div>
+        </div>
+
+        <!-- live mode big mark -->
+        <div class="live-bar">
+          <button class="mark-button">
+            <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 13l4-2 8-9-4 4 1 1-9 6z"/></svg>
+            Mark this moment
+            <span class="kbd">M</span>
+          </button>
+          <div class="mark-info">
+            Tab through fields, <b style="font-family:var(--font-mono);background:var(--bg-base);padding:2px 6px;border-radius:3px">↩</b> saves, <b style="font-family:var(--font-mono);background:var(--bg-base);padding:2px 6px;border-radius:3px">Esc</b> cancels.
+            New entries appear at the playhead position with a "raw" badge.
+          </div>
+          <span class="last-marked">last mark: <b>43:18.412</b> · 12s ago</span>
+        </div>
+
+        <!-- time-shift dialog (callout) -->
+        <div class="time-shift-dialog">
+          <h4>
+            <span class="icon-wrap">
+              <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M8 2v12"/></svg>
+            </span>
+            Source audio length changed by +27 seconds.
+          </h4>
+          <p class="body">A new master of this set was uploaded. The intro is now <b>27.000s longer</b>. We can shift every entry after <b>00:30:00</b> forward by <b>27s</b> so timestamps line up. Preview:</p>
+          <div class="preview">
+            12. Inhuman <span class="arrow">→</span> 43:18 → 43:45 &nbsp; · &nbsp; 13. Move (mashup) <span class="arrow">→</span> 48:42 → 49:09 &nbsp; · &nbsp; 14. Bad Hands Pt. 1 <span class="arrow">→</span> 53:10 → 53:37
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary btn-sm">Shift 12 entries by +27s</button>
+            <button class="btn btn-sm">Adjust shift threshold…</button>
+            <button class="btn btn-ghost btn-sm">Skip — I'll do it manually</button>
+          </div>
+        </div>
+
+        <!-- entries -->
+        <div class="entries">
+          <div class="entries-header">
+            <span class="meta"><b>23 / 31</b> resolved</span>
+            <span class="meta">·</span>
+            <span class="meta"><b>3</b> raw · <b>5</b> AcoustID-confirmed · <b>15</b> manually resolved</span>
+            <div style="margin-left:auto" class="cmdk-hint">
+              <span class="kbd">[</span> <span class="kbd">]</span> step entries
+            </div>
+          </div>
+
+          <div class="entry-row recently-added">
+            <span class="drag-handle"><svg viewBox="0 0 8 16" width="8" height="16" fill="currentColor" opacity="0.6"><circle cx="2" cy="4" r="1"/><circle cx="6" cy="4" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="2" cy="12" r="1"/><circle cx="6" cy="12" r="1"/></svg></span>
+            <span class="ts">43:18</span>
+            <span class="pos">12.</span>
+            <div>
+              <div class="tn">Inhuman</div>
+              <div class="ta"><b>DJ T-1000</b> · Tresor 159 · 1999 · w/ Robert Hood — Move (acapella)</div>
+              <div class="raw-label">just-marked · DJ T-1000 - Inhuman / Tresor</div>
+            </div>
+            <span class="bpm-key"><b>134</b> · C<sub>m</sub></span>
+            <span class="badge badge-resolved">just resolved</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Edit"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3l9-9z"/></svg></button>
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Delete"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M5 4v10h6V4M6 7v4M10 7v4M6 4V2h4v2"/></svg></button>
+            </div>
+          </div>
+
+          <div class="entry-row editing">
+            <span class="drag-handle"><svg viewBox="0 0 8 16" width="8" height="16" fill="currentColor" opacity="0.6"><circle cx="2" cy="4" r="1"/><circle cx="6" cy="4" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="2" cy="12" r="1"/><circle cx="6" cy="12" r="1"/></svg></span>
+            <span class="ts">48:42</span>
+            <span class="pos">13.</span>
+            <div style="grid-column: 4 / -1">
+              <div class="inline-edit">
+                <input value="Joris Voorn vs. Robert Hood" placeholder="Artist">
+                <input value="Move (mashup)" placeholder="Title" autofocus style="border-color:var(--accent)">
+                <input value="" placeholder="Mix / edit" style="font-style:italic;color:var(--text-faint)">
+                <input value="" placeholder="Label" style="grid-column:1/3">
+                <input value="w/ Move acapella" placeholder="Notes / mashup with…">
+                <div class="inline-edit-actions">
+                  <button class="btn btn-primary btn-sm">Save <span class="kbd" style="background:rgba(8,9,12,0.25);color:var(--text-on-accent);border-color:transparent">⏎</span></button>
+                  <button class="btn btn-sm">Mark as ID — ID</button>
+                  <button class="btn btn-ghost btn-sm">Cancel <span class="kbd">Esc</span></button>
+                  <span class="inline-edit-help" style="margin-left:auto"><span class="kbd">⇥</span> next field · <span class="kbd">⇧⇥</span> previous</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="entry-row">
+            <span class="drag-handle"><svg viewBox="0 0 8 16" width="8" height="16" fill="currentColor" opacity="0.6"><circle cx="2" cy="4" r="1"/><circle cx="6" cy="4" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="2" cy="12" r="1"/><circle cx="6" cy="12" r="1"/></svg></span>
+            <span class="ts">53:10</span>
+            <span class="pos">14.</span>
+            <div>
+              <div class="tn">Bad Hands Pt. 1 (2002 Reissue)</div>
+              <div class="ta"><b>Surgeon</b> · Dynamic Tension</div>
+            </div>
+            <span class="bpm-key"><b>133</b> · D<sub>m</sub></span>
+            <span class="badge badge-acoustid">acoustid ✓</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3l9-9z"/></svg></button>
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M5 4v10h6V4"/></svg></button>
+            </div>
+          </div>
+
+          <!-- raw row with AcoustID dropdown shown -->
+          <div class="entry-row" style="grid-template-rows: auto auto">
+            <span class="drag-handle" style="grid-row:1"><svg viewBox="0 0 8 16" width="8" height="16" fill="currentColor" opacity="0.6"><circle cx="2" cy="4" r="1"/><circle cx="6" cy="4" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="2" cy="12" r="1"/><circle cx="6" cy="12" r="1"/></svg></span>
+            <span class="ts" style="grid-row:1">1:02:34</span>
+            <span class="pos" style="grid-row:1">16.</span>
+            <div style="grid-row:1">
+              <div class="tn">— ID — ID —</div>
+              <div class="ta">probably an upcoming Voorn release · @maks: "this is the Spectrum 250 ID"</div>
+            </div>
+            <span class="bpm-key" style="grid-row:1"><b>132</b> · —</span>
+            <span class="badge badge-raw" style="grid-row:1">unknown</span>
+            <div class="actions" style="opacity:1;grid-row:1">
+              <button class="btn btn-sm btn-primary" style="font-size:var(--ts-sm)">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="6,8 7.5,9.5 11,6"/></svg>
+                ID this
+              </button>
+            </div>
+            <div class="acoustid-results">
+              <div class="label-small" style="margin-bottom:6px">AcoustID candidates · fingerprinted 15s window @ 1:02:34 → 1:02:49</div>
+              <div class="acoustid-row">
+                <div>
+                  <div class="name">Spectrum 250 (Original Mix)</div>
+                  <div class="meta">Joris Voorn · Spectrum · 2024 (forthcoming)</div>
+                </div>
+                <span class="conf">98% match</span>
+                <button class="btn btn-primary btn-sm">accept</button>
+              </div>
+              <div class="acoustid-row">
+                <div>
+                  <div class="name">Spectrum 250</div>
+                  <div class="meta">Joris Voorn · unreleased preview · soundcloud</div>
+                </div>
+                <span class="conf med">71% match</span>
+                <button class="btn btn-sm">accept</button>
+              </div>
+              <div class="acoustid-row">
+                <div>
+                  <div class="name">Knock You Out (Live Edit)</div>
+                  <div class="meta">Joris Voorn · Spectrum</div>
+                </div>
+                <span class="conf low">42% match</span>
+                <button class="btn btn-sm">accept</button>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:var(--ts-xs);color:var(--text-faint)">
+                <span>None of these match? <a style="color:var(--accent)">Search Track DB →</a></span>
+                <span>data via AcoustID + MusicBrainz</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="entry-row">
+            <span class="drag-handle"><svg viewBox="0 0 8 16" width="8" height="16" fill="currentColor" opacity="0.6"><circle cx="2" cy="4" r="1"/><circle cx="6" cy="4" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="2" cy="12" r="1"/><circle cx="6" cy="12" r="1"/></svg></span>
+            <span class="ts">1:08:12</span>
+            <span class="pos">17.</span>
+            <div>
+              <div class="tn">Saturate</div>
+              <div class="ta"><b>Charlotte de Witte</b> · KNTXT · 2023</div>
+            </div>
+            <span class="bpm-key"><b>134</b> · A<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3l9-9z"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- paste-mode preview (collapsed view) -->
+        <div class="paste-preview">
+          <div class="label-small" style="color:var(--text-faint);margin-bottom:6px">Mode 02 — Paste &amp; parse · click tab above to switch</div>
+          <div>Pasting from a forum, comment, or text dump? Drop the raw text on the left, watch it parse into structured rows on the right.</div>
+          <div class="grid">
+            <div class="paste-textarea">00:00 - Joris Voorn - Knock You Out (Live Edit)
+04:18 - ID
+09:45 - Stephan Bodzin - A Memory of Light
+14:22 - Lewis Fautzi - Confidential Reform [Soma]
+...
+1:02:34 - probably the Spectrum 250 ID
+1:08:12 - Charlotte de Witte - Saturate</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:var(--ts-md)">
+              <div style="color:var(--text-default)">📊 <b>Parsed by LLM</b> · 6 rows · 1 ID-not-yet-known · 1 free-form note</div>
+              <div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;font-family:var(--font-mono);font-size:var(--ts-xs);align-items:center">
+                <span style="color:var(--text-faint)">00:00</span>
+                <span style="color:var(--text-strong)">Joris Voorn — Knock You Out</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">ok</span>
+                <span style="color:var(--text-faint)">04:18</span>
+                <span style="color:var(--text-strong)">— ID — ID —</span>
+                <span class="badge badge-raw" style="font-size:9px;padding:1px 5px">id</span>
+                <span style="color:var(--text-faint)">09:45</span>
+                <span style="color:var(--text-strong)">Stephan Bodzin — A Memory of Light</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">ok</span>
+                <span style="color:var(--text-faint)">14:22</span>
+                <span style="color:var(--text-strong)">Lewis Fautzi — Confidential Reform</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">ok</span>
+                <span style="color:var(--text-faintest)">…</span>
+                <span style="color:var(--text-faint)">3 more rows</span>
+                <span></span>
+              </div>
+              <button class="btn btn-primary btn-sm" style="margin-top:6px">Accept all 6 rows</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TOOLS RAIL -->
+      <aside class="tools-rail">
+        <div class="tool-group">
+          <h4>Resolution progress</h4>
+          <div class="progress-callout">
+            <h5>23 / 31 resolved</h5>
+            <div class="progress-line">
+              <div class="label"><span>Total</span><b>74%</b></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:74%"></div></div>
+            </div>
+            <div class="progress-line">
+              <div class="label" style="color:var(--accent-secondary)"><span>AcoustID-confirmed</span><span style="font-family:var(--font-mono);color:var(--accent-secondary)">5</span></div>
+            </div>
+            <div class="progress-line">
+              <div class="label"><span>Manually resolved</span><span style="font-family:var(--font-mono)">15</span></div>
+            </div>
+            <div class="progress-line">
+              <div class="label" style="color:var(--accent)"><span>Just-resolved (this session)</span><b>3</b></div>
+            </div>
+            <div class="progress-line">
+              <div class="label" style="color:var(--accent-warning)"><span>Still raw / unknown</span><span style="font-family:var(--font-mono);color:var(--accent-warning)">8</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <h4>Bulk tools</h4>
+          <div class="tool-row">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="6,8 7.5,9.5 11,6"/></svg>
+            Auto-ID all unknowns (8)
+            <span class="kbd">⇧A</span>
+          </div>
+          <div class="tool-row">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M8 3v10"/></svg>
+            Insert "ID — ID" at playhead
+            <span class="kbd">⇧M</span>
+          </div>
+          <div class="tool-row">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l4 4-4 4M14 4l-4 4 4 4"/></svg>
+            Time-shift entries…
+          </div>
+          <div class="tool-row">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5l5 6 7-9"/></svg>
+            Mark all as resolved
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <h4>Keyboard</h4>
+          <div class="tool-row" style="cursor:default"><span class="kbd">M</span><span style="margin-left:auto;color:var(--text-muted)">mark playhead</span></div>
+          <div class="tool-row" style="cursor:default"><span class="kbd">E</span><span style="margin-left:auto;color:var(--text-muted)">edit selected</span></div>
+          <div class="tool-row" style="cursor:default"><span class="kbd">⌫</span><span style="margin-left:auto;color:var(--text-muted)">delete selected</span></div>
+          <div class="tool-row" style="cursor:default"><span class="kbd">[</span> <span class="kbd">]</span><span style="margin-left:auto;color:var(--text-muted)">prev / next entry</span></div>
+          <div class="tool-row" style="cursor:default"><span class="kbd">⏎</span><span style="margin-left:auto;color:var(--text-muted)">save / accept</span></div>
+          <div class="tool-row" style="cursor:default"><span class="kbd">Esc</span><span style="margin-left:auto;color:var(--text-muted)">cancel edit</span></div>
+        </div>
+
+        <div class="tool-group">
+          <h4>Provenance</h4>
+          <div style="font-size:var(--ts-md);color:var(--text-default);line-height:var(--lh-relaxed);">
+            Every field tracks who set it (you, or which provider) and locks against auto-overwrite when you edit it. Click any field to see its history.
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <footer class="mini-player">
+    <div class="mp-now">
+      <div class="mp-cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)">SP<br>250</div>
+      <div>
+        <div class="mp-title">Inhuman <span style="font-weight:400;color:var(--text-faint)">— DJ T-1000</span></div>
+        <div class="mp-sub">Spectrum 250 · editing tracklist</div>
+      </div>
+    </div>
+    <div class="mp-controls">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/></svg></button>
+      <button class="btn btn-icon" style="background:var(--accent);color:var(--text-on-accent);border-color:var(--accent)"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+      <span class="mp-time">43:18</span>
+      <div class="mp-mini-wave"></div>
+      <span class="mp-time">1:54:32</span>
+    </div>
+    <div class="mp-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 10a3 3 0 0 1 3 3"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M3 8h10M3 11h6"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="2,6 5,6 9,3 9,13 5,10 2,10" fill="currentColor"/></svg></button>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

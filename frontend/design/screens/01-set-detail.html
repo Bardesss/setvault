@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — Joris Voorn · Spectrum 250 @ Awakenings 2024</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="../assets/components.css">
+<style>
+  /* ===== set-detail layout-specific ===== */
+  .set-hero {
+    padding: var(--sp-6) var(--sp-8) var(--sp-5);
+    background: linear-gradient(180deg, rgba(0,255,178,0.025), transparent);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .breadcrumb {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: center;
+    font-size: var(--ts-md);
+    color: var(--text-faint);
+    margin-bottom: var(--sp-4);
+  }
+  .breadcrumb a { color: var(--text-muted); }
+  .breadcrumb a:hover { color: var(--text-default); }
+  .breadcrumb .sep { color: var(--text-faintest); }
+  .breadcrumb .current { color: var(--text-strong); }
+
+  .set-title-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--sp-8);
+    align-items: end;
+    margin-bottom: var(--sp-5);
+  }
+  .set-title {
+    font-size: var(--ts-3xl);
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    font-weight: 700;
+  }
+  .set-title .by {
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  .set-title-actions { display: flex; gap: var(--sp-2); }
+
+  .set-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    align-items: center;
+    margin-bottom: var(--sp-4);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+  }
+  .set-meta a { color: var(--text-default); border-bottom: 1px dashed var(--border-strong); padding-bottom: 1px; }
+  .set-meta a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .set-meta .sep { color: var(--text-faintest); margin: 0 var(--sp-2); }
+
+  .set-meta-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .set-tags {
+    margin-top: var(--sp-4);
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .tag-pill {
+    font-family: var(--font-sans);
+    font-size: var(--ts-md);
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+  }
+  .tag-pill.genre { color: var(--accent); border-color: rgba(0,255,178,0.25); background: var(--accent-soft); }
+
+  /* ===== waveform ===== */
+  .wave-stage {
+    position: relative;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: var(--sp-4) var(--sp-8) var(--sp-2);
+  }
+  .wave-canvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+    position: relative;
+  }
+  .wave-canvas svg { width: 100%; height: 100%; display: block; }
+  .wave-playhead {
+    position: absolute;
+    top: var(--sp-4);
+    bottom: var(--sp-2);
+    width: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .wave-marker {
+    position: absolute;
+    top: var(--sp-4);
+    width: 2px;
+    height: 16px;
+    background: var(--accent-secondary);
+    border-radius: 1px;
+    cursor: pointer;
+  }
+  .wave-marker.bookmark { background: var(--accent-warning); top: var(--sp-4); height: 12px; }
+  .wave-marker:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text-default);
+    font-size: var(--ts-xs);
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .wave-time-rail {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--text-faintest);
+    letter-spacing: 0.04em;
+  }
+
+  /* ===== transport ===== */
+  .transport-bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: var(--sp-4) var(--sp-8);
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-surface);
+  }
+  .transport-time {
+    font-family: var(--font-mono);
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    font-weight: 500;
+    font-feature-settings: 'tnum';
+  }
+  .transport-time .div { color: var(--text-faintest); padding: 0 6px; }
+  .transport-time .ms { color: var(--text-faint); font-size: var(--ts-sm); }
+  .transport-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .play-large {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    background: var(--accent);
+    border-radius: var(--r-md);
+    color: var(--text-on-accent);
+    border: 1px solid var(--accent);
+    box-shadow: var(--accent-glow);
+    cursor: pointer;
+  }
+  .transport-aux {
+    display: flex; gap: var(--sp-2); justify-content: end; align-items: center;
+  }
+  .speed-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    height: 28px;
+  }
+  .speed-toggle button {
+    padding: 0 10px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-default);
+    height: 100%;
+  }
+  .speed-toggle button:last-child { border-right: 0; }
+  .speed-toggle button.on { background: var(--accent); color: var(--text-on-accent); }
+
+  /* ===== body: tracks + side ===== */
+  .body-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 0;
+    align-items: start;
+  }
+  .tracks-section {
+    border-right: 1px solid var(--border-subtle);
+  }
+  .tracks-header {
+    display: flex;
+    align-items: center;
+    padding: var(--sp-4) var(--sp-8) var(--sp-3);
+    gap: var(--sp-4);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky; top: 0;
+    z-index: 1;
+  }
+  .tracks-header h3 {
+    font-size: var(--ts-base);
+    font-weight: 600;
+    color: var(--text-strong);
+    letter-spacing: 0;
+  }
+  .tracks-header h3 b { color: var(--text-faint); font-weight: 400; margin-left: 6px; font-size: var(--ts-md); font-family: var(--font-mono); }
+  .tracks-header .right { margin-left: auto; display: flex; gap: var(--sp-2); }
+
+  .track-row {
+    grid-template-columns: 64px 32px 1fr 110px auto auto;
+    padding: var(--sp-3) var(--sp-8);
+    gap: var(--sp-4);
+  }
+
+  .track-mash {
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--accent-secondary);
+    background: rgba(108, 212, 255, 0.06);
+    padding: 2px 6px;
+    border-radius: var(--r-xs);
+  }
+
+  /* side panel */
+  .side {
+    background: var(--bg-surface);
+    min-height: 100vh;
+  }
+  .side-tabs {
+    padding: 0 var(--sp-5);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .side-content {
+    padding: var(--sp-5);
+  }
+  .side-section + .side-section { margin-top: var(--sp-6); }
+  .side-section h4 {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    margin-bottom: var(--sp-3);
+    font-weight: 500;
+  }
+
+  .comment {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: var(--sp-3);
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .comment-ts {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--accent-secondary);
+    cursor: pointer;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .comment-author {
+    font-size: var(--ts-md);
+    color: var(--text-strong);
+    font-weight: 600;
+  }
+  .comment-meta {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--text-faint);
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+  }
+  .comment-body { font-size: var(--ts-md); color: var(--text-default); margin-top: 2px; line-height: var(--lh-relaxed); }
+
+  .stat-line {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--sp-2) 0;
+    font-size: var(--ts-md);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .stat-line:last-child { border-bottom: none; }
+  .stat-line .k { color: var(--text-muted); }
+  .stat-line .v { color: var(--text-strong); font-family: var(--font-mono); font-feature-settings: 'tnum'; }
+
+  /* mini-player content */
+  .mp-now {
+    display: flex; align-items: center; gap: var(--sp-3);
+  }
+  .mp-cover {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    border-radius: var(--r-sm);
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    font-weight: 700;
+  }
+  .mp-title { font-weight: 600; color: var(--text-strong); font-size: var(--ts-md); }
+  .mp-sub { font-size: var(--ts-sm); color: var(--text-muted); margin-top: 1px; }
+  .mp-controls {
+    display: flex; align-items: center; gap: var(--sp-3); justify-content: center;
+  }
+  .mp-time {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    font-feature-settings: 'tnum';
+    min-width: 52px;
+  }
+  .mp-mini-wave {
+    flex: 1;
+    height: 24px;
+    max-width: 360px;
+    background: var(--bg-base);
+    border-radius: var(--r-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .mp-mini-wave::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 38%;
+    background: linear-gradient(90deg, var(--accent-soft) 0%, var(--accent-soft) 95%, var(--accent) 100%);
+  }
+  .mp-right {
+    display: flex; align-items: center; gap: var(--sp-2); justify-content: end;
+  }
+
+  /* shortcut hint pill */
+  .shortcut-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ts-md);
+    color: var(--text-faint);
+  }
+
+  /* page-level tweaks: hide scrollbar gutter shifting */
+  .main { padding-bottom: var(--sp-12); }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <a class="brand" href="../index.html">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
+    </a>
+    <button class="search-trigger">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/>
+      </svg>
+      <span>Search artists, sets, parties…</span>
+      <span class="kbd">⌘&nbsp;K</span>
+    </button>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-icon" aria-label="Notifications">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6a4 4 0 1 1 8 0v3l1 2H3l1-2V6z"/><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-icon" aria-label="Theme">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 9.5a6 6 0 0 1-7.5-7.5A6 6 0 1 0 14 9.5z"/></svg>
+      </button>
+      <div style="width:32px;height:32px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:var(--ts-md);">B</div>
+    </div>
+  </header>
+
+  <!-- LEFT RAIL -->
+  <nav class="rail">
+    <div class="rail-section">
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7l6-5 6 5v7H2z"/><path d="M6 14V9h4v5"/></svg>
+        Home
+      </div>
+      <div class="rail-link active" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/></svg>
+        Library
+        <span class="count">847</span>
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M3 14a5 5 0 0 1 10 0"/></svg>
+        Artists
+        <span class="count">214</span>
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2z"/><path d="M5 4v8M11 4v8"/></svg>
+        Parties
+        <span class="count">63</span>
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13V7l5-4 5 4v6"/><rect x="6" y="9" width="4" height="4"/></svg>
+        Venues
+        <span class="count">38</span>
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>
+        Tracks
+        <span class="count">11.2k</span>
+      </div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">Yours</div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.5l-1.5-1.5C3 9 1 6.5 1 4.5A3 3 0 0 1 4 1.5C5.5 1.5 7 2.5 8 4c1-1.5 2.5-2.5 4-2.5A3 3 0 0 1 15 4.5c0 2-2 4.5-5.5 7.5L8 13.5z"/></svg>
+        Favorites
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>
+        Watch later
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
+        Playlists
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,8 9,11 14,4"/><polyline points="10,4 14,4 14,8"/></svg>
+        Activity
+      </div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">System</div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,6 5,3 8,6 11,3 14,6"/><polyline points="2,10 5,13 8,10 11,13 14,10"/></svg>
+        Jobs
+        <span class="count" style="color:var(--accent)">3</span>
+      </div>
+      <div class="rail-link" tabindex="0">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3 3l2 2M11 11l2 2M3 13l2-2M11 5l2-2"/></svg>
+        Settings
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- HERO -->
+    <section class="set-hero">
+      <div class="breadcrumb">
+        <a>Library</a>
+        <span class="sep">›</span>
+        <a>Series</a>
+        <span class="sep">›</span>
+        <a>Awakenings 2024</a>
+        <span class="sep">›</span>
+        <span class="current">Spectrum 250</span>
+      </div>
+      <div class="set-title-row">
+        <div>
+          <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+            <span class="badge badge-resolved"><span class="live-dot" style="width:6px;height:6px"></span> 23/31 resolved</span>
+            <span class="label-small" style="color:var(--text-faint)">closing set · 2024-06-28</span>
+          </div>
+          <h1 class="set-title">
+            Spectrum 250 <span class="by">— Joris Voorn</span>
+          </h1>
+          <div class="set-meta">
+            <a>Joris Voorn</a>
+            <span class="sep">/</span>
+            <a>Awakenings</a>
+            <span class="sep">@</span>
+            <a>Recreatiegebied Spaarnwoude</a>
+            <span class="sep">·</span>
+            <span>Outdoor festival grounds</span>
+          </div>
+        </div>
+        <div class="set-title-actions">
+          <button class="btn">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.5l-1.5-1.5C3 9 1 6.5 1 4.5A3 3 0 0 1 4 1.5C5.5 1.5 7 2.5 8 4c1-1.5 2.5-2.5 4-2.5A3 3 0 0 1 15 4.5c0 2-2 4.5-5.5 7.5L8 13.5z"/></svg>
+            Favorite
+          </button>
+          <button class="btn">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="12" height="8"/><polyline points="6,6 6,2 10,2 10,6"/></svg>
+            Cast
+          </button>
+          <button class="btn">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M8 2l6 6-6 6"/></svg>
+            Share
+            <span class="kbd">S</span>
+          </button>
+          <button class="btn btn-icon" aria-label="More">
+            <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- meta grid -->
+      <div class="meta-grid set-meta-grid">
+        <div class="meta-cell"><div class="k">Date</div><div class="v">2024.06.28</div></div>
+        <div class="meta-cell"><div class="k">Length</div><div class="v">1:54:32</div></div>
+        <div class="meta-cell"><div class="k">Type</div><div class="v">Closing</div></div>
+        <div class="meta-cell"><div class="k">LUFS</div><div class="v">−7.2</div></div>
+        <div class="meta-cell"><div class="k">Source</div><div class="v" style="font-size:var(--ts-md)">SoundCloud</div></div>
+        <div class="meta-cell"><div class="k">Tracks</div><div class="v acc">23 / 31</div></div>
+      </div>
+
+      <div class="set-tags">
+        <span class="tag-pill genre">techno</span>
+        <span class="tag-pill genre">peak time</span>
+        <span class="tag-pill">festival</span>
+        <span class="tag-pill">closing</span>
+        <span class="tag-pill">2024</span>
+      </div>
+    </section>
+
+    <!-- WAVEFORM -->
+    <section class="wave-stage">
+      <div class="wave-canvas">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+          <!-- played portion (filled mint) -->
+          <path id="wave-played" d="M0,60 L4,52 L8,58 L12,44 L16,50 L20,38 L24,46 L28,32 L32,42 L36,28 L40,40 L44,30 L48,46 L52,38 L56,52 L60,42 L64,58 L68,46 L72,54 L76,38 L80,48 L84,32 L88,44 L92,38 L96,54 L100,42 L104,52 L108,30 L112,42 L116,24 L120,36 L124,30 L128,52 L132,38 L136,54 L140,44 L144,58 L148,46 L152,62 L156,50 L160,38 L164,52 L168,34 L172,48 L176,28 L180,42 L184,22 L188,36 L192,30 L196,52 L200,38 L204,54 L208,42 L212,58 L216,46 L220,62 L224,50 L228,66 L232,52 L236,68 L240,54 L244,72 L248,56 L252,76 L256,60 L260,80 L264,64 L268,82 L272,66 L276,84 L280,68 L284,86 L288,70 L292,88 L296,72 L300,90 L304,74 L308,92 L312,76 L316,94 L320,78 L324,96 L328,80 L332,98 L336,82 L340,98 L344,82 L348,96 L352,80 L356,94 L360,78 L364,92 L368,76 L372,90 L376,74 L380,88 L384,72 L388,86 L392,70 L396,84 L400,68 L404,82 L408,66 L412,80 L416,64 L420,78 L424,62 L428,76 L432,60 L436,74 L440,58 L444,72 L448,56 L452,70 L456,54 L460,66" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- played mirror -->
+          <path d="M0,60 L4,68 L8,62 L12,76 L16,70 L20,82 L24,74 L28,88 L32,78 L36,92 L40,80 L44,90 L48,74 L52,82 L56,68 L60,78 L64,62 L68,74 L72,66 L76,82 L80,72 L84,88 L88,76 L92,82 L96,66 L100,78 L104,68 L108,90 L112,78 L116,96 L120,84 L124,90 L128,68 L132,82 L136,66 L140,76 L144,62 L148,74 L152,58 L156,70 L160,82 L164,68 L168,86 L172,72 L176,92 L180,78 L184,98 L188,84 L192,90 L196,68 L200,82 L204,66 L208,78 L212,62 L216,74 L220,58 L224,70 L228,54 L232,68 L236,52 L240,66 L244,48 L248,64 L252,44 L256,60 L260,40 L264,56 L268,38 L272,54 L276,36 L280,52 L284,34 L288,50 L292,32 L296,48 L300,30 L304,46 L308,28 L312,44 L316,26 L320,42 L324,24 L328,40 L332,22 L336,38 L340,22 L344,38 L348,24 L352,40 L356,26 L360,42 L364,28 L368,44 L372,30 L376,46 L380,32 L384,48 L388,34 L392,50 L396,36 L400,52 L404,38 L408,54 L412,40 L416,56 L420,42 L424,58 L428,44 L432,60 L436,46 L440,62 L444,48 L448,64 L452,50 L456,66 L460,54" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+          <!-- unplayed portion (gray) -->
+          <path d="M460,60 L464,72 L468,56 L472,68 L476,52 L480,64 L484,48 L488,60 L492,44 L496,56 L500,40 L504,52 L508,36 L512,48 L516,32 L520,44 L524,28 L528,40 L532,24 L536,36 L540,28 L544,42 L548,32 L552,46 L556,38 L560,52 L564,42 L568,56 L572,46 L576,60 L580,50 L584,64 L588,54 L592,68 L596,58 L600,72 L604,62 L608,76 L612,66 L616,80 L620,70 L624,84 L628,74 L632,86 L636,76 L640,90 L644,80 L648,92 L652,82 L656,86 L660,76 L664,80 L668,70 L672,74 L676,64 L680,68 L684,58 L688,62 L692,52 L696,56 L700,46 L704,50 L708,40 L712,44 L716,34 L720,38 L724,28 L728,32 L732,22 L736,26 L740,16 L744,20 L748,14 L752,18 L756,22 L760,30 L764,40 L768,52 L772,62 L776,74 L780,84 L784,76 L788,68 L792,76 L796,86 L800,78 L804,86 L808,96 L812,84 L816,90 L820,82 L824,86 L828,76 L832,80 L836,70 L840,74 L844,64 L848,68 L852,58 L856,62 L860,52 L864,56 L868,46 L872,50 L876,40 L880,44 L884,34 L888,38 L892,28 L896,32 L900,26 L904,30 L908,36 L912,44 L916,52 L920,60 L924,68 L928,74 L932,68 L936,60 L940,68 L944,76 L948,68 L952,74 L956,82 L960,74 L964,80 L968,72 L972,76 L976,66 L980,70 L984,60 L988,64 L992,54 L996,58 L1000,48 L1004,52 L1008,42 L1012,46 L1016,36 L1020,40 L1024,30 L1028,34 L1032,24 L1036,28 L1040,22 L1044,26 L1048,32 L1052,40 L1056,48 L1060,56 L1064,64 L1068,60 L1072,52 L1076,60 L1080,68 L1084,60 L1088,66 L1092,72 L1096,64 L1100,70 L1104,62 L1108,66 L1112,56 L1116,60 L1120,50 L1124,54 L1128,44 L1132,48 L1136,38 L1140,42 L1144,32 L1148,36 L1152,28 L1156,32 L1160,38 L1164,44 L1168,50 L1172,56 L1176,62 L1180,68 L1184,72 L1188,68 L1192,64 L1196,60 L1200,60" stroke="var(--waveform-unplayed)" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M460,60 L464,48 L468,64 L472,52 L476,68 L480,56 L484,72 L488,60 L492,76 L496,64 L500,80 L504,68 L508,84 L512,72 L516,88 L520,76 L524,92 L528,80 L532,96 L536,84 L540,92 L544,78 L548,88 L552,74 L556,82 L560,68 L564,78 L568,64 L572,74 L576,60 L580,70 L584,56 L588,66 L592,52 L596,62 L600,48 L604,58 L608,44 L612,54 L616,40 L620,50 L624,36 L628,46 L632,34 L636,44 L640,30 L644,40 L648,28 L652,38 L656,34 L660,44 L664,40 L668,50 L672,46 L676,56 L680,52 L684,62 L688,58 L692,68 L696,64 L700,74 L704,70 L708,80 L712,76 L716,86 L720,82 L724,92 L728,88 L732,98 L736,94 L740,104 L744,100 L748,106 L752,102 L756,98 L760,90 L764,80 L768,68 L772,58 L776,46 L780,36 L784,44 L788,52 L792,44 L796,34 L800,42 L804,34 L808,24 L812,36 L816,30 L820,38 L824,34 L828,44 L832,40 L836,50 L840,46 L844,56 L848,52 L852,62 L856,58 L860,68 L864,64 L868,74 L872,70 L876,80 L880,76 L884,86 L888,82 L892,92 L896,88 L900,94 L904,90 L908,84 L912,76 L916,68 L920,60 L924,52 L928,46 L932,52 L936,60 L940,52 L944,44 L948,52 L952,46 L956,38 L960,46 L964,40 L968,48 L972,44 L976,54 L980,50 L984,60 L988,56 L992,66 L996,62 L1000,72 L1004,68 L1008,78 L1012,74 L1016,84 L1020,80 L1024,90 L1028,86 L1032,96 L1036,92 L1040,98 L1044,94 L1048,88 L1052,80 L1056,72 L1060,64 L1064,56 L1068,60 L1072,68 L1076,60 L1080,52 L1084,60 L1088,54 L1092,48 L1096,56 L1100,50 L1104,58 L1108,54 L1112,64 L1116,60 L1120,70 L1124,66 L1128,76 L1132,72 L1136,82 L1140,78 L1144,88 L1148,84 L1152,92 L1156,88 L1160,82 L1164,76 L1168,70 L1172,64 L1176,58 L1180,52 L1184,48 L1188,52 L1192,56 L1196,60 L1200,60" stroke="var(--waveform-unplayed)" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        </svg>
+        <div class="wave-playhead" style="left: 38%;"></div>
+        <!-- comments markers -->
+        <div class="wave-marker" style="left: 23%" data-label="@maks: this transition is wild"></div>
+        <div class="wave-marker" style="left: 41%" data-label="@bart: classic Voorn move"></div>
+        <div class="wave-marker bookmark" style="left: 52%" data-label="bookmark · drop"></div>
+        <div class="wave-marker" style="left: 67%" data-label="@niels: shazam'd this one"></div>
+        <div class="wave-marker bookmark" style="left: 79%" data-label="bookmark · acapella in"></div>
+      </div>
+      <div class="wave-time-rail">
+        <span>0:00</span>
+        <span>15:00</span>
+        <span>30:00</span>
+        <span>45:00</span>
+        <span>1:00:00</span>
+        <span>1:15:00</span>
+        <span>1:30:00</span>
+        <span>1:45:00</span>
+        <span>1:54:32</span>
+      </div>
+    </section>
+
+    <!-- TRANSPORT -->
+    <section class="transport-bar">
+      <div style="display:flex;align-items:center;gap:var(--sp-4);">
+        <div class="transport-time">
+          <b>43:18</b><span class="div">/</span>1:54:32
+          <span class="ms">.412</span>
+        </div>
+        <span class="shortcut-hint">
+          <span class="kbd">M</span>
+          mark playhead
+        </span>
+        <span class="shortcut-hint">
+          <span class="kbd">B</span>
+          bookmark
+        </span>
+      </div>
+      <div class="transport-controls">
+        <button class="btn btn-icon" aria-label="Previous track">
+          <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/><rect x="3" y="2" width="1" height="12"/></svg>
+        </button>
+        <button class="btn btn-icon" aria-label="Back 10s">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4 L7 4 L7 1 L2 4 Z" fill="currentColor"/><path d="M14 8a6 6 0 1 0-2 4.5"/><text x="6" y="11" font-size="6" fill="currentColor" font-family="ui-monospace,monospace">10</text></svg>
+        </button>
+        <button class="play-large" aria-label="Pause">
+          <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg>
+        </button>
+        <button class="btn btn-icon" aria-label="Forward 10s">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 4 L9 4 L9 1 L14 4 Z" fill="currentColor"/><path d="M2 8a6 6 0 1 1 2 4.5"/><text x="5" y="11" font-size="6" fill="currentColor" font-family="ui-monospace,monospace">10</text></svg>
+        </button>
+        <button class="btn btn-icon" aria-label="Next track">
+          <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/><rect x="12" y="2" width="1" height="12"/></svg>
+        </button>
+      </div>
+      <div class="transport-aux">
+        <div class="speed-toggle">
+          <button>0.75×</button>
+          <button class="on">1×</button>
+          <button>1.25×</button>
+          <button>1.5×</button>
+        </div>
+        <button class="btn btn-icon" aria-label="Loop">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8a4 4 0 0 1 4-4h6"/><polyline points="11,2 13,4 11,6"/><path d="M13 8a4 4 0 0 1-4 4H3"/><polyline points="5,14 3,12 5,10"/></svg>
+        </button>
+        <button class="btn btn-icon" aria-label="Volume">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="2,6 5,6 9,3 9,13 5,10 2,10" fill="currentColor" stroke="none"/><path d="M11 5a4 4 0 0 1 0 6"/><path d="M13 3a7 7 0 0 1 0 10"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- BODY: TRACKS + SIDE -->
+    <section class="body-grid">
+
+      <!-- ============ TRACKS ============ -->
+      <div class="tracks-section">
+        <div class="tracks-header">
+          <h3>Tracklist <b>· 23 / 31 resolved</b></h3>
+          <div class="right">
+            <button class="btn btn-sm">
+              <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 7,12 13,4"/></svg>
+              Bulk resolve
+            </button>
+            <button class="btn btn-sm">
+              Edit tracklist <span class="kbd">E</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+
+          <div class="track-row">
+            <span class="ts">00:00</span>
+            <span class="pos">01.</span>
+            <div>
+              <div class="tn">Knock You Out (Live Edit)</div>
+              <div class="ta"><b>Joris Voorn</b> · Spectrum</div>
+            </div>
+            <span class="bpm-key"><b>128</b> · F<sub>m</sub></span>
+            <span class="badge badge-acoustid">acoustid ✓</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm btn-icon" aria-label="Find related"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><line x1="10" y1="10" x2="13" y2="13"/></svg></button>
+            </div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">04:18</span>
+            <span class="pos">02.</span>
+            <div>
+              <div class="tn">— ID — ID —</div>
+              <div class="ta">no match yet · click to fingerprint</div>
+            </div>
+            <span class="bpm-key">— · —</span>
+            <span class="badge badge-raw">unknown</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm">ID this</button>
+            </div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">09:45</span>
+            <span class="pos">03.</span>
+            <div>
+              <div class="tn">A Memory of Light</div>
+              <div class="ta"><b>Stephan Bodzin</b> · Afterlife · 2023</div>
+            </div>
+            <span class="bpm-key"><b>126</b> · A<sub>m</sub></span>
+            <span class="badge badge-acoustid">acoustid ✓</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">14:22</span>
+            <span class="pos">04.</span>
+            <div>
+              <div class="tn">Confidential Reform</div>
+              <div class="ta"><b>Lewis Fautzi</b> · Soma Records · 2023</div>
+            </div>
+            <span class="bpm-key"><b>132</b> · F♭<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row now">
+            <span class="ts">43:18</span>
+            <span class="pos">12.</span>
+            <div>
+              <div class="tn">Inhuman</div>
+              <div class="ta"><b>DJ T-1000</b> · Tresor 159 · 1999</div>
+              <span class="track-mash">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h6M2 11h6M14 5l-3 3 3 3M14 5h-3"/></svg>
+                w/ Robert Hood — Move (acapella)
+              </span>
+            </div>
+            <span class="bpm-key"><b>134</b> · C<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M8 2v12"/></svg></button>
+            </div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">48:42</span>
+            <span class="pos">13.</span>
+            <div>
+              <div class="tn">Move (mashup)</div>
+              <div class="ta"><b>Joris Voorn vs. Robert Hood</b></div>
+            </div>
+            <span class="bpm-key"><b>134</b> · —</span>
+            <span class="badge badge-raw">unverified</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">53:10</span>
+            <span class="pos">14.</span>
+            <div>
+              <div class="tn">Bad Hands Pt. 1 (2002 Reissue)</div>
+              <div class="ta"><b>Surgeon</b> · Dynamic Tension</div>
+            </div>
+            <span class="bpm-key"><b>133</b> · D<sub>m</sub></span>
+            <span class="badge badge-acoustid">acoustid ✓</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">57:48</span>
+            <span class="pos">15.</span>
+            <div>
+              <div class="tn">Hyperion</div>
+              <div class="ta"><b>Adam Beyer &amp; Bart Skils</b> · Drumcode · 2024</div>
+            </div>
+            <span class="bpm-key"><b>132</b> · G<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">1:02:34</span>
+            <span class="pos">16.</span>
+            <div>
+              <div class="tn">— ID — ID —</div>
+              <div class="ta">probably an upcoming Voorn release · @maks: "this is the Spectrum 250 ID"</div>
+            </div>
+            <span class="bpm-key"><b>132</b> · —</span>
+            <span class="badge badge-raw">unknown</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">1:08:12</span>
+            <span class="pos">17.</span>
+            <div>
+              <div class="tn">Saturate</div>
+              <div class="ta"><b>Charlotte de Witte</b> · KNTXT · 2023</div>
+            </div>
+            <span class="bpm-key"><b>134</b> · A<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">1:14:08</span>
+            <span class="pos">18.</span>
+            <div>
+              <div class="tn">Endless Plain (Voorn Edit)</div>
+              <div class="ta"><b>Joris Voorn</b> · unreleased</div>
+            </div>
+            <span class="bpm-key"><b>132</b> · D<sub>m</sub></span>
+            <span class="badge badge-resolved">resolved</span>
+            <div class="actions"></div>
+          </div>
+
+          <div class="track-row">
+            <span class="ts">1:18:42</span>
+            <span class="pos">19.</span>
+            <div>
+              <div class="tn">Klockworks 31</div>
+              <div class="ta"><b>Etapp Kyle</b> · Klockworks · 2022</div>
+            </div>
+            <span class="bpm-key"><b>133</b> · F<sub>m</sub></span>
+            <span class="badge badge-acoustid">acoustid ✓</span>
+            <div class="actions"></div>
+          </div>
+
+          <div style="padding:var(--sp-4) var(--sp-8);text-align:center;color:var(--text-faint);font-size:var(--ts-md);">
+            <button class="btn btn-ghost btn-sm">show 12 more entries (1:23:00 → 1:54:32)</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ SIDE PANEL ============ -->
+      <aside class="side">
+        <div class="side-tabs">
+          <div class="tabs">
+            <button class="tab active">Comments <span class="muted mono" style="font-size:var(--ts-xs);margin-left:4px;font-weight:400">7</span></button>
+            <button class="tab">About set</button>
+            <button class="tab">Artist</button>
+            <button class="tab">Activity</button>
+          </div>
+        </div>
+        <div class="side-content">
+          <div class="side-section">
+            <h4>Pinned bookmark</h4>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-md);padding:var(--sp-3);">
+              <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                <span class="badge badge-neutral" style="color:var(--accent-warning);border-color:rgba(255,122,89,0.3)"><svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v12l-5-3-5 3z"/></svg> 1:01:42</span>
+                <span class="label-small">drop · Spectrum 250 ID</span>
+              </div>
+              <div style="font-size:var(--ts-md);color:var(--text-default);margin-top:6px;">"the moment everything goes off — JV holds the build for 90 seconds before this hits"</div>
+            </div>
+          </div>
+
+          <div class="side-section">
+            <h4>Comments &amp; IDs</h4>
+
+            <div class="comment">
+              <span class="comment-ts">1:02:34</span>
+              <div>
+                <span class="comment-author">maks</span>
+                <span class="comment-meta">3h ago</span>
+                <div class="comment-body">this is the unreleased one — apparently it's coming on Spectrum w/ a Patrice Bäumel remix</div>
+              </div>
+            </div>
+
+            <div class="comment">
+              <span class="comment-ts">43:18</span>
+              <div>
+                <span class="comment-author">niels</span>
+                <span class="comment-meta">yesterday</span>
+                <div class="comment-body">classic — DJ T-1000's 'Inhuman' has been a Voorn closer staple for years</div>
+              </div>
+            </div>
+
+            <div class="comment">
+              <span class="comment-ts">28:14</span>
+              <div>
+                <span class="comment-author">bart</span>
+                <span class="comment-meta">2d ago</span>
+                <div class="comment-body">that transition between 28:14 and 30:02 is incredible. think there's an acid loop layered under the Bodzin track</div>
+              </div>
+            </div>
+
+            <div class="comment">
+              <span class="comment-ts" style="color:var(--text-faint)">general</span>
+              <div>
+                <span class="comment-author">bart</span>
+                <span class="comment-meta">5d ago</span>
+                <div class="comment-body">Best 1h54 of 2024 imo. The 50-minute peak section onwards is unreal.</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="side-section">
+            <h4>Stats — yours</h4>
+            <div class="stat-line"><span class="k">Plays</span><span class="v">14</span></div>
+            <div class="stat-line"><span class="k">Last played</span><span class="v" style="font-family:var(--font-sans);font-feature-settings:normal">2h ago</span></div>
+            <div class="stat-line"><span class="k">Total time</span><span class="v">18:42:11</span></div>
+            <div class="stat-line"><span class="k">Most replayed</span><span class="v">1:01–1:08</span></div>
+          </div>
+
+          <div class="side-section">
+            <h4>Tools</h4>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn btn-sm" style="justify-content:start">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,7 8,3 14,7 14,13 2,13 z"/></svg>
+                Add to playlist
+              </button>
+              <button class="btn btn-sm" style="justify-content:start">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h10l-1 7H4z"/><path d="M5 6V3h6v3"/></svg>
+                Export tracklist (.cue / .txt)
+              </button>
+              <button class="btn btn-sm" style="justify-content:start">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="6,8 7.5,9.5 11,6"/></svg>
+                Generate RSS chapter file
+              </button>
+              <button class="btn btn-sm" style="justify-content:start">
+                <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/></svg>
+                Copy embed code
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- MINI PLAYER -->
+  <footer class="mini-player">
+    <div class="mp-now">
+      <div class="mp-cover">SP<br>250</div>
+      <div>
+        <div class="mp-title">Inhuman <span style="font-weight:400;color:var(--text-faint)">— DJ T-1000</span></div>
+        <div class="mp-sub">Spectrum 250 · Joris Voorn @ Awakenings 2024</div>
+      </div>
+    </div>
+    <div class="mp-controls">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/></svg></button>
+      <button class="btn btn-icon" style="background:var(--accent);color:var(--text-on-accent);border-color:var(--accent)">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+      <span class="mp-time">43:18</span>
+      <div class="mp-mini-wave"></div>
+      <span class="mp-time">1:54:32</span>
+    </div>
+    <div class="mp-right">
+      <button class="btn btn-ghost btn-icon" aria-label="Cast">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 10a3 3 0 0 1 3 3"/><path d="M1 7a6 6 0 0 1 6 6"/><path d="M1 4a9 9 0 0 1 9 9"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-icon" aria-label="Queue">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M3 8h10M3 11h6M11 11l3 2-3 2v-4z" fill="currentColor"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-icon" aria-label="Volume">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="2,6 5,6 9,3 9,13 5,10 2,10" fill="currentColor" stroke="none"/><path d="M11 5a4 4 0 0 1 0 6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

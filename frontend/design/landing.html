@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — self-hosted live-set manager</title>
+<meta name="description" content="A self-hosted home for your DJ live sets. Upload, rip, catalog with time-coded tracklists, and play back across DLNA, Sonos, Chromecast, and Subsonic.">
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/components.css">
+<style>
+  /* ============================================================
+     Landing page — editorial composition.
+     Same tokens as the app, but no app shell. Big hero, scrolling
+     feature sections, generous whitespace.
+     ============================================================ */
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-default);
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .land { position: relative; z-index: 2; }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--sp-6);
+  }
+
+  /* ===== top nav ===== */
+  .nav {
+    padding: var(--sp-5) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-6);
+  }
+  .nav .brand {
+    height: auto;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: var(--ts-base);
+  }
+  .nav .links {
+    display: flex; gap: var(--sp-5);
+    align-items: center;
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+  }
+  .nav .links a:hover { color: var(--text-default); }
+  .nav .right {
+    margin-left: auto;
+    display: flex; gap: var(--sp-3); align-items: center;
+  }
+  .nav .release-pill {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid rgba(0, 255, 178, 0.3);
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    text-transform: lowercase;
+    letter-spacing: 0;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    padding: var(--sp-16) 0 var(--sp-12);
+    position: relative;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-12);
+    align-items: center;
+  }
+  @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
+  .hero-kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid rgba(0, 255, 178, 0.25);
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    margin-bottom: var(--sp-6);
+  }
+  .hero h1 {
+    font-size: clamp(48px, 6vw, 76px);
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    color: var(--text-strong);
+    font-weight: 800;
+    margin-bottom: var(--sp-5);
+  }
+  .hero h1 b {
+    color: var(--accent);
+    font-weight: 800;
+    position: relative;
+    display: inline-block;
+  }
+  .hero h1 b::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -4px;
+    height: 3px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+  .hero h1 em {
+    font-family: var(--font-sans);
+    font-style: normal;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .hero .lede {
+    font-size: var(--ts-xl);
+    color: var(--text-muted);
+    line-height: var(--lh-relaxed);
+    max-width: 56ch;
+    margin-bottom: var(--sp-6);
+  }
+  .hero .lede b { color: var(--text-default); font-weight: 600; }
+  .hero-ctas { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+  .hero-ctas .btn-primary { padding: 0 var(--sp-6); height: 48px; font-size: var(--ts-base); }
+  .hero-ctas .btn { height: 48px; padding: 0 var(--sp-5); font-size: var(--ts-base); }
+  .hero-meta {
+    margin-top: var(--sp-6);
+    display: flex; flex-wrap: wrap; gap: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+  }
+  .hero-meta b { color: var(--accent); font-weight: 500; }
+
+  /* hero visual: a stylized, mini player mockup */
+  .hero-visual {
+    position: relative;
+    perspective: 1400px;
+  }
+  .hero-screenshot {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,255,178,0.08);
+    transform: rotateY(-6deg) rotateX(2deg);
+    transition: transform var(--dur-slow) var(--ease-default);
+  }
+  .hero-screenshot:hover { transform: rotateY(-3deg) rotateX(1deg); }
+  .hero-screenshot .topbar {
+    height: 36px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-default);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
+  }
+  .hero-screenshot .topbar .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .hero-screenshot .topbar .url {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .hero-screenshot .body {
+    padding: var(--sp-5);
+  }
+  .ss-title {
+    font-size: var(--ts-xl);
+    color: var(--text-strong);
+    font-weight: 700;
+    letter-spacing: var(--ls-tight);
+    line-height: 1;
+  }
+  .ss-title .by { color: var(--text-faint); font-weight: 500; font-size: var(--ts-base); display: block; margin-top: 6px; }
+  .ss-meta {
+    margin-top: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    color: var(--text-faint);
+    letter-spacing: var(--ls-uppercase);
+    display: flex; gap: 14px;
+  }
+  .ss-meta b { color: var(--accent); }
+  .ss-wave {
+    margin-top: var(--sp-4);
+    height: 80px;
+    background: var(--bg-base);
+    border-radius: var(--r-md);
+    padding: var(--sp-3);
+    position: relative;
+  }
+  .ss-wave svg { width: 100%; height: 100%; display: block; }
+  .ss-wave .ph {
+    position: absolute; left: 38%; top: var(--sp-3); bottom: var(--sp-3);
+    width: 2px; background: var(--accent); box-shadow: var(--accent-glow);
+  }
+  .ss-tracks {
+    margin-top: var(--sp-4);
+    display: grid; gap: var(--sp-2);
+  }
+  .ss-tr {
+    display: grid;
+    grid-template-columns: 50px 1fr auto;
+    gap: var(--sp-3);
+    align-items: center;
+    font-size: var(--ts-md);
+    padding: 8px 10px;
+    background: var(--bg-elevated);
+    border-radius: var(--r-sm);
+    border-left: 2px solid transparent;
+  }
+  .ss-tr.now {
+    background: var(--bg-now);
+    border-left-color: var(--accent);
+  }
+  .ss-tr .ts { font-family: var(--font-mono); font-size: var(--ts-xs); color: var(--text-faint); font-feature-settings: 'tnum'; }
+  .ss-tr.now .ts { color: var(--accent); }
+  .ss-tr .nm { color: var(--text-strong); font-weight: 600; line-height: var(--lh-snug); }
+  .ss-tr .ar { font-size: var(--ts-sm); color: var(--text-muted); margin-top: 1px; }
+  .ss-tr .ar b { color: var(--text-default); }
+  .ss-tr .badge { font-size: 9px; padding: 2px 6px; }
+
+  /* divider */
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-default), transparent);
+    margin: var(--sp-12) 0;
+  }
+
+  /* ===== WHAT IS ===== */
+  .what {
+    padding: var(--sp-12) 0;
+    text-align: center;
+  }
+  .section-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+    margin-bottom: var(--sp-3);
+  }
+  .what h2 {
+    font-size: var(--ts-3xl);
+    letter-spacing: var(--ls-tight);
+    line-height: 1.05;
+    color: var(--text-strong);
+    max-width: 28ch;
+    margin: 0 auto var(--sp-5);
+    font-weight: 800;
+  }
+  .what h2 b { color: var(--accent); font-weight: 800; }
+  .what .body {
+    font-size: var(--ts-xl);
+    color: var(--text-muted);
+    max-width: 56ch;
+    margin: 0 auto;
+    line-height: var(--lh-relaxed);
+  }
+
+  .three {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-6);
+    margin-top: var(--sp-12);
+    text-align: left;
+  }
+  @media (max-width: 880px) { .three { grid-template-columns: 1fr; } }
+  .three-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+  }
+  .three-num {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-md);
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    font-weight: 700;
+    margin-bottom: var(--sp-4);
+  }
+  .three-item h3 {
+    font-size: var(--ts-lg);
+    color: var(--text-strong);
+    margin-bottom: var(--sp-2);
+    letter-spacing: var(--ls-tight);
+  }
+  .three-item p {
+    color: var(--text-muted);
+    font-size: var(--ts-base);
+    line-height: var(--lh-relaxed);
+  }
+
+  /* ===== feature gallery ===== */
+  .features { padding: var(--sp-12) 0; }
+  .features-head {
+    display: flex; justify-content: space-between; align-items: end;
+    margin-bottom: var(--sp-8);
+  }
+  .features-head h2 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    line-height: 1.05;
+    max-width: 22ch;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--sp-4);
+  }
+  .feature {
+    grid-column: span 3;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .feature.wide { grid-column: span 6; display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .feature.narrow { grid-column: span 2; }
+  @media (max-width: 980px) { .feature, .feature.narrow, .feature.wide { grid-column: span 6; } .feature.wide { grid-template-columns: 1fr; } }
+
+  .feature-body {
+    padding: var(--sp-6);
+  }
+  .feature .label {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    margin-bottom: var(--sp-3);
+  }
+  .feature h3 {
+    font-size: var(--ts-xl);
+    line-height: var(--lh-snug);
+    color: var(--text-strong);
+    margin-bottom: var(--sp-2);
+    letter-spacing: var(--ls-tight);
+  }
+  .feature p {
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    line-height: var(--lh-relaxed);
+  }
+  .feature-visual {
+    background: var(--bg-base);
+    border-top: 1px solid var(--border-default);
+    padding: var(--sp-5);
+    overflow: hidden;
+  }
+  .feature.wide .feature-visual {
+    border-top: none;
+    border-left: 1px solid var(--border-default);
+  }
+
+  /* ===== integrations strip ===== */
+  .integrations {
+    padding: var(--sp-12) 0;
+    text-align: center;
+  }
+  .integrations h2 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    margin-bottom: var(--sp-4);
+  }
+  .integrations h2 b { color: var(--accent); font-weight: 800; }
+  .integrations p { color: var(--text-muted); font-size: var(--ts-lg); max-width: 56ch; margin: 0 auto; }
+  .integrations-grid {
+    margin-top: var(--sp-8);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  @media (max-width: 720px) { .integrations-grid { grid-template-columns: repeat(2, 1fr); } }
+  .integration-cell {
+    background: var(--bg-surface);
+    padding: var(--sp-5) var(--sp-4);
+    text-align: center;
+  }
+  .integration-cell .nm {
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .integration-cell .kn {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+  }
+
+  /* ===== requirements ===== */
+  .reqs { padding: var(--sp-12) 0; }
+  .reqs h2 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    margin-bottom: var(--sp-3);
+  }
+  .reqs .lede { color: var(--text-muted); font-size: var(--ts-lg); max-width: 60ch; margin-bottom: var(--sp-8); }
+  .reqs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+  @media (max-width: 880px) { .reqs-grid { grid-template-columns: 1fr; } }
+  .req-tier {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+    position: relative;
+  }
+  .req-tier.recommended {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--accent-softer), var(--bg-surface) 50%);
+  }
+  .req-tier .pill {
+    position: absolute;
+    top: -12px; left: var(--sp-5);
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    font-weight: 700;
+  }
+  .req-tier h3 {
+    font-size: var(--ts-lg);
+    color: var(--text-strong);
+    margin-bottom: var(--sp-4);
+  }
+  .req-tier dl { margin: 0; }
+  .req-tier dt {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    margin-top: var(--sp-3);
+    margin-bottom: 2px;
+  }
+  .req-tier dd {
+    margin: 0;
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    line-height: var(--lh-snug);
+  }
+
+  /* ===== quickstart ===== */
+  .quick { padding: var(--sp-12) 0; }
+  .quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: var(--sp-8);
+    align-items: start;
+  }
+  @media (max-width: 880px) { .quick-grid { grid-template-columns: 1fr; } }
+  .quick h2 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    line-height: 1.05;
+    margin-bottom: var(--sp-3);
+  }
+  .quick h2 b { color: var(--accent); font-weight: 800; }
+  .quick .lede { color: var(--text-muted); font-size: var(--ts-base); line-height: var(--lh-relaxed); margin-bottom: var(--sp-5); }
+  .quick ol { padding-left: 0; list-style: none; counter-reset: stp; }
+  .quick li {
+    counter-increment: stp;
+    padding: var(--sp-2) 0 var(--sp-2) var(--sp-8);
+    position: relative;
+    color: var(--text-default);
+    font-size: var(--ts-md);
+    line-height: var(--lh-relaxed);
+  }
+  .quick li::before {
+    content: counter(stp);
+    position: absolute;
+    left: 0; top: 8px;
+    width: 22px; height: 22px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    font-weight: 700;
+    border-radius: 50%;
+    display: grid; place-items: center;
+  }
+
+  .terminal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 16px 56px rgba(0,0,0,0.4);
+  }
+  .terminal-header {
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-default);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .terminal-header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+  .terminal-header .dot:nth-child(1) { background: var(--accent-warning); }
+  .terminal-header .dot:nth-child(2) { background: #d8d23c; }
+  .terminal-header .dot:nth-child(3) { background: var(--accent); }
+  .terminal-header .title { margin-left: auto; font-family: var(--font-mono); font-size: var(--ts-xs); color: var(--text-faint); }
+  .terminal pre {
+    margin: 0;
+    padding: var(--sp-5);
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .terminal .prompt { color: var(--accent); }
+  .terminal .cmt { color: var(--text-faint); }
+  .terminal .key { color: var(--accent-secondary); }
+  .terminal .ok { color: var(--accent); }
+  .terminal .url { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ===== cta ===== */
+  .cta {
+    padding: var(--sp-16) 0;
+    text-align: center;
+    border-top: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-default);
+    margin-top: var(--sp-12);
+    background: linear-gradient(180deg, var(--accent-softer), transparent);
+  }
+  .cta h2 {
+    font-size: var(--ts-3xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    line-height: 1.05;
+    max-width: 22ch;
+    margin: 0 auto var(--sp-4);
+    font-weight: 800;
+  }
+  .cta h2 b { color: var(--accent); font-weight: 800; }
+  .cta p { color: var(--text-muted); font-size: var(--ts-lg); max-width: 56ch; margin: 0 auto var(--sp-6); }
+  .cta .btn-primary { padding: 0 var(--sp-6); height: 48px; font-size: var(--ts-base); }
+  .cta .btn { padding: 0 var(--sp-6); height: 48px; font-size: var(--ts-base); }
+
+  /* ===== footer ===== */
+  .footer {
+    padding: var(--sp-8) 0 var(--sp-12);
+    color: var(--text-faint);
+    font-size: var(--ts-sm);
+  }
+  .footer-row {
+    display: flex; flex-wrap: wrap; gap: var(--sp-4);
+    align-items: center;
+  }
+  .footer-row a { color: var(--text-muted); }
+  .footer-row a:hover { color: var(--text-default); }
+  .footer-right { margin-left: auto; }
+  .footer-credit {
+    margin-top: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faintest);
+  }
+</style>
+</head>
+<body>
+<div class="land">
+
+  <!-- NAV -->
+  <header class="container">
+    <nav class="nav">
+      <a class="brand" href="index.html"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+      <span class="release-pill">v0.1.0 · early preview</span>
+      <div class="links" style="margin-left: var(--sp-4)">
+        <a>Features</a>
+        <a>Self-host</a>
+        <a>Docs</a>
+        <a>Changelog</a>
+      </div>
+      <div class="right">
+        <a class="btn btn-ghost btn-sm" href="https://github.com/">
+          <svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.3-.9-.8-1.2-.8-1.2-.7-.5 0-.5 0-.5.8 0 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7.1-.5.3-.9.5-1.1-1.7-.2-3.6-.9-3.6-3.9 0-.9.3-1.6.8-2.2 0-.2-.4-1 .1-2 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.5 1 .1 1.8.1 2 .5.6.8 1.3.8 2.2 0 3-1.9 3.7-3.6 3.9.3.2.5.7.5 1.4v2.1c0 .2.1.4.5.4A8 8 0 0 0 8 0z"/></svg>
+          GitHub
+        </a>
+        <a class="btn btn-primary btn-sm">Get started</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-kicker">
+          <span class="live-dot" style="width: 6px; height: 6px"></span>
+          self-hosted · offline-first · open source
+        </div>
+        <h1>The home for your <b>live sets</b>,<br><em>on hardware you own.</em></h1>
+        <p class="lede">Upload or rip recorded DJ sets. Catalog them with <b>artists, parties, venues,</b> and <b>time-coded tracklists</b>. Stream them through the web player, your Sonos, Chromecast, DLNA renderer, or any Subsonic-compatible app. <b>No cloud, no telemetry, no monthly fee.</b></p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+            Self-host in 60 seconds
+          </a>
+          <a class="btn">
+            <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.3-.9-.8-1.2-.8-1.2-.7-.5 0-.5 0-.5.8 0 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7.1-.5.3-.9.5-1.1-1.7-.2-3.6-.9-3.6-3.9 0-.9.3-1.6.8-2.2 0-.2-.4-1 .1-2 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.5 1 .1 1.8.1 2 .5.6.8 1.3.8 2.2 0 3-1.9 3.7-3.6 3.9.3.2.5.7.5 1.4v2.1c0 .2.1.4.5.4A8 8 0 0 0 8 0z"/></svg>
+            View on GitHub
+          </a>
+        </div>
+        <div class="hero-meta">
+          <span><b>MIT</b> licensed</span>
+          <span>·</span>
+          <span>amd64 + arm64</span>
+          <span>·</span>
+          <span>≤ 8 GB RAM</span>
+          <span>·</span>
+          <span><b>zero</b> cloud dependencies</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-screenshot">
+          <div class="topbar">
+            <span class="dot"></span><span class="dot" style="background:#d8d23c"></span><span class="dot" style="background:var(--accent)"></span>
+            <span class="url">setvault.local — Spectrum 250</span>
+          </div>
+          <div class="body">
+            <div class="ss-title">Spectrum 250<span class="by">— Joris Voorn @ Awakenings 2024</span></div>
+            <div class="ss-meta">
+              <span><b>1:54:32</b></span>
+              <span>·</span>
+              <span>23/31 resolved</span>
+              <span>·</span>
+              <span>−7.2 LUFS</span>
+              <span>·</span>
+              <span>SoundCloud rip</span>
+            </div>
+            <div class="ss-wave">
+              <svg viewBox="0 0 320 60" preserveAspectRatio="none">
+                <path d="M0,30 L8,22 L16,28 L24,16 L32,32 L40,18 L48,28 L56,12 L64,32 L72,18 L80,30 L88,22 L96,30 L104,16 L112,30 L120,22 L122,30" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                <path d="M0,30 L8,38 L16,32 L24,44 L32,28 L40,42 L48,32 L56,48 L64,28 L72,42 L80,30 L88,38 L96,30 L104,44 L112,30 L120,38 L122,30" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.6"/>
+                <path d="M122,30 L130,28 L140,16 L150,30 L160,18 L170,32 L180,12 L190,30 L200,18 L210,30 L220,16 L230,28 L240,18 L250,32 L260,22 L270,30 L280,16 L290,28 L300,18 L310,30 L320,22" stroke="var(--waveform-unplayed)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+                <path d="M122,30 L130,32 L140,44 L150,30 L160,42 L170,28 L180,48 L190,30 L200,42 L210,30 L220,44 L230,32 L240,42 L250,28 L260,38 L270,30 L280,44 L290,32 L300,42 L310,30 L320,38" stroke="var(--waveform-unplayed)" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.6"/>
+              </svg>
+              <div class="ph"></div>
+            </div>
+            <div class="ss-tracks">
+              <div class="ss-tr">
+                <span class="ts">14:22</span>
+                <div><div class="nm">Confidential Reform</div><div class="ar"><b>Lewis Fautzi</b> · Soma</div></div>
+                <span class="badge badge-resolved">res</span>
+              </div>
+              <div class="ss-tr now">
+                <span class="ts">43:18</span>
+                <div><div class="nm">Inhuman</div><div class="ar"><b>DJ T-1000</b> · Tresor 159</div></div>
+                <span class="badge badge-resolved">res</span>
+              </div>
+              <div class="ss-tr">
+                <span class="ts">48:42</span>
+                <div><div class="nm">Move (mashup)</div><div class="ar"><b>Voorn vs. Hood</b></div></div>
+                <span class="badge badge-raw">raw</span>
+              </div>
+              <div class="ss-tr">
+                <span class="ts">53:10</span>
+                <div><div class="nm">Bad Hands Pt. 1</div><div class="ar"><b>Surgeon</b></div></div>
+                <span class="badge badge-acoustid">acoustid ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="rule"></div></div>
+
+  <!-- WHAT IS -->
+  <section class="what container">
+    <div class="section-kicker">// what is setvault</div>
+    <h2>The vault for sets <b>your crew actually listens to</b>.</h2>
+    <p class="body">Not Spotify, not Mixcloud, not 1001tracklists — but every part of those that matters when you're trying to find a specific 90-second moment in a 2-hour set, or you want to know what that ID was at 1:02:34.</p>
+
+    <div class="three">
+      <div class="three-item">
+        <div class="three-num">1</div>
+        <h3>Yours, on your hardware</h3>
+        <p>One <code style="color:var(--accent)">docker compose up</code> on a NUC or homeserver. Files stay on disk you own. The app keeps working when the WAN drops.</p>
+      </div>
+      <div class="three-item">
+        <div class="three-num">2</div>
+        <h3>Built for sets, not tracks</h3>
+        <p>Time-coded tracklists are first-class. "ID — ID" is supported. Mashups link to both source tracks. Drop-bookmarks survive forever.</p>
+      </div>
+      <div class="three-item">
+        <div class="three-num">3</div>
+        <h3>Your existing players, native</h3>
+        <p>DLNA on Sonos and Kodi. Subsonic API for Substreamer / Symfonium. RSS feeds with chapter-marker tracklists for any podcast app.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="rule"></div></div>
+
+  <!-- FEATURES -->
+  <section class="features container">
+    <div class="features-head">
+      <div>
+        <div class="section-kicker">// what's in the box</div>
+        <h2>Everything you'd build yourself, <span class="accent">except you don't have to.</span></h2>
+      </div>
+      <a class="btn btn-sm">Full feature list →</a>
+    </div>
+
+    <div class="feature-grid">
+
+      <div class="feature wide">
+        <div class="feature-body">
+          <div class="label">Player &amp; tracklist</div>
+          <h3>The marquee — a player that actually respects what a live set is.</h3>
+          <p>Waveform with playhead and clickable tracklist sidebar. Time-stamped comments and bookmarks pinned to the wave. Variable-speed playback with pitch preservation. Keyboard-native: M to mark a track at the playhead, [/] to step entries, Cmd-K for global search.</p>
+        </div>
+        <div class="feature-visual" style="display:grid;place-items:center;padding: var(--sp-4)">
+          <svg viewBox="0 0 360 80" width="100%" preserveAspectRatio="none" style="display:block">
+            <path d="M0,40 L10,32 L20,38 L30,24 L40,42 L50,28 L60,36 L70,18 L80,40 L90,26 L100,38 L110,28 L120,40 L130,22 L140,38 L150,28 L160,46 L170,30 L180,52 L190,32 L200,42 L210,22 L220,40 L230,28 L240,44 L250,32 L260,50 L270,30 L280,52 L290,34 L300,46 L310,28 L320,42 L330,32 L340,44 L350,28 L360,40" stroke="var(--accent)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M0,40 L10,48 L20,42 L30,56 L40,36 L50,52 L60,42 L70,62 L80,38 L90,54 L100,42 L110,52 L120,40 L130,58 L140,42 L150,52 L160,32 L170,50 L180,28 L190,48 L200,38 L210,58 L220,40 L230,52 L240,36 L250,48 L260,30 L270,50 L280,28 L290,46 L300,32 L310,52 L320,38 L330,48 L340,36 L350,52 L360,40" stroke="var(--accent)" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.6"/>
+            <line x1="180" y1="6" x2="180" y2="74" stroke="var(--accent-warning)" stroke-width="1.5"/>
+            <circle cx="55" cy="6" r="3" fill="var(--accent-secondary)"/>
+            <circle cx="120" cy="6" r="3" fill="var(--accent-secondary)"/>
+            <circle cx="240" cy="6" r="3" fill="var(--accent-warning)"/>
+            <circle cx="300" cy="6" r="3" fill="var(--accent-secondary)"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Tracklist editor</div>
+          <h3>Three ways to enter a tracklist.</h3>
+          <p><b>Live</b>: hit M during playback. <b>Paste</b>: drop forum text, an LLM parses it. <b>URL</b>: 1001tracklists scraper builds the whole thing. Every entry tracks "raw / resolved / AcoustID-confirmed" so you always know what's verified.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="display:grid;gap:6px">
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--bg-surface);border-left:2px solid var(--accent)">
+              <span style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--accent)">43:18</span>
+              <span style="font-size:var(--ts-md);color:var(--text-strong);font-weight:600">Inhuman — DJ T-1000</span>
+              <span class="badge badge-resolved">res</span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--bg-surface)">
+              <span style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint)">48:42</span>
+              <span style="font-size:var(--ts-md);color:var(--text-strong);font-weight:600">— ID — ID —</span>
+              <span class="badge badge-raw">raw</span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--bg-surface)">
+              <span style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint)">53:10</span>
+              <span style="font-size:var(--ts-md);color:var(--text-strong);font-weight:600">Bad Hands Pt. 1 — Surgeon</span>
+              <span class="badge badge-acoustid">acoustid</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Ingest</div>
+          <h3>Upload anything, rip from anywhere.</h3>
+          <p>Drag-drop FLAC / WAV / MP3, or paste a URL — yt-dlp pulls from SoundCloud, YouTube, Mixcloud, Twitch VODs, Bandcamp. Auto-transcoded to opus, normalized to EBU R128, fingerprinted, dedup-checked.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="display:grid;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--ts-md);color:var(--text-default)">
+              <span>Transcode → opus 128k</span>
+              <span style="font-family:var(--font-mono);color:var(--accent);font-size:var(--ts-sm)">62%</span>
+            </div>
+            <div style="height:4px;background:var(--bg-elevated);border-radius:var(--r-pill);overflow:hidden"><div style="height:100%;width:62%;background:var(--accent);box-shadow:var(--accent-glow)"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--ts-md);color:var(--text-default);margin-top:4px">
+              <span>AcoustID enrichment</span>
+              <span style="font-family:var(--font-mono);color:var(--accent-secondary);font-size:var(--ts-sm)">88%</span>
+            </div>
+            <div style="height:4px;background:var(--bg-elevated);border-radius:var(--r-pill);overflow:hidden"><div style="height:100%;width:88%;background:var(--accent-secondary)"></div></div>
+            <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-muted);margin-top:6px">3 jobs running · live progress over WS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Casting + multi-room</div>
+          <h3>Native Sonos. Chromecast. DLNA. Snapcast.</h3>
+          <p>A first-class Sonos SMAPI service so SetVault appears like Spotify in the Sonos app — native browse, search, queue. DLNA for Kodi/VLC/smart TVs. Snapcast for synced multi-room audio across the house.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-family:var(--font-mono);font-size:var(--ts-xs)">
+            <div style="padding:6px 8px;background:var(--bg-surface);border-left:2px solid var(--accent);color:var(--text-default)">SONOS · KITCHEN</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);color:var(--text-muted)">SONOS · LIVING ROOM</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);color:var(--text-muted)">CHROMECAST · TV</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);color:var(--text-muted)">DLNA · KODI</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);color:var(--text-muted)">SNAPCAST · STUDIO</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);color:var(--text-muted)">SUBSONIC · PHONE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Subsonic API</div>
+          <h3>Use the apps you already love.</h3>
+          <p>Subsonic-compatible read API exposed out of the box. Substreamer, DSub, Symfonium, play:Sub — they all just work. Live sets become Subsonic "albums," tracklist entries become "songs." Free mobile experience.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <span class="filter-pill">Substreamer</span>
+            <span class="filter-pill">DSub</span>
+            <span class="filter-pill">Symfonium</span>
+            <span class="filter-pill">play:Sub</span>
+            <span class="filter-pill">Tempo</span>
+            <span class="filter-pill">Ultrasonic</span>
+            <span class="filter-pill">+ any other</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Metadata enrichment</div>
+          <h3>Pluggable providers, your keys.</h3>
+          <p>Bring your own Discogs / MusicBrainz / Beatport / Spotify / Last.fm / AcoustID / LLM. Each is opt-in, per-field-priority orderable, and gracefully skipped when the WAN is down. Your raw data is never sent until you enable a provider.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-family:var(--font-mono);font-size:var(--ts-xs)">
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center">DISCOGS</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center;color:var(--accent);border-color:var(--accent)">MUSICBRAINZ</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center">BEATPORT</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center">SPOTIFY</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center;color:var(--accent);border-color:var(--accent)">ACOUSTID</div>
+            <div style="padding:6px 8px;background:var(--bg-surface);text-align:center">LAST.FM</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-body">
+          <div class="label">Mobile + PWA</div>
+          <h3>Headphones-on, lockscreen-ready.</h3>
+          <p>Responsive from 360 px up. PWA installs to your home screen. MediaSession integration shows native lockscreen artwork + transport. Recently-played sets cache offline, automatically.</p>
+        </div>
+        <div class="feature-visual">
+          <div style="margin: 0 auto; width: 80px; height: 130px; border: 4px solid var(--border-strong); border-radius: 14px; background: var(--bg-base); position: relative; overflow: hidden">
+            <div style="height:14px;background:var(--border-strong);border-radius:0 0 6px 6px;width:30px;margin:0 auto"></div>
+            <div style="padding:6px;font-size:8px;color:var(--accent);font-family:var(--font-mono);text-align:center">22:14</div>
+            <div style="padding:6px;font-size:7px;color:var(--text-strong);font-weight:700;line-height:1.2">Inhuman</div>
+            <div style="padding:0 6px;font-size:6px;color:var(--text-muted)">DJ T-1000</div>
+            <div style="margin:6px;height:2px;background:var(--bg-elevated);border-radius:1px"><div style="height:100%;width:38%;background:var(--accent);box-shadow:var(--accent-glow)"></div></div>
+            <div style="display:flex;gap:3px;justify-content:center;margin-top:4px">
+              <div style="width:14px;height:14px;background:var(--bg-elevated);border-radius:3px;display:grid;place-items:center;font-size:6px;color:var(--text-default)">⏮</div>
+              <div style="width:18px;height:18px;background:var(--accent);border-radius:3px;display:grid;place-items:center;font-size:6px;color:var(--text-on-accent)">▶</div>
+              <div style="width:14px;height:14px;background:var(--bg-elevated);border-radius:3px;display:grid;place-items:center;font-size:6px;color:var(--text-default)">⏭</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="container"><div class="rule"></div></div>
+
+  <!-- INTEGRATIONS -->
+  <section class="integrations container">
+    <div class="section-kicker">// integrations</div>
+    <h2>Plays nicely with the things you <b>already run</b>.</h2>
+    <p>Authentik, Authelia, Pocket-ID for SSO. Caddy, Traefik, nginx for reverse proxy. Last.fm, ListenBrainz for scrobbling. Sonos, Kodi, Chromecast, Subsonic for output. Drop-in for any homelab stack.</p>
+
+    <div class="integrations-grid">
+      <div class="integration-cell"><div class="nm">Authelia</div><div class="kn">OIDC SSO</div></div>
+      <div class="integration-cell"><div class="nm">Authentik</div><div class="kn">OIDC SSO</div></div>
+      <div class="integration-cell"><div class="nm">Pocket-ID</div><div class="kn">OIDC SSO</div></div>
+      <div class="integration-cell"><div class="nm">Keycloak</div><div class="kn">OIDC SSO</div></div>
+      <div class="integration-cell"><div class="nm">Caddy</div><div class="kn">reverse proxy · bundled</div></div>
+      <div class="integration-cell"><div class="nm">Traefik</div><div class="kn">reverse proxy</div></div>
+      <div class="integration-cell"><div class="nm">nginx</div><div class="kn">reverse proxy</div></div>
+      <div class="integration-cell"><div class="nm">Sonos</div><div class="kn">SMAPI music service</div></div>
+      <div class="integration-cell"><div class="nm">Chromecast</div><div class="kn">cast SDK</div></div>
+      <div class="integration-cell"><div class="nm">Kodi / VLC</div><div class="kn">DLNA browse</div></div>
+      <div class="integration-cell"><div class="nm">Snapcast</div><div class="kn">multi-room sync</div></div>
+      <div class="integration-cell"><div class="nm">Substreamer</div><div class="kn">Subsonic mobile</div></div>
+      <div class="integration-cell"><div class="nm">Last.fm</div><div class="kn">scrobbling</div></div>
+      <div class="integration-cell"><div class="nm">ListenBrainz</div><div class="kn">scrobbling</div></div>
+      <div class="integration-cell"><div class="nm">Discogs</div><div class="kn">metadata · BYO key</div></div>
+      <div class="integration-cell"><div class="nm">MusicBrainz</div><div class="kn">metadata · free</div></div>
+    </div>
+  </section>
+
+  <div class="container"><div class="rule"></div></div>
+
+  <!-- REQUIREMENTS -->
+  <section class="reqs container">
+    <div class="section-kicker">// system requirements</div>
+    <h2>Sized for a homelab. Comfortable on a NUC.</h2>
+    <p class="lede">Three reference tiers from spec §13 — you don't need a server farm. The middle tier handles a 10-user crew and a thousand sets without breaking a sweat.</p>
+
+    <div class="reqs-grid">
+
+      <div class="req-tier">
+        <h3>Minimum</h3>
+        <dl>
+          <dt>CPU</dt>
+          <dd>2 cores · Pi 4/5 OK · ARM64 fine</dd>
+          <dt>RAM</dt>
+          <dd>2 GB</dd>
+          <dt>Disk</dt>
+          <dd>2 GB app + your audio<br>(≈ 100 GB for 1k sets)</dd>
+          <dt>OS</dt>
+          <dd>Linux + Docker 24</dd>
+          <dt>Note</dt>
+          <dd>Ingest jobs run 5–15 min for a 90 min set on Pi 4. Usable, but you'll feel it.</dd>
+        </dl>
+      </div>
+
+      <div class="req-tier recommended">
+        <span class="pill">Recommended</span>
+        <h3>NUC-class</h3>
+        <dl>
+          <dt>CPU</dt>
+          <dd>4 cores x86_64 · modern Intel / AMD · Apple Silicon native</dd>
+          <dt>RAM</dt>
+          <dd>8 GB</dd>
+          <dt>Disk</dt>
+          <dd>SSD for app/DB · SSD or fast HDD for audio</dd>
+          <dt>OS</dt>
+          <dd>Debian / Ubuntu / Fedora / Alpine · Docker 24 · Compose v2</dd>
+          <dt>Network</dt>
+          <dd>HTTPS via reverse proxy · public DNS optional (only Sonos SMAPI / external clients need it)</dd>
+        </dl>
+      </div>
+
+      <div class="req-tier">
+        <h3>Power-user</h3>
+        <dl>
+          <dt>CPU</dt>
+          <dd>6+ cores · multiple worker replicas</dd>
+          <dt>RAM</dt>
+          <dd>16 GB</dd>
+          <dt>Disk</dt>
+          <dd>NVMe for DB/cache · separate bulk for audio · multi-TB OK</dd>
+          <dt>GPU</dt>
+          <dd>Not used (reserved for future Demucs)</dd>
+          <dt>Workload</dt>
+          <dd>Batch enrichment, BPM/key analysis, pgvector similarity over thousands of sets</dd>
+        </dl>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="container"><div class="rule"></div></div>
+
+  <!-- QUICKSTART -->
+  <section class="quick container">
+    <div class="quick-grid">
+      <div>
+        <div class="section-kicker">// quickstart</div>
+        <h2>From <code style="color:var(--accent)">git clone</code> to <b>"the crew is listening"</b> in 60 seconds.</h2>
+        <p class="lede">Three commands. No registration required. Default config works on a fresh box; OIDC, providers, and SMTP are admin-configured later in the UI.</p>
+        <ol>
+          <li>Clone the repo and copy the example compose file.</li>
+          <li>Set <code style="color:var(--accent)">SECRET_KEY</code> in <code style="color:var(--accent)">.env</code>.</li>
+          <li><code style="color:var(--accent)">docker compose up -d</code>. Open the URL printed at the end.</li>
+          <li>Create the admin account on the first-run wizard. Invite the rest of your crew.</li>
+        </ol>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-header">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="title">setvault@nuc:~</span>
+        </div>
+        <pre><span class="cmt"># clone the repo</span>
+<span class="prompt">$</span> git clone https://github.com/yourname/setvault.git
+<span class="prompt">$</span> cd setvault/infra/docker
+
+<span class="cmt"># bootstrap config</span>
+<span class="prompt">$</span> cp compose.example.yml compose.yml
+<span class="prompt">$</span> echo <span class="key">"SECRET_KEY=$(openssl rand -hex 32)"</span> > .env
+
+<span class="cmt"># launch</span>
+<span class="prompt">$</span> docker compose up -d
+<span class="ok">✓</span> postgres: ready
+<span class="ok">✓</span> redis: ready
+<span class="ok">✓</span> setvault-web: <span class="url">http://localhost:8080</span>
+<span class="ok">✓</span> setvault-worker: rq worker started
+<span class="ok">✓</span> setvault-dlna: announced on LAN
+<span class="ok">✓</span> caddy: TLS provisioned for setvault.local
+
+<span class="cmt"># create admin on first-run wizard, then upload</span>
+<span class="cmt"># your first set, build the catalog, invite the crew.</span>
+<span class="prompt">$</span> open <span class="url">http://localhost:8080</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <div class="section-kicker">// next step</div>
+      <h2>Stop letting Mixcloud rate-limit your <b>own crew's listening</b>.</h2>
+      <p>SetVault is open-source and runs on hardware you already own. The vault is yours; the data is yours; the listening is yours.</p>
+      <div style="display:flex;gap:var(--sp-3);justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-primary">Self-host in 60 seconds</a>
+        <a class="btn">Read the docs →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer container">
+    <div class="footer-row">
+      <a class="brand" href="index.html"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+      <span style="color: var(--text-faintest)">·</span>
+      <a>Docs</a>
+      <a>Changelog</a>
+      <a>GitHub</a>
+      <a>Issues</a>
+      <a>Discussions</a>
+      <span class="footer-right">MIT licensed · &copy; 2026</span>
+    </div>
+    <div class="footer-credit">
+      Built with FastAPI + SvelteKit · postgres + pgvector · self-hosted fonts (bricolage grotesque + jetbrains mono) · zero CDN deps in production · zero telemetry
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
