@@ -101,6 +101,7 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 - **J3.** Reverse-proxy / subpath safe (`X-Forwarded-*`, `BASE_URL` env).
 - **J4.** Per-user API tokens (scoped: `subsonic`, `rss`, `sonos`).
 - **J5.** OIDC SSO (Authelia/Authentik/Keycloak/Pocket-ID compatible).
+- **J6.** **SMTP outbound email** — admin-configured (host, port, username, password, encryption [STARTTLS/SSL/none], from address, from name, reply-to). Used for: account invites, password reset, email verification, `@mention` notifications, optional weekly activity digest. **Test-email button** in admin. **Graceful fallback when SMTP is not configured:** invite and password-reset flows show the one-time link in the admin UI for manual copy-paste — the app stays fully functional without an SMTP server. Per-user **notification preferences** (email vs in-app vs off) for each notification kind. Outbound mail goes through the worker queue so SMTP timeouts never block web requests.
 
 ### K. Spicy nice-to-haves
 - **K1.** BPM/key detection on ingest (essentia or aubio).
@@ -192,9 +193,12 @@ setvault/
 All entities are Postgres tables. `*` = nullable. `jsonb` for provider blobs.
 
 ### Identity & auth
-- **User** — id, email, username, display_name, password_hash*, oidc_subject*, role(admin|user), avatar_url, quota_bytes*, last_seen_at
+- **User** — id, email, username, display_name, password_hash*, oidc_subject*, role(admin|user), avatar_url, quota_bytes*, email_verified_at*, last_seen_at
 - **OidcProvider** — id, issuer_url, client_id, client_secret_encrypted, scopes, enabled, auto_provision
 - **ApiToken** — id, user_id, name, token_hash, scopes (`subsonic`|`rss`|`sonos`|`api`), created_at, last_used_at, revoked_at*
+- **EmailToken** — id, user_id* (null for invites that haven't been redeemed), email, kind(`invite`|`password_reset`|`verify_email`|`unsubscribe`), token_hash, payload jsonb (e.g., role for invites, notification kind for unsubscribe), expires_at, used_at*, created_by*, created_at
+- **NotificationPreference** — PK(user_id, kind), channel(`email`|`in_app`|`both`|`off`), updated_at
+- **SmtpConfig** — single-row admin config: host, port, username*, password_encrypted*, encryption(`starttls`|`ssl`|`none`), from_address, from_name, reply_to*, enabled, last_test_at*, last_test_result*
 
 ### Catalog
 - **Artist** — id, name, slug, aliases[], bio, image_url, country, socials jsonb, external_ids jsonb, enrichment_status jsonb
@@ -370,10 +374,24 @@ OpenAI-compatible: base URL, model name, API key, monthly token budget cap. Work
 
 ### Auth
 
-- **Local accounts** — Argon2id password hashes, email-based invite flow (admin generates invite link with one-time token).
-- **OIDC** — admin enables in Settings, configures issuer/client_id/secret. Login screen shows "Sign in with <Provider>" alongside local form. First-time OIDC login auto-provisions user (if admin enabled) or maps via email match.
+- **Local accounts** — Argon2id password hashes, email-based invite flow (admin generates invite → email sent via SMTP if configured, otherwise admin gets a copy-paste link). Invite link contains a one-time `EmailToken`; recipient sets username/password to redeem.
+- **Password reset** — user enters email on the login screen → if matched, `EmailToken` of kind `password_reset` is created and emailed (or shown to admin if SMTP not configured). Token expires in 1 hour, single-use.
+- **Email verification** — sent on first email change; until verified, the user's email-based features (notifications, password reset) keep working with the previous verified address.
+- **OIDC** — admin enables in Settings, configures issuer/client_id/secret. Login screen shows "Sign in with <Provider>" alongside local form. First-time OIDC login auto-provisions user (if admin enabled) or maps via email match. OIDC users can skip the verification step (the IdP is the source of truth).
 - **Sessions** — HTTP-only secure cookie, 30-day rolling. CSRF token on mutations.
-- **Roles** — `admin` and `user`. Admins manage users/providers/OIDC/quotas/jobs; everyone else does the rest.
+- **Roles** — `admin` and `user`. Admins manage users/providers/OIDC/quotas/jobs/SMTP; everyone else does the rest.
+
+### Notifications
+
+In-app notifications and email notifications share the same trigger logic; the channel is determined per-user, per-kind by `NotificationPreference`.
+
+| Kind | Default channel | Notes |
+|---|---|---|
+| `mention` | both | `@user` in a comment |
+| `comment_on_set_you_uploaded` | in_app | replies/comments on a set you own |
+| `set_added_by_followed_user` | in_app | requires user-subscribe (H2) |
+| `weekly_digest` | email | opt-in |
+| `account_security` | email | password change, new session — never disabled |
 
 ### Search & browse
 
@@ -394,11 +412,12 @@ OpenAI-compatible: base URL, model name, API key, monthly token budget cap. Work
 
 ### Admin (`/admin`)
 
-Tabs: Users • Providers • OIDC • Jobs • Storage • Backup • System.
+Tabs: Users • Providers • OIDC • Email • Jobs • Storage • Backup • System.
 
-- **Users** — list, invite, deactivate, set quota, force-logout, reset password.
+- **Users** — list, invite, deactivate, set quota, force-logout, reset password. When SMTP is not configured, invite/reset modals show the one-time link to copy and send manually.
 - **Providers** — list, enable/disable, edit config, test connection, drag-order priority.
 - **OIDC** — issuers, add/edit/remove, auto-provision toggle.
+- **Email** — SMTP host/port/encryption/auth/from. **Send test email** button. Last test result + timestamp shown inline.
 - **Jobs** — last 500 cross-user, filter by status/kind, view payload + log, retry failed.
 - **Storage** — per-user usage, total volume, breakdown by file type, orphan cleanup.
 - **Backup** — one-click DB dump + audio tarball; configurable schedule. CLI restore.
@@ -439,8 +458,8 @@ State: TanStack Query (server state) + Svelte store (player/queue). One multiple
 
 Implementation broken into phases. Each phase ships something usable.
 
-1. **Phase 1 — Core vault.** Auth (local), upload, transcode/normalize/waveform pipeline, manual catalog (artist/party/venue/set), in-app player, Postgres FTS basic search. **MVP.**
-2. **Phase 2 — Tracklist & enrichment.** Tracklist editor (live + paste), Track DB, provider plugin framework, MusicBrainz + Discogs + AcoustID, comments, bookmarks.
+1. **Phase 1 — Core vault.** Auth (local) + SMTP basics (invite + password reset, with copy-paste fallback), upload, transcode/normalize/waveform pipeline, manual catalog (artist/party/venue/set), in-app player, Postgres FTS basic search. **MVP.**
+2. **Phase 2 — Tracklist & enrichment.** Tracklist editor (live + paste), Track DB, provider plugin framework, MusicBrainz + Discogs + AcoustID, comments, bookmarks, `@mention` notifications (in-app + email).
 3. **Phase 3 — Ingest & distribution.** yt-dlp URL rip, RSS feeds, embeddable player, mobile PWA polish.
 4. **Phase 4 — Compatibility.** Subsonic API + scrobbling.
 5. **Phase 5 — Casting.** DLNA, Chromecast, listen-together rooms.
