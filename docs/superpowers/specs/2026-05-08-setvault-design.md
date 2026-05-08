@@ -459,13 +459,13 @@ State: TanStack Query (server state) + Svelte store (player/queue). One multiple
 Phases ordered to maximize the value of each subsequent phase. Each phase produces concrete artifacts that unblock the next.
 
 1. **Phase 1 — Design & visual identity.** No backend or app code in this phase. Deliverables:
-   - Design language: CSS-variable token set (color, type, spacing, radius, motion) with dark + light palettes.
-   - High-fidelity mockups (HTML/CSS) for the top 5 screens: **set detail / player**, **tracklist editor**, **library / browse**, **home / activity**, **artist or party detail**.
-   - Mobile breakpoints for the player view.
-   - Component sketch list (buttons, inputs, dialogs, tabs, status badges, tracklist row, filter sidebar, mini-player) — pattern-level, not built yet.
-   - Landing-page direction (separate aesthetic but harmonious with in-app).
-   - Driven by `docs/design-brief.md` in a fresh `frontend-design` Claude session (likely a separate worktree). Output is HTML/CSS prototypes committed to `frontend/design/` for reference during implementation.
-   - **Done when:** mockups review well with the crew and the design language reads as coherent across the 5 screens.
+   - **Design tokens:** CSS-variable set (color, type, spacing, radius, motion) with dark + light palettes. Used by both the app and the landing page.
+   - **App mockups (HTML/CSS)** for the top 5 screens: **set detail / player**, **tracklist editor**, **library / browse**, **home / activity**, **artist or party detail**. Mobile breakpoints for the player view.
+   - **Landing page mockup (HTML/CSS).** Shares the design tokens and component primitives with the app — same brand vocabulary — but uses editorial composition (big hero, scroll-driven feature sections, screenshot/video demos, generous whitespace). Distinct from the app's dense utility composition. Think Linear's marketing site vs. Linear the app: same identity, different layouts.
+   - **Component sketch list:** buttons, inputs, dialogs, tabs, status badges, tracklist row, filter sidebar, mini-player — pattern-level, not built yet. Exposed in a `components.html` showcase page.
+   - **Live preview entry point:** `frontend/design/index.html` lists every mockup and component page with thumbnails and links. Browseable locally with one command (`npx serve frontend/design` or equivalent). During the `frontend-design` session itself, the visual companion already shows mockups live in the browser as they evolve — the static `frontend/design/` build is what survives the session for ongoing reference.
+   - Driven by `docs/design-brief.md` in a fresh `frontend-design` Claude session (likely a separate worktree).
+   - **Done when:** mockups review well with the crew, the design language reads coherent across all 5 app screens + the landing page, and `frontend/design/index.html` works as a one-stop preview.
 2. **Phase 2 — Core vault.** Auth (local) + SMTP basics (invite + password reset, with copy-paste fallback), upload, transcode/normalize/waveform pipeline, manual catalog (artist/party/venue/set), in-app player matching the Phase-1 design, Postgres FTS basic search. **First runnable build / MVP.**
 3. **Phase 3 — Tracklist & enrichment.** Tracklist editor (live + paste), Track DB, provider plugin framework, MusicBrainz + Discogs + AcoustID, comments, bookmarks, `@mention` notifications (in-app + email).
 4. **Phase 4 — Ingest & distribution.** yt-dlp URL rip, RSS feeds, embeddable player, mobile PWA polish.

@@ -54,8 +54,9 @@ Use `frontend-design` to drive the conversation. I'd like:
 2. **A design language** — type stack, color palette (dark + light), spacing scale, radius system, motion principles, a small icon vocabulary. Concrete CSS variables.
 3. **High-fidelity mockups for the top 5 screens** above. Real content, not Lorem Ipsum — use real-looking artist/party names and a representative tracklist. Show both desktop and mobile breakpoints for the player view.
 4. **A reusable component sketch list** — buttons, inputs, dialogs, tabs, cards, status badges, the tracklist row, the entity hero header, the filter sidebar. Just the patterns; production code comes later in implementation phases.
-5. **A landing-page direction** — separate from the in-app design language but harmonious with it. Hero, feature gallery, system requirements, quickstart, footer. Will live on GitHub Pages.
+5. **A landing-page mockup** — shares design tokens and component primitives with the app (same color palette, typography, buttons, badges) but uses editorial composition (big hero, scroll-driven feature sections, screenshot/video demos, generous whitespace) — distinct from the app's dense utility layouts. Same brand vocabulary, different sentences. Think Linear's marketing site vs. Linear the app. Sections: hero, what-is, feature gallery, system requirements, quickstart, footer. Will live on GitHub Pages.
 6. **Accessibility & responsive notes** baked into each mockup, not bolted on after.
+7. **A live preview index** at `frontend/design/index.html` — lists every mockup and component page with thumbnail and link, so I (and the crew) can browse the whole design at any time by running `npx serve frontend/design` or equivalent. This is the artifact that survives the design session and lets implementation phases reference real rendered HTML, not screenshots.
 
 ### Reference material
 
