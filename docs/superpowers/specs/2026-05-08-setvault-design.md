@@ -28,7 +28,7 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 ### B. Catalog / data model
 - **B1.** Artists with aliases, bio, image, country, socials.
 - **B2.** Parties / Events with name, edition, date, lineup.
-- **B3.** Venues with city, country, geo.
+- **B3.** Venues with city/area, country, geo, and **kind** (club, concert hall, arena, outdoor grounds, warehouse, boat, studio/radio, online/livestream, other) — covers indoor clubs through open-air festival grounds and radio-studio recordings.
 - **B4.** Live Sets with title, date, set type (opener/closer/B2B/headline/warmup/unknown), duration, source.
 - **B5.** Tags / Genres.
 - **B6.** Time-coded tracklists with "ID — ID" support.
@@ -79,7 +79,7 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 ### G. Browse / search
 - **G1.** Full-text search across sets, tracklists, comments (Postgres FTS).
 - **G2.** "Find sets containing track X" via the reusable Track DB.
-- **G3.** Filter sidebar: artist/party/venue/year/genre/duration. Filter state in URL params.
+- **G3.** Filter sidebar: artist/party/venue/venue-kind/year/genre/duration. Filter state in URL params.
 - **G4.** Smart playlists (rule-based; jsonb query DSL).
 - **G5.** Recently added / recently played widgets.
 - **G6.** "Similar sets" via pgvector cosine similarity on tracklist embeddings (fallback to artist/tag overlap before ≥10 resolved entries).
@@ -202,7 +202,7 @@ All entities are Postgres tables. `*` = nullable. `jsonb` for provider blobs.
 
 ### Catalog
 - **Artist** — id, name, slug, aliases[], bio, image_url, country, socials jsonb, external_ids jsonb, enrichment_status jsonb
-- **Venue** — id, name, slug, city, country, lat*, lon*, capacity*
+- **Venue** — id, name, slug, kind(`club`|`concert_hall`|`arena`|`outdoor`|`warehouse`|`boat`|`studio`|`online`|`other`), city_or_area*, country*, lat*, lon*, capacity*, website* — `city_or_area` accepts both city names ("Amsterdam") and named outdoor sites ("Recreatiegebied Spaarnwoude"); `country` and geo are nullable so radio/online venues don't need them; `kind` drives icon/filter UX
 - **Series** — id, name, slug, description, image_url
 - **Party** — id, name, slug, series_id*, venue_id*, date*, description
 - **LiveSet** — id, slug, title, party_id*, venue_id*, date*, set_type, duration_seconds, source_type, source_url*, audio_path, streaming_path, waveform_path, normalized_lufs*, description, uploaded_by, duplicate_of*
@@ -398,7 +398,7 @@ In-app notifications and email notifications share the same trigger logic; the c
 - **Postgres FTS** — global search bar; results split by entity type with autocomplete.
 - **Library views:** All Sets / By Artist / By Party / By Venue / By Series / By Tag. Cover-grid and dense-row toggles.
 - **"Sets containing track X"** — one click on any track row.
-- **Filter sidebar:** artist/party/venue/year/duration/source/tags. State in URL params (shareable, bookmarkable).
+- **Filter sidebar:** artist/party/venue/venue-kind/year/duration/source/tags. State in URL params (shareable, bookmarkable).
 - **Smart playlists** — jsonb query DSL; rule-row UI with AND/OR groups.
 - **Similar sets** — pgvector cosine similarity on `LiveSet.embedding`. Falls back to artist/tag overlap before ≥10 resolved entries.
 - **Saved searches** — bookmark a filtered URL; appears in sidebar.
