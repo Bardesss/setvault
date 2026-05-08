@@ -1,5 +1,8 @@
 # SetVault repo .gitignore
 
+# Local-only design docs and specs — kept out of the public repo
+docs/
+
 # Brainstorming visual companion sessions (transient, per-machine)
 .superpowers/
 
