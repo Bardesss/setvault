@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — Mobile player</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="../assets/components.css">
+<style>
+  /* Mobile preview frame so we can show two phone screens side by side
+     on a desktop preview. The actual app would be the inner .phone
+     content rendered fullscreen. */
+  body {
+    background: #050608;
+    padding: var(--sp-8) var(--sp-6);
+  }
+  .preview-shell {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .preview-head {
+    display: flex; justify-content: space-between; align-items: end;
+    padding-bottom: var(--sp-5);
+    margin-bottom: var(--sp-5);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .preview-head h1 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+  }
+  .preview-head .sub {
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .preview-head a { color: var(--accent); font-size: var(--ts-md); }
+
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: center;
+    gap: var(--sp-8);
+    padding: var(--sp-6) 0;
+  }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
+  .phone-label {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-muted);
+  }
+  .phone-label b { color: var(--accent); }
+
+  .phone {
+    width: 360px;
+    height: 760px;
+    background: var(--bg-base);
+    border: 8px solid #1d1f25;
+    border-radius: 36px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.65), inset 0 0 0 1px var(--border-default);
+  }
+  .phone .notch {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 130px; height: 28px;
+    background: #1d1f25;
+    border-radius: 0 0 16px 16px;
+    z-index: 100;
+  }
+  .phone-content {
+    height: 100%;
+    overflow-y: auto;
+    background: var(--bg-base);
+    position: relative;
+  }
+  .phone .scanlines {
+    position: absolute; inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ============= mobile layout ============= */
+  .m-topbar {
+    display: flex; align-items: center;
+    padding: 36px var(--sp-4) var(--sp-3);
+    gap: var(--sp-3);
+    position: sticky; top: 0;
+    background: var(--bg-base);
+    z-index: 10;
+  }
+  .m-back {
+    width: 36px; height: 36px;
+    border-radius: var(--r-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    display: grid; place-items: center;
+  }
+  .m-title-block { flex: 1; min-width: 0; }
+  .m-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+  }
+  .m-title {
+    font-size: var(--ts-md);
+    color: var(--text-strong);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .m-icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--text-muted);
+    display: grid; place-items: center;
+  }
+
+  .m-hero {
+    padding: 0 var(--sp-4) var(--sp-4);
+  }
+  .m-cover {
+    width: 100%;
+    aspect-ratio: 1.6;
+    background: linear-gradient(135deg, #1a3838, #062626);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border-default);
+    margin-bottom: var(--sp-4);
+    position: relative;
+    overflow: hidden;
+  }
+  .m-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; }
+  .m-cover .stamp {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    background: var(--bg-base);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    letter-spacing: var(--ls-uppercase);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--accent);
+  }
+  .m-set-title {
+    font-size: var(--ts-2xl);
+    line-height: var(--lh-tight);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    margin-bottom: 4px;
+  }
+  .m-set-title .by { color: var(--text-faint); font-weight: 500; display: block; font-size: var(--ts-lg); margin-top: 4px; }
+  .m-set-meta {
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    margin-top: var(--sp-2);
+  }
+  .m-set-meta a { color: var(--accent); }
+
+  .m-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-top: var(--sp-4);
+  }
+  .m-meta-cell {
+    background: var(--bg-elevated);
+    padding: var(--sp-2) var(--sp-3);
+  }
+  .m-meta-cell .k {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    margin-bottom: 2px;
+  }
+  .m-meta-cell .v {
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-strong);
+    font-weight: 500;
+  }
+  .m-meta-cell .v.acc { color: var(--accent); }
+
+  /* waveform */
+  .m-wave {
+    margin: var(--sp-4) 0 0;
+    height: 88px;
+    position: relative;
+    background: linear-gradient(180deg, transparent, var(--accent-softer));
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: var(--sp-2) var(--sp-4);
+  }
+  .m-wave svg { width: 100%; height: 100%; display: block; }
+  .m-wave .playhead {
+    position: absolute;
+    left: 38%;
+    top: var(--sp-2); bottom: var(--sp-2);
+    width: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+  .m-wave-time-rail {
+    display: flex; justify-content: space-between;
+    padding: 0 var(--sp-4) var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    color: var(--text-faint);
+  }
+
+  /* transport */
+  .m-transport {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    padding: var(--sp-4);
+    gap: var(--sp-3);
+  }
+  .m-time-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--sp-2);
+  }
+  .m-time {
+    font-family: var(--font-mono);
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    font-weight: 500;
+  }
+  .m-time .div { color: var(--text-faintest); }
+  .m-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 60px 1fr 1fr;
+    align-items: center;
+    gap: var(--sp-2);
+    justify-items: center;
+  }
+  .m-play {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    display: grid; place-items: center;
+    box-shadow: var(--accent-glow), 0 8px 24px rgba(0,255,178,0.2);
+  }
+  .m-play svg { width: 22px; height: 22px; }
+  .m-tcontrol {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    color: var(--text-default);
+  }
+  .m-tcontrol svg { width: 22px; height: 22px; }
+  .m-mark-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+  .m-mark-btn {
+    height: 40px;
+    border-radius: var(--r-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: var(--ts-md);
+    font-weight: 500;
+  }
+  .m-mark-btn.acc {
+    background: var(--accent-softer);
+    border-color: rgba(0, 255, 178, 0.25);
+    color: var(--accent);
+  }
+
+  /* tabs */
+  .m-tabs {
+    display: flex;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-base);
+    padding: 0 var(--sp-4);
+    gap: var(--sp-4);
+    margin-top: var(--sp-3);
+  }
+  .m-tab {
+    padding: var(--sp-3) 0;
+    font-size: var(--ts-md);
+    font-weight: 500;
+    color: var(--text-muted);
+    position: relative;
+  }
+  .m-tab.active { color: var(--text-strong); }
+  .m-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+
+  /* tracklist mobile */
+  .m-track {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+    position: relative;
+  }
+  .m-track.now {
+    background: var(--bg-now);
+  }
+  .m-track.now::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+  .m-track .ts {
+    font-family: var(--font-mono);
+    font-size: var(--ts-sm);
+    color: var(--text-faint);
+    font-feature-settings: 'tnum';
+  }
+  .m-track.now .ts { color: var(--accent); }
+  .m-track .tn {
+    font-weight: 600;
+    color: var(--text-strong);
+    font-size: var(--ts-md);
+    line-height: var(--lh-snug);
+  }
+  .m-track .ta {
+    font-size: var(--ts-sm);
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .m-track .ta b { color: var(--text-default); font-weight: 500; }
+  .m-track .badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  /* swipe hint */
+  .m-swipe-hint {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 100px;
+    background: linear-gradient(90deg, transparent, var(--accent));
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    align-items: center;
+    text-align: center;
+    transform: translateX(-30px);
+  }
+
+  /* mini-player as bottom sheet */
+  .m-bottom-sheet {
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border-default);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    padding: var(--sp-3) var(--sp-4) var(--sp-4);
+    position: sticky;
+    bottom: 0;
+    box-shadow: 0 -16px 48px rgba(0,0,0,0.55);
+  }
+  .m-sheet-grip {
+    width: 40px; height: 4px;
+    background: var(--border-strong);
+    border-radius: var(--r-pill);
+    margin: 0 auto var(--sp-3);
+  }
+  .m-sheet-row {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+  .m-sheet-cover {
+    width: 44px; height: 44px;
+    border-radius: var(--r-sm);
+    background: linear-gradient(135deg,#2a1a3e,#11042e);
+    display: grid; place-items: center;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1;
+  }
+  .m-sheet-title {
+    font-weight: 600;
+    color: var(--text-strong);
+    font-size: var(--ts-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .m-sheet-sub {
+    font-size: var(--ts-sm);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .m-sheet-controls {
+    display: flex; gap: var(--sp-2);
+  }
+
+  /* lockscreen variant */
+  .lockscreen {
+    background: linear-gradient(180deg, #06080a 0%, #0e0f12 100%);
+    height: 100%;
+    padding: 36px var(--sp-5) var(--sp-6);
+    display: flex; flex-direction: column;
+    color: var(--text-default);
+    position: relative;
+  }
+  .lockscreen::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+  }
+  .ls-time {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 64px;
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    line-height: 1;
+  }
+  .ls-date {
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    margin-top: 4px;
+  }
+  .ls-now-card {
+    margin-top: auto;
+    background: rgba(20,22,27,0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    padding: var(--sp-4);
+  }
+  .ls-app-line {
+    display: flex; align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    margin-bottom: var(--sp-3);
+  }
+  .ls-app-line .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .ls-now-row {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: var(--sp-3);
+    align-items: center;
+  }
+  .ls-cover {
+    width: 56px; height: 56px;
+    border-radius: var(--r-md);
+    background: linear-gradient(135deg,#2a1a3e,#11042e);
+    color: var(--accent);
+    display: grid; place-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1;
+  }
+  .ls-title {
+    font-weight: 700;
+    color: var(--text-strong);
+    font-size: var(--ts-base);
+  }
+  .ls-sub {
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .ls-progress {
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    margin: var(--sp-3) 0 var(--sp-2);
+  }
+  .ls-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+    border-radius: var(--r-pill);
+  }
+  .ls-time-rail {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .ls-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+  }
+  .ls-btn {
+    height: 44px;
+    border-radius: var(--r-md);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-strong);
+    display: grid; place-items: center;
+  }
+  .ls-btn.play {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    box-shadow: var(--accent-glow);
+  }
+  .ls-cast-line {
+    margin-top: var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--accent);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-shell">
+  <div class="preview-head">
+    <div>
+      <h1>Mobile player view</h1>
+      <p class="sub">Full set view · Compact view · OS lockscreen w/ MediaSession integration</p>
+    </div>
+    <a>← back to design index</a>
+  </div>
+
+  <div class="phones">
+
+    <!-- ============= Phone 1: full set view ============= -->
+    <div class="phone-wrap">
+      <span class="phone-label"><b>Phone 1</b> — set detail · 360 px</span>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-content">
+          <div class="scanlines"></div>
+
+          <div class="m-topbar">
+            <button class="m-back">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9,3 4,8 9,13"/></svg>
+            </button>
+            <div class="m-title-block">
+              <span class="m-kicker">closing set · 2024-06-28</span>
+              <span class="m-title">Spectrum 250 — Joris Voorn</span>
+            </div>
+            <button class="m-icon-btn">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+            </button>
+          </div>
+
+          <div class="m-hero">
+            <div class="m-cover">
+              <svg viewBox="0 0 200 130" preserveAspectRatio="none"><path d="M0,80 L20,40 L40,90 L60,30 L80,100 L100,20 L120,110 L140,40 L160,80 L180,30 L200,90 L200,140 L0,140 Z" fill="rgba(0,255,178,0.18)"/></svg>
+              <span class="stamp">LIVE @ AWAKENINGS</span>
+            </div>
+            <h2 class="m-set-title">Spectrum 250<span class="by">— Joris Voorn</span></h2>
+            <p class="m-set-meta">
+              <a>Awakenings</a> @ <a>Recreatiegebied Spaarnwoude</a> · outdoor festival grounds
+            </p>
+            <div class="m-meta-grid">
+              <div class="m-meta-cell"><div class="k">Date</div><div class="v">2024.06.28</div></div>
+              <div class="m-meta-cell"><div class="k">Length</div><div class="v">1:54:32</div></div>
+              <div class="m-meta-cell"><div class="k">Tracks</div><div class="v acc">23 / 31</div></div>
+            </div>
+          </div>
+
+          <div class="m-wave">
+            <svg viewBox="0 0 320 70" preserveAspectRatio="none">
+              <path d="M0,35 L8,28 L16,38 L24,18 L32,40 L40,22 L48,38 L56,18 L64,42 L72,24 L80,40 L88,28 L96,40 L104,22 L112,40 L120,28 L128,46 L136,28 L144,52 L152,32 L160,40 L168,22 L176,38 L184,28 L192,42 L200,30 L208,46 L216,28 L224,52 L232,32 L240,46 L248,28 L256,40 L264,32 L272,42 L280,28 L288,40 L296,32 L304,40 L312,28 L320,40" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              <path d="M0,35 L8,42 L16,32 L24,52 L32,30 L40,48 L48,32 L56,52 L64,28 L72,46 L80,30 L88,42 L96,30 L104,48 L112,30 L120,42 L128,24 L136,42 L144,18 L152,38 L160,30 L168,48 L176,32 L184,42 L192,28 L200,40 L208,24 L216,42 L224,18 L232,38 L240,24 L248,42 L256,30 L264,38 L272,28 L280,42 L288,30 L296,38 L304,30 L312,42 L320,30" stroke="var(--waveform-played)" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.55"/>
+            </svg>
+            <div class="playhead"></div>
+          </div>
+          <div class="m-wave-time-rail">
+            <span>0:00</span><span>43:18</span><span>1:54:32</span>
+          </div>
+
+          <div class="m-transport">
+            <div class="m-time-row">
+              <span class="m-time">43:18<span class="div"> / </span>1:54:32</span>
+              <span class="badge badge-resolved" style="font-size:9px">23/31</span>
+            </div>
+            <div class="m-controls">
+              <button class="m-tcontrol"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/><rect x="3" y="2" width="1" height="12"/></svg></button>
+              <button class="m-tcontrol"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 8a6 6 0 1 0-2 4.5"/><path d="M2 4 L7 4 L7 1 L2 4 Z" fill="currentColor"/></svg></button>
+              <button class="m-play"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+              <button class="m-tcontrol"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8a6 6 0 1 1 2 4.5"/><path d="M14 4 L9 4 L9 1 L14 4 Z" fill="currentColor"/></svg></button>
+              <button class="m-tcontrol"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/><rect x="12" y="2" width="1" height="12"/></svg></button>
+            </div>
+            <div class="m-mark-row">
+              <button class="m-mark-btn">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.5l-1.5-1.5C3 9 1 6.5 1 4.5A3 3 0 0 1 4 1.5C5.5 1.5 7 2.5 8 4c1-1.5 2.5-2.5 4-2.5A3 3 0 0 1 15 4.5c0 2-2 4.5-5.5 7.5L8 13.5z"/></svg>
+                Favorite
+              </button>
+              <button class="m-mark-btn acc">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 10a3 3 0 0 1 3 3"/><path d="M1 7a6 6 0 0 1 6 6"/></svg>
+                Cast
+              </button>
+            </div>
+          </div>
+
+          <div class="m-tabs">
+            <span class="m-tab active">Tracklist · 31</span>
+            <span class="m-tab">Comments · 7</span>
+            <span class="m-tab">About</span>
+          </div>
+
+          <div>
+            <div class="m-track">
+              <span class="ts">14:22</span>
+              <div>
+                <div class="tn">Confidential Reform</div>
+                <div class="ta"><b>Lewis Fautzi</b> · Soma · 2023</div>
+              </div>
+              <span class="badge badge-resolved">res</span>
+            </div>
+            <div class="m-track now">
+              <span class="ts">43:18</span>
+              <div>
+                <div class="tn">Inhuman</div>
+                <div class="ta"><b>DJ T-1000</b> · Tresor · 1999</div>
+              </div>
+              <span class="badge badge-resolved">res</span>
+            </div>
+            <div class="m-track" style="overflow:hidden">
+              <span class="ts">48:42</span>
+              <div>
+                <div class="tn">Move (mashup)</div>
+                <div class="ta"><b>Joris Voorn vs. Robert Hood</b></div>
+              </div>
+              <span class="badge badge-raw">raw</span>
+              <div class="m-swipe-hint">
+                <span style="display:none">×</span>
+                <span style="grid-column:2;color:var(--text-on-accent)">resolve →</span>
+              </div>
+            </div>
+            <div class="m-track">
+              <span class="ts">53:10</span>
+              <div>
+                <div class="tn">Bad Hands Pt. 1</div>
+                <div class="ta"><b>Surgeon</b> · Dynamic Tension</div>
+              </div>
+              <span class="badge badge-acoustid">acoustid</span>
+            </div>
+            <div class="m-track">
+              <span class="ts">57:48</span>
+              <div>
+                <div class="tn">Hyperion</div>
+                <div class="ta"><b>Adam Beyer &amp; Bart Skils</b> · Drumcode</div>
+              </div>
+              <span class="badge badge-resolved">res</span>
+            </div>
+            <div style="padding:var(--sp-4);text-align:center;color:var(--text-faint);font-size:var(--ts-md)">
+              26 more entries
+            </div>
+          </div>
+
+          <div class="m-bottom-sheet">
+            <div class="m-sheet-grip"></div>
+            <div class="m-sheet-row">
+              <div class="m-sheet-cover">SP<br>250</div>
+              <div style="min-width:0">
+                <div class="m-sheet-title">Inhuman — DJ T-1000</div>
+                <div class="m-sheet-sub">Spectrum 250 · Joris Voorn</div>
+              </div>
+              <div class="m-sheet-controls">
+                <button class="m-tcontrol" style="width:32px;height:32px"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+                <button class="m-tcontrol" style="width:32px;height:32px"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= Phone 2: compact view (player closed, browse) ============= -->
+    <div class="phone-wrap">
+      <span class="phone-label"><b>Phone 2</b> — library w/ persistent mini-player</span>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-content">
+          <div class="scanlines"></div>
+
+          <div class="m-topbar">
+            <button class="m-back" style="background:transparent;border:none;width:auto;padding:0">
+              <svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+            </button>
+            <div class="m-title-block">
+              <span class="m-title" style="font-size:var(--ts-lg);font-weight:800">Library</span>
+            </div>
+            <button class="m-icon-btn">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>
+            </button>
+          </div>
+
+          <div style="padding: 0 var(--sp-4) var(--sp-3); display:flex; gap:6px; flex-wrap:wrap">
+            <span class="filter-pill active">techno <span class="count">312</span></span>
+            <span class="filter-pill">house</span>
+            <span class="filter-pill">2024</span>
+            <span class="filter-pill">+ 4</span>
+          </div>
+
+          <div style="padding: 0 var(--sp-4) var(--sp-3)">
+            <div style="font-family:var(--font-mono); font-size:var(--ts-xs); color:var(--text-faint); text-transform:uppercase; letter-spacing:var(--ls-uppercase); margin-bottom:8px">34 sets · sorted by date added</div>
+            <div style="display:grid;gap:var(--sp-3)">
+
+              <div style="display:grid;grid-template-columns:96px 1fr;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden">
+                <div style="background:linear-gradient(135deg,#2a1a3e,#11042e);height:72px;display:grid;place-items:end;padding:6px"><span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)">1:54</span></div>
+                <div style="padding:var(--sp-3) var(--sp-3) var(--sp-3) 0">
+                  <div style="font-weight:600;color:var(--text-strong);font-size:var(--ts-md);line-height:var(--lh-snug)">Spectrum 250 — closing</div>
+                  <div style="font-size:var(--ts-sm);color:var(--text-default);margin-top:2px">Joris Voorn</div>
+                  <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint);margin-top:6px">Awakenings · 2024-06-28</div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:96px 1fr;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden">
+                <div style="background:linear-gradient(135deg,#1a2e2e,#042020);height:72px;display:grid;place-items:end;padding:6px"><span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)">2:01</span></div>
+                <div style="padding:var(--sp-3) var(--sp-3) var(--sp-3) 0">
+                  <div style="font-weight:600;color:var(--text-strong);font-size:var(--ts-md);line-height:var(--lh-snug)">Mainstage closer</div>
+                  <div style="font-size:var(--ts-sm);color:var(--text-default);margin-top:2px">Adam Beyer b2b Bart Skils</div>
+                  <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint);margin-top:6px">Tomorrowland · 2024-07-20</div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:96px 1fr;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden">
+                <div style="background:linear-gradient(135deg,#3e1a1a,#2a0808);height:72px;display:grid;place-items:end;padding:6px"><span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)">3:42</span></div>
+                <div style="padding:var(--sp-3) var(--sp-3) var(--sp-3) 0">
+                  <div style="font-weight:600;color:var(--text-strong);font-size:var(--ts-md);line-height:var(--lh-snug)">All-night-long</div>
+                  <div style="font-size:var(--ts-sm);color:var(--text-default);margin-top:2px">Dixon</div>
+                  <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint);margin-top:6px">Watergate · 2024-04-13</div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:96px 1fr;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden">
+                <div style="background:linear-gradient(135deg,#1e3a1a,#08200a);height:72px;display:grid;place-items:end;padding:6px"><span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)">2:14</span></div>
+                <div style="padding:var(--sp-3) var(--sp-3) var(--sp-3) 0">
+                  <div style="font-weight:600;color:var(--text-strong);font-size:var(--ts-md);line-height:var(--lh-snug)">Closing the woods</div>
+                  <div style="font-size:var(--ts-sm);color:var(--text-default);margin-top:2px">Solomun</div>
+                  <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint);margin-top:6px">Mysteryland · 2024-08-31</div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:96px 1fr;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden">
+                <div style="background:linear-gradient(135deg,#3a341a,#20180a);height:72px;display:grid;place-items:end;padding:6px"><span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)">1:48</span></div>
+                <div style="padding:var(--sp-3) var(--sp-3) var(--sp-3) 0">
+                  <div style="font-weight:600;color:var(--text-strong);font-size:var(--ts-md);line-height:var(--lh-snug)">B2B sunrise</div>
+                  <div style="font-size:var(--ts-sm);color:var(--text-default);margin-top:2px">Tale of Us b2b Mind Against</div>
+                  <div style="font-family:var(--font-mono);font-size:var(--ts-xs);color:var(--text-faint);margin-top:6px">Afterlife · 2024-12-20</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="m-bottom-sheet" style="position:sticky;bottom:0">
+            <div class="m-sheet-grip"></div>
+            <div class="m-sheet-row">
+              <div class="m-sheet-cover">SP<br>250</div>
+              <div style="min-width:0">
+                <div class="m-sheet-title">Inhuman — DJ T-1000</div>
+                <div class="m-sheet-sub">43:18 · Spectrum 250</div>
+              </div>
+              <div class="m-sheet-controls">
+                <button class="m-tcontrol" style="width:36px;height:36px;background:var(--accent);color:var(--text-on-accent);border-radius:var(--r-md)"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+                <button class="m-tcontrol" style="width:36px;height:36px"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= Phone 3: lockscreen ============= -->
+    <div class="phone-wrap">
+      <span class="phone-label"><b>Phone 3</b> — lockscreen · MediaSession API</span>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-content">
+          <div class="lockscreen">
+            <div class="ls-time">22:14</div>
+            <div class="ls-date">Sat 28 jun · 18°c</div>
+
+            <div class="ls-now-card">
+              <div class="ls-app-line">
+                <span class="dot"></span>
+                <span>Now playing · SetVault</span>
+              </div>
+              <div class="ls-now-row">
+                <div class="ls-cover">SP<br>250</div>
+                <div>
+                  <div class="ls-title">Inhuman</div>
+                  <div class="ls-sub">DJ T-1000 · Spectrum 250</div>
+                </div>
+              </div>
+              <div class="ls-progress"><div class="ls-progress-fill" style="width:38%"></div></div>
+              <div class="ls-time-rail"><span>43:18</span><span>1:54:32</span></div>
+              <div class="ls-controls">
+                <button class="ls-btn"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/></svg></button>
+                <button class="ls-btn play"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+                <button class="ls-btn"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+              </div>
+              <div class="ls-cast-line">→ casting to "kitchen sonos"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="margin-top:var(--sp-8);text-align:center;color:var(--text-muted);font-size:var(--ts-md);max-width:800px;margin-left:auto;margin-right:auto;line-height:var(--lh-relaxed)">
+    Mobile uses the same design tokens as desktop — no parallel theme. The set view shrinks to a hero + waveform + transport + tracklist. Mini-player becomes a sticky bottom sheet you can drag up to expand. Tracklist rows accept swipe-right gestures (e.g., swipe to resolve a raw entry). MediaSession integration shows native lockscreen artwork + transport + a "casting" line when an external target is active.
+  </p>
+</div>
+
+</body>
+</html>

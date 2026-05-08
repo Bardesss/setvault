@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — Home</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="../assets/components.css">
+<style>
+  .greet {
+    padding: var(--sp-8) var(--sp-8) var(--sp-5);
+    border-bottom: 1px solid var(--border-subtle);
+    background: linear-gradient(180deg, rgba(0,255,178,0.04), transparent);
+  }
+  .greet h1 {
+    font-size: var(--ts-3xl);
+    letter-spacing: var(--ls-tight);
+    line-height: var(--lh-tight);
+    color: var(--text-strong);
+    margin-bottom: var(--sp-2);
+  }
+  .greet h1 b {
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  .greet h1 .accent {
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .greet .sub {
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+  }
+  .greet .sub b { color: var(--accent); font-weight: 500; }
+
+  .home-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-top: var(--sp-5);
+  }
+  .home-stat {
+    background: var(--bg-elevated);
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .home-stat .v {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: var(--ts-2xl);
+    line-height: 1;
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    margin-bottom: 4px;
+  }
+  .home-stat .v.acc { color: var(--accent); }
+  .home-stat .k {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+  }
+  .home-stat .delta {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .home-stat .delta.up { color: var(--accent); }
+
+  .home-section {
+    padding: var(--sp-6) var(--sp-8);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .home-section h2 {
+    font-size: var(--ts-xl);
+    color: var(--text-strong);
+    font-weight: 700;
+    letter-spacing: var(--ls-tight);
+  }
+  .home-section .section-head {
+    display: flex; align-items: end; justify-content: space-between;
+    margin-bottom: var(--sp-4);
+  }
+  .home-section .sub-meta {
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .home-section .show-more {
+    color: var(--accent);
+    font-size: var(--ts-md);
+    font-family: var(--font-mono);
+  }
+
+  /* continue listening cards */
+  .continue {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-3);
+  }
+  .continue-card {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--dur-default) var(--ease-default);
+  }
+  .continue-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+  .continue-cover {
+    background: linear-gradient(135deg,#2a1a3e,#11042e);
+    position: relative;
+  }
+  .continue-card .play-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid; place-items: center;
+    background: rgba(8,9,12,0.45);
+    opacity: 0;
+    transition: opacity var(--dur-fast);
+  }
+  .continue-card:hover .play-overlay { opacity: 1; }
+  .continue-card .play-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    display: grid; place-items: center;
+    box-shadow: var(--accent-glow);
+  }
+  .continue-card .body {
+    padding: var(--sp-3) var(--sp-4);
+    position: relative;
+  }
+  .continue-card .ttl {
+    font-weight: 700;
+    color: var(--text-strong);
+    font-size: var(--ts-md);
+    line-height: var(--lh-snug);
+    margin-bottom: 2px;
+  }
+  .continue-card .artist {
+    font-size: var(--ts-md);
+    color: var(--text-default);
+  }
+  .continue-card .progress-bar {
+    position: absolute;
+    bottom: var(--sp-3);
+    left: var(--sp-4); right: var(--sp-4);
+    height: 3px;
+    background: var(--bg-base);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+  }
+  .continue-card .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: var(--r-pill);
+  }
+  .continue-card .progress-time {
+    position: absolute;
+    bottom: 18px;
+    left: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+
+  /* recently added grid */
+  .recent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--sp-3);
+  }
+  .recent-card {
+    cursor: pointer;
+    transition: all var(--dur-default) var(--ease-default);
+  }
+  .recent-card:hover { transform: translateY(-2px); }
+  .recent-cover {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg,#1a2e2e,#042020);
+    border-radius: var(--r-md);
+    margin-bottom: var(--sp-2);
+    border: 1px solid var(--border-default);
+    position: relative;
+    overflow: hidden;
+  }
+  .recent-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; }
+  .recent-cover .new-pip {
+    position: absolute; top: 8px; right: 8px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    padding: 2px 6px;
+    border-radius: var(--r-xs);
+    font-weight: 700;
+  }
+  .recent-card .ttl { font-weight: 600; font-size: var(--ts-md); color: var(--text-strong); line-height: var(--lh-snug); }
+  .recent-card .meta { font-size: var(--ts-sm); color: var(--text-muted); margin-top: 2px; }
+  .recent-card .meta b { color: var(--text-default); font-weight: 500; }
+
+  /* activity feed */
+  .activity-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--sp-6);
+  }
+  .activity-feed {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .activity-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+  }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: var(--ts-md);
+  }
+  .av-bart { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+  .av-maks { background: rgba(108, 212, 255, 0.12); color: var(--accent-secondary); border: 1px solid var(--accent-secondary); }
+  .av-niels { background: rgba(255, 122, 89, 0.12); color: var(--accent-warning); border: 1px solid var(--accent-warning); }
+  .av-sys { background: var(--bg-elevated); color: var(--text-faint); border: 1px solid var(--border-default); }
+  .activity-text { font-size: var(--ts-md); color: var(--text-default); line-height: var(--lh-snug); }
+  .activity-text b { color: var(--text-strong); }
+  .activity-text .verb { color: var(--text-muted); }
+  .activity-text a { color: var(--accent); }
+  .activity-text .quote {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+    border-left: 2px solid var(--border-default);
+    padding-left: 8px;
+    font-style: italic;
+  }
+  .activity-time {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    align-self: start;
+  }
+
+  /* jobs panel */
+  .jobs-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    padding: var(--sp-4);
+  }
+  .jobs-panel h3 {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    font-weight: 500;
+    margin-bottom: var(--sp-3);
+  }
+  .job-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: var(--sp-3) 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .job-row:first-of-type { border-top: 0; padding-top: 0; }
+  .job-title-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: var(--ts-md);
+    margin-bottom: 6px;
+  }
+  .job-title-row .label {
+    color: var(--text-default);
+    font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .job-title-row .pct {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: var(--ts-sm);
+    font-feature-settings: 'tnum';
+  }
+  .progress {
+    height: 4px;
+    background: var(--bg-base);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    box-shadow: var(--accent-glow);
+    border-radius: var(--r-pill);
+    transition: width var(--dur-slow) var(--ease-default);
+  }
+  .job-meta {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <a class="brand" href="../index.html"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+    <button class="search-trigger">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>
+      <span>Search artists, sets, parties…</span>
+      <span class="kbd">⌘&nbsp;K</span>
+    </button>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6a4 4 0 1 1 8 0v3l1 2H3l1-2V6z"/></svg></button>
+      <div style="width:32px;height:32px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:var(--ts-md);">B</div>
+    </div>
+  </header>
+
+  <nav class="rail">
+    <div class="rail-section">
+      <div class="rail-link active" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7l6-5 6 5v7H2z"/><path d="M6 14V9h4v5"/></svg> Home</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/></svg> Library<span class="count">847</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M3 14a5 5 0 0 1 10 0"/></svg> Artists<span class="count">214</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2z"/><path d="M5 4v8M11 4v8"/></svg> Parties<span class="count">63</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13V7l5-4 5 4v6"/></svg> Venues<span class="count">38</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg> Tracks<span class="count">11.2k</span></div>
+    </div>
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">Yours</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.5l-1.5-1.5C3 9 1 6.5 1 4.5A3 3 0 0 1 4 1.5C5.5 1.5 7 2.5 8 4c1-1.5 2.5-2.5 4-2.5A3 3 0 0 1 15 4.5c0 2-2 4.5-5.5 7.5L8 13.5z"/></svg> Favorites</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg> Watch later</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg> Playlists</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,8 9,11 14,4"/></svg> Activity</div>
+    </div>
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">System</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,6 5,3 8,6 11,3 14,6"/></svg> Jobs<span class="count" style="color:var(--accent)">3</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg> Settings</div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- GREETING -->
+    <header class="greet">
+      <h1>Evening, <span class="accent">Bart</span>. <b>Two new sets landed since you last logged in.</b></h1>
+      <p class="sub"><b>3 jobs</b> running · <b>5 unread mentions</b> · 18:42 listening time this week</p>
+
+      <div class="home-stats">
+        <div class="home-stat">
+          <div class="v acc">847</div>
+          <div class="k">Sets in vault</div>
+          <div class="delta up">▲ 12 this week</div>
+        </div>
+        <div class="home-stat">
+          <div class="v">11.2<span style="font-size:var(--ts-md);color:var(--text-muted);font-weight:400">k</span></div>
+          <div class="k">Tracks resolved</div>
+          <div class="delta up">▲ 184 this week</div>
+        </div>
+        <div class="home-stat">
+          <div class="v">218</div>
+          <div class="k">Tracks needing IDs</div>
+          <div class="delta">— 0 this week</div>
+        </div>
+        <div class="home-stat">
+          <div class="v">242<span style="font-size:var(--ts-md);color:var(--text-muted);font-weight:400">G</span></div>
+          <div class="k">Audio storage</div>
+          <div class="delta">≈ 38% of quota</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTINUE LISTENING -->
+    <section class="home-section">
+      <div class="section-head">
+        <div>
+          <h2>Continue where you left off</h2>
+          <p class="sub-meta">3 sets in progress</p>
+        </div>
+        <a class="show-more">view all →</a>
+      </div>
+      <div class="continue">
+        <article class="continue-card">
+          <div class="continue-cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)">
+            <div class="play-overlay"><div class="play-circle"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+          </div>
+          <div class="body">
+            <div class="ttl">Spectrum 250 — closing</div>
+            <div class="artist">Joris Voorn</div>
+            <div class="progress-time">43:18 / 1:54:32 · 38% played</div>
+            <div class="progress-bar"><div class="progress-fill" style="width: 38%;"></div></div>
+          </div>
+        </article>
+        <article class="continue-card">
+          <div class="continue-cover" style="background:linear-gradient(135deg,#1a2e2e,#042020)">
+            <div class="play-overlay"><div class="play-circle"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+          </div>
+          <div class="body">
+            <div class="ttl">Mainstage closer</div>
+            <div class="artist">Adam Beyer b2b Bart Skils</div>
+            <div class="progress-time">1:12:08 / 2:01:18 · 60% played</div>
+            <div class="progress-bar"><div class="progress-fill" style="width: 60%;"></div></div>
+          </div>
+        </article>
+        <article class="continue-card">
+          <div class="continue-cover" style="background:linear-gradient(135deg,#3e1a1a,#2a0808)">
+            <div class="play-overlay"><div class="play-circle"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+          </div>
+          <div class="body">
+            <div class="ttl">All-night-long</div>
+            <div class="artist">Dixon</div>
+            <div class="progress-time">0:42:44 / 3:42:12 · 19% played</div>
+            <div class="progress-bar"><div class="progress-fill" style="width: 19%;"></div></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- RECENTLY ADDED -->
+    <section class="home-section">
+      <div class="section-head">
+        <div>
+          <h2>Recently added</h2>
+          <p class="sub-meta">12 in the last 7 days · all by your crew</p>
+        </div>
+        <a class="show-more">browse library →</a>
+      </div>
+      <div class="recent-grid">
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#1e3a1a,#08200a)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,60 L20,30 L40,70 L60,20 L80,80 L100,40 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+            <span class="new-pip">new</span>
+          </div>
+          <div class="ttl">Closing the woods</div>
+          <div class="meta"><b>Solomun</b> · Mysteryland · 2024</div>
+        </article>
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#3a341a,#20180a)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,40 L20,80 L40,30 L60,90 L80,40 L100,80 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+            <span class="new-pip">new</span>
+          </div>
+          <div class="ttl">B2B sunrise</div>
+          <div class="meta"><b>Tale of Us</b> b2b Mind Against</div>
+        </article>
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#1a253e,#08142a)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,80 L20,30 L40,90 L60,50 L80,100 L100,40 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+          </div>
+          <div class="ttl">Awakenings warm-up</div>
+          <div class="meta"><b>Reinier Zonneveld</b></div>
+        </article>
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#3a1a37,#20082a)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,50 L20,100 L40,30 L60,80 L80,40 L100,100 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+          </div>
+          <div class="ttl">Forest peak</div>
+          <div class="meta"><b>Boris Brejcha</b></div>
+        </article>
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#2a3a1a,#142208)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,60 L20,30 L40,80 L60,40 L80,90 L100,50 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+          </div>
+          <div class="ttl">Festival opener</div>
+          <div class="meta"><b>Charlotte de Witte</b></div>
+        </article>
+        <article class="recent-card">
+          <div class="recent-cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,40 L20,90 L40,30 L60,80 L80,40 L100,90 L100,100 L0,100 Z" fill="rgba(0,255,178,0.15)"/></svg>
+          </div>
+          <div class="ttl">Spectrum 250 — closing</div>
+          <div class="meta"><b>Joris Voorn</b></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ACTIVITY + JOBS -->
+    <section class="home-section" style="padding-bottom:var(--sp-12)">
+      <div class="activity-grid">
+
+        <div>
+          <div class="section-head">
+            <div>
+              <h2>What the crew is up to</h2>
+              <p class="sub-meta">last 24h</p>
+            </div>
+            <a class="show-more">full activity →</a>
+          </div>
+          <div class="activity-feed">
+
+            <div class="activity-row">
+              <div class="activity-avatar av-maks">M</div>
+              <div class="activity-text">
+                <b>maks</b> <span class="verb">commented at 1:02:34 on</span> <a>Spectrum 250</a>
+                <span class="quote">"this is the unreleased one — apparently it's coming on Spectrum w/ a Patrice Bäumel remix"</span>
+              </div>
+              <span class="activity-time">3h</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-bart">B</div>
+              <div class="activity-text">
+                <b>bart</b> <span class="verb">added</span> <a>Solomun — Closing the woods @ Mysteryland 2024</a>
+              </div>
+              <span class="activity-time">5h</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-niels">N</div>
+              <div class="activity-text">
+                <b>niels</b> <span class="verb">resolved 7 raw entries on</span> <a>Charlotte de Witte — DGTL warmup</a>
+              </div>
+              <span class="activity-time">8h</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-bart">B</div>
+              <div class="activity-text">
+                <b>bart</b> <span class="verb">favorited</span> <a>Tale of Us b2b Mind Against — sunrise set</a>
+              </div>
+              <span class="activity-time">9h</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-maks">M</div>
+              <div class="activity-text">
+                <b>maks</b> <span class="verb">created playlist</span> <a>"Closing sets, 2024"</a>, added 6 sets
+              </div>
+              <span class="activity-time">yesterday</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-sys">⚙</div>
+              <div class="activity-text">
+                <span class="verb">enrichment from MusicBrainz completed —</span> <b>184 tracks</b> got bpm + key + label
+              </div>
+              <span class="activity-time">yesterday</span>
+            </div>
+
+            <div class="activity-row">
+              <div class="activity-avatar av-niels">N</div>
+              <div class="activity-text">
+                <b>niels</b> <span class="verb">added a bookmark on</span> <a>Spectrum 250</a> at 1:01:42
+                <span class="quote">"the moment everything goes off"</span>
+              </div>
+              <span class="activity-time">2d</span>
+            </div>
+
+          </div>
+        </div>
+
+        <div>
+          <div class="jobs-panel">
+            <h3>Active jobs <span style="float:right;color:var(--accent)">3 running</span></h3>
+            <div class="job-row">
+              <div class="job-title-row">
+                <span class="label">
+                  <span class="live-dot" style="width:6px;height:6px"></span>
+                  Transcoding "Mainstage closer"
+                </span>
+                <span class="pct">62%</span>
+              </div>
+              <div class="progress"><div class="progress-fill" style="width:62%"></div></div>
+              <div class="job-meta"><span>opus 128k · 02:01:18</span><span>≈ 38s left</span></div>
+            </div>
+            <div class="job-row">
+              <div class="job-title-row">
+                <span class="label">
+                  <span class="live-dot" style="width:6px;height:6px"></span>
+                  yt-dlp ripping a SoundCloud URL
+                </span>
+                <span class="pct">14%</span>
+              </div>
+              <div class="progress"><div class="progress-fill" style="width:14%"></div></div>
+              <div class="job-meta"><span>maks queued · 1:48:12</span><span>≈ 2m 24s left</span></div>
+            </div>
+            <div class="job-row">
+              <div class="job-title-row">
+                <span class="label">
+                  <span class="live-dot" style="width:6px;height:6px;background:var(--accent-secondary)"></span>
+                  AcoustID enrichment
+                </span>
+                <span class="pct">88%</span>
+              </div>
+              <div class="progress"><div class="progress-fill" style="width:88%;background:var(--accent-secondary)"></div></div>
+              <div class="job-meta"><span>72 / 82 entries</span><span>≈ 12s left</span></div>
+            </div>
+
+            <div style="margin-top:var(--sp-4);padding-top:var(--sp-3);border-top:1px solid var(--border-subtle)">
+              <div class="label-small" style="margin-bottom:var(--sp-2)">Completed today</div>
+              <div style="font-size:var(--ts-md);color:var(--text-muted);line-height:var(--lh-relaxed)">
+                <div>✓ Waveform generated · 4 sets</div>
+                <div>✓ Loudness normalized · 4 sets</div>
+                <div>✓ Discogs enrichment · 142 tracks</div>
+                <div>✓ Daily backup · 47.2 GB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mini-player">
+    <div class="mp-now">
+      <div class="mp-cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)">SP<br>250</div>
+      <div>
+        <div class="mp-title">Inhuman <span style="font-weight:400;color:var(--text-faint)">— DJ T-1000</span></div>
+        <div class="mp-sub">Spectrum 250 · Joris Voorn @ Awakenings 2024</div>
+      </div>
+    </div>
+    <div class="mp-controls">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/></svg></button>
+      <button class="btn btn-icon" style="background:var(--accent);color:var(--text-on-accent);border-color:var(--accent)"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+      <span class="mp-time">43:18</span>
+      <div class="mp-mini-wave"></div>
+      <span class="mp-time">1:54:32</span>
+    </div>
+    <div class="mp-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 10a3 3 0 0 1 3 3"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M3 8h10M3 11h6"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="2,6 5,6 9,3 9,13 5,10 2,10" fill="currentColor"/></svg></button>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

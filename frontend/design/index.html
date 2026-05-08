@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — design package · Direction C</title>
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/components.css">
+<style>
+  body {
+    background: var(--bg-base);
+    padding: var(--sp-10) var(--sp-8) var(--sp-12);
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .doc { max-width: 1280px; margin: 0 auto; position: relative; z-index: 2; }
+
+  /* hero */
+  .head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--sp-8);
+    align-items: end;
+    border-bottom: 1px solid var(--border-default);
+    padding-bottom: var(--sp-6);
+    margin-bottom: var(--sp-8);
+  }
+  .head .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+    margin-bottom: var(--sp-4);
+  }
+  .head h1 {
+    font-size: var(--ts-4xl);
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    font-weight: 800;
+    margin-bottom: var(--sp-3);
+    max-width: 22ch;
+  }
+  .head h1 b { color: var(--accent); font-weight: 800; }
+  .head .lede {
+    font-size: var(--ts-lg);
+    color: var(--text-muted);
+    max-width: 60ch;
+    line-height: var(--lh-relaxed);
+  }
+  .head .lede a { color: var(--accent); border-bottom: 1px dashed currentColor; padding-bottom: 1px; }
+  .head .meta {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+    margin-top: var(--sp-4);
+    flex-wrap: wrap;
+  }
+  .head-side {
+    display: grid;
+    gap: 1px;
+    background: var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    grid-template-columns: 1fr 1fr;
+    align-self: end;
+    min-width: 320px;
+  }
+  .head-stat {
+    background: var(--bg-elevated);
+    padding: var(--sp-4);
+    text-align: left;
+  }
+  .head-stat .v {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: var(--ts-2xl);
+    line-height: 1;
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    margin-bottom: 4px;
+  }
+  .head-stat .v.acc { color: var(--accent); }
+  .head-stat .k {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+  }
+
+  /* sections */
+  .section { margin-bottom: var(--sp-12); }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: var(--sp-5);
+  }
+  .section-head h2 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    line-height: 1;
+  }
+  .section-head .num {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    margin-right: var(--sp-3);
+  }
+  .section-head .lede {
+    color: var(--text-muted);
+    font-size: var(--ts-md);
+    max-width: 56ch;
+  }
+
+  /* preview cards */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-5);
+  }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .grid.full { grid-template-columns: 1fr; }
+  @media (max-width: 1080px) { .grid, .grid.three { grid-template-columns: 1fr; } }
+
+  .preview-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: all var(--dur-default) var(--ease-default);
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--accent-glow), var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .preview-card a { color: inherit; }
+  .preview-frame {
+    aspect-ratio: 16/10;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-base);
+    position: relative;
+  }
+  .preview-frame iframe {
+    width: 200%;
+    height: 200%;
+    border: 0;
+    transform: scale(0.5);
+    transform-origin: 0 0;
+    pointer-events: none;
+    background: var(--bg-base);
+  }
+  .preview-frame::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(8,9,12,0.35));
+    pointer-events: none;
+  }
+  .preview-meta {
+    padding: var(--sp-4) var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .preview-meta .num {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+  }
+  .preview-meta h3 {
+    font-size: var(--ts-lg);
+    color: var(--text-strong);
+    line-height: var(--lh-snug);
+    letter-spacing: var(--ls-tight);
+  }
+  .preview-meta p {
+    color: var(--text-muted);
+    font-size: var(--ts-md);
+    line-height: var(--lh-relaxed);
+  }
+  .preview-meta .links {
+    display: flex; gap: var(--sp-2); margin-top: 4px;
+  }
+
+  /* token preview row */
+  .token-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--sp-4);
+  }
+  @media (max-width: 980px) { .token-grid { grid-template-columns: 1fr; } }
+  .token-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    padding: var(--sp-5);
+  }
+  .token-card h4 {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+    margin-bottom: var(--sp-3);
+    font-weight: 500;
+  }
+  .colour-row { display: flex; gap: 0; margin-bottom: var(--sp-3); border-radius: var(--r-sm); overflow: hidden; height: 36px; border: 1px solid var(--border-default); }
+  .colour-chip { flex: 1; }
+  .meta-list { display: grid; gap: 6px; font-family: var(--font-mono); font-size: var(--ts-sm); color: var(--text-muted); }
+  .meta-list b { color: var(--text-default); font-weight: 500; }
+
+  /* foot */
+  .foot {
+    background: var(--bg-elevated);
+    border-left: 3px solid var(--accent);
+    padding: var(--sp-5) var(--sp-6);
+    color: var(--text-default);
+    font-size: var(--ts-md);
+    line-height: var(--lh-relaxed);
+    margin-top: var(--sp-12);
+  }
+  .foot b { color: var(--accent); }
+  .foot code { background: var(--bg-base); padding: 2px 6px; border-radius: var(--r-xs); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <!-- HEAD -->
+  <header class="head">
+    <div>
+      <div class="kicker">
+        <span class="live-dot" style="width: 6px; height: 6px"></span>
+        Phase 1 — Design &amp; visual identity · Direction C: Underground Terminal
+      </div>
+      <h1>The <b>SetVault</b> design package.</h1>
+      <p class="lede">
+        Five app screens, a component library, and a landing page — all built from the same tokens, with self-hosted fonts so the previews work offline. This index is the live preview entry point referenced in the spec at <a href="../../docs/superpowers/specs/2026-05-08-setvault-design.md">§9, Phase 1</a>. Phase 2 implementation builds against the patterns shown here.
+      </p>
+      <div class="meta">
+        <span class="badge badge-resolved">5 app screens</span>
+        <span class="badge badge-acoustid">component library</span>
+        <span class="badge badge-resolved">landing page</span>
+        <span class="badge badge-neutral">dark + light tokens</span>
+        <span class="badge badge-neutral">offline-first · 0 CDN deps</span>
+      </div>
+    </div>
+    <div class="head-side">
+      <div class="head-stat">
+        <div class="v acc">9</div>
+        <div class="k">Mockups</div>
+      </div>
+      <div class="head-stat">
+        <div class="v">~170<span style="font-size:var(--ts-md);font-weight:400;color:var(--text-muted);margin-left:4px">KB</span></div>
+        <div class="k">Self-hosted fonts</div>
+      </div>
+      <div class="head-stat">
+        <div class="v">2</div>
+        <div class="k">Themes (dark + light)</div>
+      </div>
+      <div class="head-stat">
+        <div class="v acc">0</div>
+        <div class="k">CDN dependencies</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SCREENS -->
+  <section class="section">
+    <div class="section-head">
+      <h2><span class="num">01.</span>App screens</h2>
+      <p class="lede">Click a card to open the screen full-size. Hover for a hint.</p>
+    </div>
+
+    <!-- Marquee: set-detail (full width) -->
+    <div class="grid full" style="margin-bottom: var(--sp-5)">
+      <article class="preview-card">
+        <a href="screens/01-set-detail.html">
+          <div class="preview-frame" style="aspect-ratio: 21/9">
+            <iframe src="screens/01-set-detail.html" loading="lazy" title="Set detail / player view"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">01 · marquee · the most-used screen in the app</span>
+            <h3>Set detail / player view</h3>
+            <p>Sticky audio player with waveform, tracklist sidebar that highlights the currently-playing entry, time-stamped comments as markers, keyboard-driven editing UI, mini-player. The marquee — get this right and the rest follows.</p>
+            <div class="links">
+              <span class="kbd">M</span> mark playhead &nbsp; · &nbsp;
+              <span class="kbd">B</span> bookmark &nbsp; · &nbsp;
+              <span class="kbd">[</span> <span class="kbd">]</span> step entries &nbsp; · &nbsp;
+              <span class="kbd">⇧L</span> loop A↔B
+            </div>
+          </div>
+        </a>
+      </article>
+    </div>
+
+    <div class="grid">
+      <article class="preview-card">
+        <a href="screens/02-library.html">
+          <div class="preview-frame">
+            <iframe src="screens/02-library.html" loading="lazy" title="Library / browse"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">02 · daily-use list</span>
+            <h3>Library / browse</h3>
+            <p>Filter sidebar (genre, year, venue-kind, duration, source), grid + dense-row toggle, applied-filter pills, smart pagination. Filter state lives in the URL — shareable, bookmarkable.</p>
+          </div>
+        </a>
+      </article>
+
+      <article class="preview-card">
+        <a href="screens/03-home.html">
+          <div class="preview-frame">
+            <iframe src="screens/03-home.html" loading="lazy" title="Home / activity feed"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">03 · first impression</span>
+            <h3>Home / activity feed</h3>
+            <p>Greeting + stats grid (sets, tracks resolved, IDs needed, storage). Continue listening, recently added, crew activity feed, active jobs panel with live progress bars.</p>
+          </div>
+        </a>
+      </article>
+
+      <article class="preview-card">
+        <a href="screens/04-tracklist-editor.html">
+          <div class="preview-frame">
+            <iframe src="screens/04-tracklist-editor.html" loading="lazy" title="Tracklist editor"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">04 · the differentiator</span>
+            <h3>Tracklist editor</h3>
+            <p>Three input modes (live "mark playhead", paste-and-parse messy text, import from URL). Inline editing with provenance tracking, AcoustID candidate list, time-shift dialog, bulk-resolve flow.</p>
+          </div>
+        </a>
+      </article>
+
+      <article class="preview-card">
+        <a href="screens/05-mobile-player.html">
+          <div class="preview-frame">
+            <iframe src="screens/05-mobile-player.html" loading="lazy" title="Mobile player"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">05 · mobile + PWA</span>
+            <h3>Mobile player view</h3>
+            <p>Three phone breakpoints — full set view (360 px), library w/ persistent mini-player, OS lockscreen via MediaSession API. Same tokens; collapses cleanly.</p>
+          </div>
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <!-- COMPONENTS + LANDING -->
+  <section class="section">
+    <div class="section-head">
+      <h2><span class="num">02.</span>Library &amp; landing</h2>
+      <p class="lede">The atom-level reference, and the marketing site.</p>
+    </div>
+    <div class="grid">
+      <article class="preview-card">
+        <a href="components.html">
+          <div class="preview-frame">
+            <iframe src="components.html" loading="lazy" title="Component library"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">06 · pattern reference</span>
+            <h3>Component library</h3>
+            <p>Tokens (color · type · spacing · radius), buttons, inputs, badges, the tracklist row, tabs, filter pills, meta grid (CDJ-style), dialogs, kbd hints. Phase 2 components map 1:1 to these patterns.</p>
+          </div>
+        </a>
+      </article>
+      <article class="preview-card">
+        <a href="landing.html">
+          <div class="preview-frame">
+            <iframe src="landing.html" loading="lazy" title="Landing page"></iframe>
+          </div>
+          <div class="preview-meta">
+            <span class="num">07 · github pages</span>
+            <h3>Landing page</h3>
+            <p>Marketing site for GitHub Pages. Same brand vocabulary as the app — same colors, type, badges — but editorial composition: big hero, scrolling features, system requirements, quickstart terminal block.</p>
+          </div>
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <!-- TOKEN PREVIEW -->
+  <section class="section">
+    <div class="section-head">
+      <h2><span class="num">03.</span>Tokens at a glance</h2>
+      <p class="lede">Full reference is in <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">assets/tokens.css</code> and on the <a href="components.html" style="color:var(--accent)">component page</a>.</p>
+    </div>
+    <div class="token-grid">
+      <div class="token-card">
+        <h4>Color · dark</h4>
+        <div class="colour-row">
+          <div class="colour-chip" style="background: #08090c"></div>
+          <div class="colour-chip" style="background: #0e0f12"></div>
+          <div class="colour-chip" style="background: #14161b"></div>
+          <div class="colour-chip" style="background: #1d1f25"></div>
+          <div class="colour-chip" style="background: #00ffb2; box-shadow: var(--accent-glow);"></div>
+          <div class="colour-chip" style="background: #6cd4ff"></div>
+          <div class="colour-chip" style="background: #ff7a59"></div>
+          <div class="colour-chip" style="background: #f4f6fb"></div>
+        </div>
+        <div class="meta-list">
+          <div><b>--accent</b> #00ffb2 phosphor mint</div>
+          <div><b>--accent-secondary</b> #6cd4ff (info)</div>
+          <div><b>--accent-warning</b> #ff7a59 (raw)</div>
+          <div><b>--accent-error</b> #ff3d5c</div>
+          <div><b>--bg-base</b> #08090c</div>
+          <div><b>--text-strong</b> #f4f6fb</div>
+        </div>
+      </div>
+
+      <div class="token-card">
+        <h4>Color · light (paper-and-rule)</h4>
+        <div class="colour-row">
+          <div class="colour-chip" style="background: #ebeae3"></div>
+          <div class="colour-chip" style="background: #f4f3ec"></div>
+          <div class="colour-chip" style="background: #fbfaf4"></div>
+          <div class="colour-chip" style="background: #cdcbbe"></div>
+          <div class="colour-chip" style="background: #007a55"></div>
+          <div class="colour-chip" style="background: #1158a0"></div>
+          <div class="colour-chip" style="background: #b3380e"></div>
+          <div class="colour-chip" style="background: #08090a"></div>
+        </div>
+        <div class="meta-list">
+          <div><b>--accent</b> #007a55 deeper mint (AA)</div>
+          <div><b>--accent-secondary</b> #1158a0</div>
+          <div><b>--accent-warning</b> #b3380e</div>
+          <div><b>--bg-base</b> #ebeae3 warm paper</div>
+          <div><b>--text-strong</b> #08090a graphite ink</div>
+          <div style="color:var(--text-faint)">not a trivial inversion — distinct mood</div>
+        </div>
+      </div>
+
+      <div class="token-card">
+        <h4>Type · spacing · motion</h4>
+        <div class="meta-list" style="font-size:var(--ts-md)">
+          <div><b>Bricolage Grotesque</b> 400 / 500 / 600 / 700 / 800</div>
+          <div><b>JetBrains Mono</b> variable wght</div>
+          <div style="color:var(--text-faint)">— self-hosted woff2 ≈ 170 KB total</div>
+          <div style="margin-top: 6px"><b>Type scale</b> 10 / 11 / 12 / 13 / 14 / 16 / 20 / 28 / 38 / 56 / 76 / 112</div>
+          <div><b>Spacing</b> 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80</div>
+          <div><b>Radius</b> 0 / 2 / 4 / <span style="color:var(--accent)">6</span> / 10 / 16 / pill</div>
+          <div><b>Motion</b> 100 / 180 / 320 ms · cubic-bezier(.2,.8,.2,1)</div>
+          <div style="color:var(--text-faint)">prefers-reduced-motion honored</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOT -->
+  <div class="foot">
+    <p style="margin-bottom: 8px"><b>How to preview locally:</b></p>
+    <ol style="padding-left: 22px; color: var(--text-default); font-size: var(--ts-md); line-height: var(--lh-relaxed); margin: 0">
+      <li>Open <code>frontend/design/index.html</code> directly in any browser, or…</li>
+      <li>Run <code>npx serve frontend/design</code> (or any static server) and visit the URL it prints. Live-reload optional.</li>
+      <li>Each screen is a complete, standalone HTML file. Click any card above to open full-size.</li>
+    </ol>
+    <p style="margin-top: var(--sp-3); color: var(--text-muted); font-size: var(--ts-md);">
+      Phase 2 implementation builds against the patterns here. The tokens in <code>assets/tokens.css</code> become the SvelteKit app's design system. Components maps 1:1 to Svelte components. Landing page becomes a SvelteKit static-adapter build deployed to GitHub Pages on push to <code>main</code>.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

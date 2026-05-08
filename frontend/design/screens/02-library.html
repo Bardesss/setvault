@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — Library</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="../assets/components.css">
+<style>
+  .page-head {
+    display: flex; align-items: center;
+    padding: var(--sp-6) var(--sp-8) var(--sp-4);
+    gap: var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .page-title {
+    font-size: var(--ts-2xl);
+    font-weight: 700;
+    letter-spacing: var(--ls-tight);
+  }
+  .page-title b {
+    color: var(--text-faint);
+    font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+    margin-left: var(--sp-3);
+    vertical-align: middle;
+  }
+  .head-spacer { flex: 1; }
+
+  .view-toggle {
+    display: inline-flex;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    height: 32px;
+  }
+  .view-toggle button {
+    padding: 0 12px;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-default);
+    height: 100%;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--ts-md);
+  }
+  .view-toggle button:last-child { border-right: 0; }
+  .view-toggle button.on { background: var(--accent-soft); color: var(--accent); }
+  .view-toggle button svg { width: 14px; height: 14px; }
+
+  .sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--r-md);
+    font-size: var(--ts-md);
+    color: var(--text-default);
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    align-items: start;
+  }
+
+  /* ===== filter sidebar ===== */
+  .filters {
+    width: 280px;
+    border-right: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    padding: var(--sp-5) var(--sp-5) var(--sp-8);
+    position: sticky;
+    top: 0;
+    align-self: stretch;
+    min-height: calc(100vh - var(--shell-topbar) - var(--shell-mini-player));
+  }
+  .filter-search {
+    width: 100%;
+    height: 32px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    border-radius: var(--r-md);
+    padding: 0 var(--sp-3);
+    font-size: var(--ts-md);
+    margin-bottom: var(--sp-5);
+  }
+  .filter-search:focus { border-color: var(--accent); }
+
+  .applied-filters {
+    margin: var(--sp-3) 0 var(--sp-5);
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .applied-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    padding: 3px 6px 3px 8px;
+    font-size: var(--ts-xs);
+    font-family: var(--font-mono);
+  }
+  .applied-filter button { color: inherit; padding: 0 0 0 4px; line-height: 1; }
+  .clear-all {
+    color: var(--text-muted);
+    font-size: var(--ts-xs);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--border-strong);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-top: 4px;
+  }
+
+  .filter-row {
+    display: flex; align-items: center;
+    padding: 5px 0;
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    cursor: pointer;
+  }
+  .filter-row:hover { color: var(--accent); }
+  .filter-row .check {
+    width: 14px; height: 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-xs);
+    margin-right: var(--sp-2);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .filter-row.checked .check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .filter-row.checked .check svg { width: 10px; height: 10px; color: var(--text-on-accent); }
+  .filter-row .count { margin-left: auto; color: var(--text-faint); font-family: var(--font-mono); font-size: var(--ts-xs); }
+
+  .filter-range {
+    margin: var(--sp-3) 0;
+  }
+  .filter-range-track {
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: var(--r-pill);
+    margin: 14px 4px;
+    position: relative;
+  }
+  .filter-range-fill {
+    position: absolute;
+    height: 100%;
+    background: var(--accent);
+    border-radius: var(--r-pill);
+    box-shadow: var(--accent-glow);
+  }
+  .filter-range-handle {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-base);
+    position: absolute;
+    top: -5px;
+    cursor: grab;
+  }
+  .filter-range-labels {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+
+  /* ===== content area ===== */
+  .content {
+    padding: var(--sp-5) var(--sp-8);
+  }
+  .content-meta {
+    display: flex; align-items: center;
+    margin-bottom: var(--sp-4);
+    gap: var(--sp-4);
+    font-size: var(--ts-md);
+    color: var(--text-muted);
+  }
+  .content-meta b { color: var(--text-default); }
+
+  /* ===== set grid card ===== */
+  .set-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--sp-4);
+  }
+  .set-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    transition: all var(--dur-default) var(--ease-default);
+    cursor: pointer;
+  }
+  .set-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+  .set-cover {
+    aspect-ratio: 1.4;
+    background: linear-gradient(135deg, #1a2b2b, #0a1818);
+    position: relative;
+    overflow: hidden;
+  }
+  .set-cover.t1 { background: linear-gradient(135deg, #2a1a3e, #11042e); }
+  .set-cover.t2 { background: linear-gradient(135deg, #1a2e2e, #042020); }
+  .set-cover.t3 { background: linear-gradient(135deg, #3e1a1a, #2a0808); }
+  .set-cover.t4 { background: linear-gradient(135deg, #1e3a1a, #08200a); }
+  .set-cover.t5 { background: linear-gradient(135deg, #3a341a, #20180a); }
+  .set-cover.t6 { background: linear-gradient(135deg, #1a253e, #08142a); }
+  .set-cover.t7 { background: linear-gradient(135deg, #3a1a37, #20082a); }
+  .set-cover.t8 { background: linear-gradient(135deg, #2a3a1a, #142208); }
+  .set-cover svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0.5;
+  }
+  .set-cover-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.7));
+    padding: var(--sp-3);
+    color: var(--text-strong);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    display: flex; justify-content: space-between;
+  }
+  .set-cover-play {
+    position: absolute;
+    inset: 0;
+    display: grid; place-items: center;
+    opacity: 0;
+    background: rgba(8,9,12,0.4);
+    transition: opacity var(--dur-default);
+  }
+  .set-card:hover .set-cover-play { opacity: 1; }
+  .set-cover-play .play {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: var(--text-on-accent);
+    box-shadow: var(--accent-glow);
+  }
+  .set-meta-strip {
+    padding: var(--sp-3);
+  }
+  .set-card-title {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: var(--ts-base);
+    color: var(--text-strong);
+    margin-bottom: 2px;
+    line-height: var(--lh-snug);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .set-card-artist {
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    margin-bottom: 6px;
+  }
+  .set-card-meta {
+    display: flex; gap: 6px; align-items: center;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    flex-wrap: wrap;
+  }
+  .set-card-meta .sep { color: var(--text-faintest); }
+  .set-card-meta .badge { padding: 1px 6px; font-size: var(--ts-xs); }
+
+  /* ===== dense list view ===== */
+  .set-list {
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-surface);
+  }
+  .set-list-header {
+    display: grid;
+    grid-template-columns: 50px 60px 1fr 200px 130px 80px 100px 60px;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-uppercase);
+    color: var(--text-faint);
+  }
+  .set-list-row {
+    display: grid;
+    grid-template-columns: 50px 60px 1fr 200px 130px 80px 100px 60px;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--ts-md);
+    color: var(--text-default);
+    cursor: pointer;
+    transition: background var(--dur-fast);
+  }
+  .set-list-row:hover { background: var(--bg-elevated); }
+  .set-list-row .ix { font-family: var(--font-mono); color: var(--text-faintest); font-size: var(--ts-xs); }
+  .set-list-row .cover { width: 44px; height: 32px; border-radius: var(--r-xs); }
+  .set-list-row .title { color: var(--text-strong); font-weight: 600; }
+  .set-list-row .sub { color: var(--text-muted); font-size: var(--ts-sm); margin-top: 1px; }
+  .set-list-row .secondary { color: var(--text-default); }
+  .set-list-row .secondary span { color: var(--text-muted); font-size: var(--ts-sm); display: block; }
+  .set-list-row .duration { font-family: var(--font-mono); color: var(--text-default); font-feature-settings: 'tnum'; }
+  .set-list-row .resolved { font-family: var(--font-mono); font-size: var(--ts-xs); color: var(--text-faint); }
+  .set-list-row .resolved b { color: var(--accent); font-weight: 500; }
+
+  .pager {
+    margin-top: var(--sp-6);
+    display: flex; gap: var(--sp-2); align-items: center; justify-content: center;
+    color: var(--text-muted);
+    font-size: var(--ts-md);
+  }
+  .pager .pn {
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--ts-md);
+  }
+  .pager .pn:hover { border-color: var(--border-strong); }
+  .pager .pn.active { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <a class="brand" href="../index.html">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
+    </a>
+    <button class="search-trigger">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>
+      <span>Search artists, sets, parties…</span>
+      <span class="kbd">⌘&nbsp;K</span>
+    </button>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6a4 4 0 1 1 8 0v3l1 2H3l1-2V6z"/></svg></button>
+      <div style="width:32px;height:32px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:var(--ts-md);">B</div>
+    </div>
+  </header>
+
+  <nav class="rail">
+    <div class="rail-section">
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7l6-5 6 5v7H2z"/><path d="M6 14V9h4v5"/></svg> Home</div>
+      <div class="rail-link active" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/></svg> Library<span class="count">847</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M3 14a5 5 0 0 1 10 0"/></svg> Artists<span class="count">214</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2z"/><path d="M5 4v8M11 4v8"/></svg> Parties<span class="count">63</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13V7l5-4 5 4v6"/></svg> Venues<span class="count">38</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg> Tracks<span class="count">11.2k</span></div>
+    </div>
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">Yours</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.5l-1.5-1.5C3 9 1 6.5 1 4.5A3 3 0 0 1 4 1.5C5.5 1.5 7 2.5 8 4c1-1.5 2.5-2.5 4-2.5A3 3 0 0 1 15 4.5c0 2-2 4.5-5.5 7.5L8 13.5z"/></svg> Favorites</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg> Watch later</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg> Playlists</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,8 9,11 14,4"/></svg> Activity</div>
+    </div>
+    <div class="rail-section">
+      <div class="rail-section-title label-micro">System</div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,6 5,3 8,6 11,3 14,6"/></svg> Jobs<span class="count" style="color:var(--accent)">3</span></div>
+      <div class="rail-link" tabindex="0"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg> Settings</div>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="page-head">
+      <div>
+        <h1 class="page-title">Library <b>847 sets</b></h1>
+      </div>
+      <div class="head-spacer"></div>
+      <button class="btn btn-sm">
+        <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 7,12 13,4"/></svg>
+        Save filter
+      </button>
+      <span class="sort">
+        <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3v10M5 13l-2-2M5 13l2-2M11 13V3M11 3l-2 2M11 3l2 2"/></svg>
+        Sort: <b style="color:var(--text-strong);font-weight:600">Date added</b>
+      </span>
+      <span class="view-toggle">
+        <button class="on" aria-label="Grid"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg> Grid</button>
+        <button aria-label="Dense"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg> Dense</button>
+      </span>
+      <button class="btn btn-primary btn-sm">
+        <svg class="icon-sm" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+        Add set
+      </button>
+    </header>
+
+    <div class="body">
+
+      <!-- FILTER SIDEBAR -->
+      <aside class="filters">
+        <input class="filter-search" placeholder="Filter library…">
+
+        <div class="applied-filters">
+          <span class="applied-filter">techno <button>×</button></span>
+          <span class="applied-filter">2024 <button>×</button></span>
+          <span class="applied-filter">outdoor <button>×</button></span>
+        </div>
+        <button class="clear-all">clear all 3 filters</button>
+
+        <div class="filter-group" style="margin-top:var(--sp-6)">
+          <h4>Genre</h4>
+          <div class="filter-row checked"><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3,8 7,12 13,4"/></svg></span> techno <span class="count">312</span></div>
+          <div class="filter-row"><span class="check"></span> peak time <span class="count">184</span></div>
+          <div class="filter-row"><span class="check"></span> minimal <span class="count">96</span></div>
+          <div class="filter-row"><span class="check"></span> house <span class="count">141</span></div>
+          <div class="filter-row"><span class="check"></span> trance <span class="count">42</span></div>
+          <div class="filter-row"><span class="check"></span> drum &amp; bass <span class="count">28</span></div>
+          <button class="clear-all" style="margin-top:6px">show 12 more…</button>
+        </div>
+
+        <div class="filter-group">
+          <h4>Year</h4>
+          <div class="filter-row checked"><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3,8 7,12 13,4"/></svg></span> 2024 <span class="count">218</span></div>
+          <div class="filter-row"><span class="check"></span> 2023 <span class="count">186</span></div>
+          <div class="filter-row"><span class="check"></span> 2022 <span class="count">134</span></div>
+          <div class="filter-row"><span class="check"></span> 2021 <span class="count">98</span></div>
+          <div class="filter-row"><span class="check"></span> earlier <span class="count">211</span></div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Venue kind</h4>
+          <div class="filter-row checked"><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3,8 7,12 13,4"/></svg></span> outdoor <span class="count">142</span></div>
+          <div class="filter-row"><span class="check"></span> club <span class="count">428</span></div>
+          <div class="filter-row"><span class="check"></span> warehouse <span class="count">76</span></div>
+          <div class="filter-row"><span class="check"></span> arena <span class="count">38</span></div>
+          <div class="filter-row"><span class="check"></span> studio / radio <span class="count">114</span></div>
+          <div class="filter-row"><span class="check"></span> online <span class="count">49</span></div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Duration</h4>
+          <div class="filter-range">
+            <div class="filter-range-track">
+              <div class="filter-range-fill" style="left: 34%; width: 26%"></div>
+              <div class="filter-range-handle" style="left: 32%"></div>
+              <div class="filter-range-handle" style="left: 58%"></div>
+            </div>
+            <div class="filter-range-labels">
+              <span>0:00</span>
+              <span>1:08–1:42</span>
+              <span>3:00+</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Source</h4>
+          <div class="filter-row"><span class="check"></span> upload <span class="count">311</span></div>
+          <div class="filter-row"><span class="check"></span> SoundCloud <span class="count">288</span></div>
+          <div class="filter-row"><span class="check"></span> YouTube <span class="count">142</span></div>
+          <div class="filter-row"><span class="check"></span> Mixcloud <span class="count">86</span></div>
+          <div class="filter-row"><span class="check"></span> Bandcamp <span class="count">20</span></div>
+        </div>
+
+        <div class="filter-group">
+          <h4>Tracklist</h4>
+          <div class="filter-row"><span class="check"></span> ≥ 90% resolved <span class="count">364</span></div>
+          <div class="filter-row"><span class="check"></span> has comments <span class="count">412</span></div>
+          <div class="filter-row"><span class="check"></span> needs IDs <span class="count">218</span></div>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <section class="content">
+        <div class="content-meta">
+          <span><b>34</b> sets match · <span class="muted">techno · 2024 · outdoor</span></span>
+          <span class="muted">·</span>
+          <span class="muted">≈ 41h 22m total runtime</span>
+          <div style="margin-left:auto" class="cmdk-hint">
+            <span class="kbd">/</span>
+            focus filter search
+          </div>
+        </div>
+
+        <div class="set-grid">
+
+          <article class="set-card">
+            <div class="set-cover t1">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,80 L20,40 L40,90 L60,30 L80,100 L100,20 L120,110 L140,40 L160,80 L180,30 L200,90 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>1:54:32</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">23/31</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Spectrum 250 — closing</div>
+              <div class="set-card-artist">Joris Voorn</div>
+              <div class="set-card-meta">
+                <span>Awakenings</span>
+                <span class="sep">·</span>
+                <span>Spaarnwoude</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t2">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,70 L20,90 L40,40 L60,80 L80,30 L100,90 L120,50 L140,80 L160,30 L180,70 L200,40 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>2:01:18</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">31/31</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Mainstage closer</div>
+              <div class="set-card-artist">Adam Beyer b2b Bart Skils</div>
+              <div class="set-card-meta">
+                <span>Tomorrowland</span>
+                <span class="sep">·</span>
+                <span>Boom</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t3">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,90 L20,50 L40,100 L60,40 L80,80 L100,30 L120,90 L140,60 L160,100 L180,40 L200,80 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>3:42:12</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">52/68</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">All-night-long</div>
+              <div class="set-card-artist">Dixon</div>
+              <div class="set-card-meta">
+                <span>Watergate</span>
+                <span class="sep">·</span>
+                <span>Berlin</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t4">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,40 L20,80 L40,60 L60,100 L80,30 L100,80 L120,50 L140,90 L160,40 L180,80 L200,60 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>1:32:08</span>
+                <span class="badge badge-acoustid" style="font-size:9px;padding:1px 5px">18/22</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Festival opener</div>
+              <div class="set-card-artist">Charlotte de Witte</div>
+              <div class="set-card-meta">
+                <span>DGTL</span>
+                <span class="sep">·</span>
+                <span>Amsterdam</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t5">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,70 L20,40 L40,80 L60,20 L80,60 L100,30 L120,90 L140,50 L160,80 L180,30 L200,70 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>1:48:42</span>
+                <span class="badge badge-raw" style="font-size:9px;padding:1px 5px">8/24</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">B2B sunrise</div>
+              <div class="set-card-artist">Tale of Us b2b Mind Against</div>
+              <div class="set-card-meta">
+                <span>Afterlife</span>
+                <span class="sep">·</span>
+                <span>Tulum</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t6">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,80 L20,30 L40,90 L60,50 L80,100 L100,40 L120,80 L140,30 L160,90 L180,50 L200,80 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>2:14:58</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">38/41</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Closing the woods</div>
+              <div class="set-card-artist">Solomun</div>
+              <div class="set-card-meta">
+                <span>Mysteryland</span>
+                <span class="sep">·</span>
+                <span>Haarlemmermeer</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t7">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,50 L20,100 L40,30 L60,80 L80,40 L100,100 L120,50 L140,80 L160,40 L180,90 L200,60 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>1:18:24</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">14/16</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Awakenings warm-up</div>
+              <div class="set-card-artist">Reinier Zonneveld</div>
+              <div class="set-card-meta">
+                <span>Awakenings</span>
+                <span class="sep">·</span>
+                <span>Spaarnwoude</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="set-card">
+            <div class="set-cover t8">
+              <svg viewBox="0 0 200 140" preserveAspectRatio="none"><path d="M0,60 L20,30 L40,80 L60,40 L80,100 L100,50 L120,90 L140,40 L160,70 L180,30 L200,80 L200,140 L0,140 Z" fill="rgba(0,255,178,0.15)"/></svg>
+              <div class="set-cover-overlay">
+                <span>2:48:00</span>
+                <span class="badge badge-resolved" style="font-size:9px;padding:1px 5px">42/52</span>
+              </div>
+              <div class="set-cover-play"><div class="play"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></div></div>
+            </div>
+            <div class="set-meta-strip">
+              <div class="set-card-title">Forest peak</div>
+              <div class="set-card-artist">Boris Brejcha</div>
+              <div class="set-card-meta">
+                <span>Wonderland</span>
+                <span class="sep">·</span>
+                <span>Tilburg</span>
+                <span class="sep">·</span>
+                <span>2024</span>
+              </div>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Dense list preview (one row to show the alt view) -->
+        <div style="margin-top:var(--sp-10);">
+          <div class="label-small" style="margin-bottom:var(--sp-3)">Dense list view (toggle above)</div>
+          <div class="set-list">
+            <div class="set-list-header">
+              <span>#</span>
+              <span></span>
+              <span>Set / Artist</span>
+              <span>Party / Venue</span>
+              <span>Date</span>
+              <span>Length</span>
+              <span>Resolved</span>
+              <span></span>
+            </div>
+            <div class="set-list-row">
+              <span class="ix">001</span>
+              <span class="cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)"></span>
+              <div>
+                <div class="title">Spectrum 250 — closing</div>
+                <div class="sub">Joris Voorn</div>
+              </div>
+              <div class="secondary">Awakenings<span>Spaarnwoude · outdoor</span></div>
+              <span class="duration">2024-06-28</span>
+              <span class="duration">1:54:32</span>
+              <span class="resolved"><b>23</b> / 31</span>
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></button>
+            </div>
+            <div class="set-list-row">
+              <span class="ix">002</span>
+              <span class="cover" style="background:linear-gradient(135deg,#1a2e2e,#042020)"></span>
+              <div>
+                <div class="title">Mainstage closer</div>
+                <div class="sub">Adam Beyer b2b Bart Skils</div>
+              </div>
+              <div class="secondary">Tomorrowland<span>Boom · outdoor</span></div>
+              <span class="duration">2024-07-20</span>
+              <span class="duration">2:01:18</span>
+              <span class="resolved"><b>31</b> / 31</span>
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></button>
+            </div>
+            <div class="set-list-row">
+              <span class="ix">003</span>
+              <span class="cover" style="background:linear-gradient(135deg,#3e1a1a,#2a0808)"></span>
+              <div>
+                <div class="title">All-night-long</div>
+                <div class="sub">Dixon</div>
+              </div>
+              <div class="secondary">Watergate<span>Berlin · club</span></div>
+              <span class="duration">2024-04-13</span>
+              <span class="duration">3:42:12</span>
+              <span class="resolved"><b>52</b> / 68</span>
+              <button class="btn btn-ghost btn-sm btn-icon"><svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l11 6L3 14V2z"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pager">
+          <button class="pn">‹</button>
+          <button class="pn active">1</button>
+          <button class="pn">2</button>
+          <button class="pn">3</button>
+          <button class="pn">4</button>
+          <span class="muted">…</span>
+          <button class="pn">12</button>
+          <button class="pn">›</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="mini-player">
+    <div class="mp-now">
+      <div class="mp-cover" style="background:linear-gradient(135deg,#2a1a3e,#11042e)">SP<br>250</div>
+      <div>
+        <div class="mp-title">Inhuman <span style="font-weight:400;color:var(--text-faint)">— DJ T-1000</span></div>
+        <div class="mp-sub">Spectrum 250 · Joris Voorn @ Awakenings 2024</div>
+      </div>
+    </div>
+    <div class="mp-controls">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L4 8l7 6V2z"/></svg></button>
+      <button class="btn btn-icon" style="background:var(--accent);color:var(--text-on-accent);border-color:var(--accent)"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l7 6-7 6V2z"/></svg></button>
+      <span class="mp-time">43:18</span>
+      <div class="mp-mini-wave"></div>
+      <span class="mp-time">1:54:32</span>
+    </div>
+    <div class="mp-right">
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 10a3 3 0 0 1 3 3"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M3 8h10M3 11h6"/></svg></button>
+      <button class="btn btn-ghost btn-icon"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="2,6 5,6 9,3 9,13 5,10 2,10" fill="currentColor"/></svg></button>
+    </div>
+  </footer>
+</div>
+</body>
+</html>
