@@ -10,6 +10,7 @@ SetVault is a self-hosted live-set manager: upload or rip recorded DJ sets, mana
 - **Users:** small private group (target: <10 active users). Logins required. Shared library — every authenticated user sees the whole vault. Per-user state (favorites, history, bookmarks, comments, playlists, notes).
 - **Scale:** target <10 users, <1000 sets. Architecture chosen so growth past this point doesn't require rewriting core pieces.
 - **Hosting target:** Decent x86 server / NUC (4+ cores, 8+ GB RAM). Multi-arch Docker images so ARM64 users (Pi/UnRaid/Synology) work too.
+- **Offline-first for core functions.** **Browsing the catalog and playing sets MUST work with zero internet access** — once the host is up on the LAN, no cloud dependency is required for daily use. See §13 for the full online-vs-offline matrix and the implementation rules that follow from this. Online dependencies (URL ripping, metadata enrichment, scrobbling, Chromecast, Sonos SMAPI) are clearly opt-in features that fail gracefully when the WAN is down — they never block core flows.
 - **No public mode in v1.** No anonymous access, no public set pages, no community features (follows, likes, profiles).
 
 ## 2. Feature catalog
@@ -111,7 +112,7 @@ Features grouped A–M. All accepted unless explicitly marked out of scope.
 - **K5.** Stem separation (Demucs) — out of scope.
 
 ### L. Project deliverables
-- **L1.** README at repo root: hero, screenshots, **system requirements** (see §12), Docker quickstart, env reference, per-provider walkthroughs (Discogs/MB/Beatport/Spotify/AcoustID/LLM), reverse-proxy examples (Caddy/Traefik/nginx), Sonos SMAPI setup, backup/restore, upgrade path, troubleshooting.
+- **L1.** README at repo root: hero, screenshots, **system requirements** (see §13), Docker quickstart, env reference, per-provider walkthroughs (Discogs/MB/Beatport/Spotify/AcoustID/LLM), reverse-proxy examples (Caddy/Traefik/nginx), Sonos SMAPI setup, backup/restore, upgrade path, troubleshooting.
 - **L2.** Landing page in `/site/`: SvelteKit static-adapter build, deployed to GitHub Pages via `.github/workflows/deploy-site.yml` on push to `main`. Sections: hero, what-is, feature gallery, screenshots, **system requirements**, quickstart, link to repo, link to docs. CNAME file for custom domain.
 
 ### M. Release & distribution
@@ -177,6 +178,10 @@ setvault/
 
 - `.env` for secrets and host config (`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `BASE_URL`, `OIDC_*` if present).
 - All per-app runtime config (provider API keys, OIDC issuers, quotas, OIDC auto-provision toggle, etc.) in DB, edited via admin UI. Secret values encrypted at rest with a key derived from `SECRET_KEY`.
+
+### Self-hosted assets (offline-first)
+
+Per §12, the app shell never reaches the internet. All fonts (woff2), icon SVGs, JS chunks, CSS, and any other static assets are bundled into the `setvault-web` image and served by the FastAPI app. No CDN links, no `https://fonts.googleapis.com`, no external script tags. Service worker (I2) caches the shell aggressively so first-paint after a cold start is fast even on a network-isolated host.
 
 ### Stack
 
@@ -489,7 +494,43 @@ Each phase becomes its own implementation plan after this spec is approved. Phas
 
 None at spec sign-off. Implementation plans (one per phase) will surface task-level questions as they arise.
 
-## 12. Recommended system requirements
+## 12. Offline-first principle & online-dependency matrix
+
+SetVault is self-hosted. Browsing the catalog and playing back sets must continue to work even when the host has **zero internet access** (only LAN). This shapes several architectural choices.
+
+### Core functions that work fully offline
+
+- Sign in (local accounts).
+- Browse the library — list, filter, search.
+- Open any set, play it in the in-app player, see waveform and tracklist.
+- Edit metadata, tracklists, comments, bookmarks, playlists, private notes.
+- Cast to LAN-only targets: DLNA renderers (F2), Snapcast (F3), Subsonic clients (F6) on the same LAN.
+- Listen-together rooms (F4) — the WS server is local.
+- All admin functions except those that need an external service to be reachable.
+
+### Functions that require internet (clearly opt-in, fail gracefully)
+
+| Feature | Why internet | Failure behavior |
+|---|---|---|
+| **A2** URL rip (yt-dlp) | yt-dlp fetches external sources | Error toast: "no network — try again later." Job marked failed, retryable. |
+| **D1–D7** Metadata enrichment providers | Each calls a third-party API | Skipped silently when WAN is down; cached responses still serve. Manual editing always works. |
+| **F1** Chromecast | Cast SDK uses Google's cloud | Cast button hidden when SDK can't reach Google. |
+| **F5** Last.fm / ListenBrainz scrobbling | Outbound HTTP | Queued in worker; retries with exponential backoff. Listening continues regardless. |
+| **F8** Sonos SMAPI | Sonos cloud calls the SMAPI service | Sonos shows the service as offline; LAN DLNA (F2) is the fallback. |
+| **J6** SMTP outbound mail | SMTP server is usually external | App degrades to "show invite/reset link to admin" mode (already specified). |
+| OIDC SSO (J5) | OIDC issuer usually external | Local accounts continue to work. OIDC button error-states cleanly. |
+
+### Implementation rules that follow
+
+1. **No CDN dependencies in the app shell.** All fonts, icons, and JS libraries are bundled into the Docker image and served from the SetVault host. The `frontend/design/` prototypes (Phase 1) and the production frontend (Phase 2 onward) self-host every asset they reference.
+2. **No telemetry / no phone-home.** SetVault never beacons to any external service unless the user has explicitly enabled a feature that requires it.
+3. **Service worker caches the app shell.** PWA service worker (I2) caches HTML/CSS/JS/fonts/icons aggressively so the app loads instantly with no network. Recently played sets are cached per the I3 offline policy.
+4. **Provider configuration is the gate.** Out of the box, **zero metadata providers are configured**. The app must be fully functional and pleasant to use in that state. Providers are admin-added when (and if) the host has internet.
+5. **Network-status awareness.** UI surfaces a small "offline" banner when the browser has lost connection; features that need network grey out or hide rather than silently failing.
+6. **Reverse-proxy can sit on a LAN-only domain** (e.g., `setvault.lan`). Sonos SMAPI and external clients are the only things that benefit from public DNS — and they're explicitly opt-in.
+7. **Landing page on GitHub Pages is marketing, not the app.** It's external by definition and never required for using SetVault. The README's quickstart is reachable from inside the running app under "Help" so users without internet still see install / config docs.
+
+## 13. Recommended system requirements
 
 These appear (in shorter form) on both the README and the GitHub Pages landing page so users can self-qualify before installing.
 
