@@ -363,7 +363,38 @@
   }
 
   /* page-level tweaks: hide scrollbar gutter shifting */
-  .main { padding-bottom: var(--sp-12); }
+  .main { padding-bottom: var(--sp-12); min-width: 0; overflow-x: clip; }
+
+  /* ===== responsive ===== */
+  @media (max-width: 1180px) {
+    /* drop the comments rail under the tracklist instead of beside it */
+    .body-grid { grid-template-columns: minmax(0, 1fr); }
+    .tracks-section { border-right: none; }
+    .side { min-height: auto; border-top: 1px solid var(--border-default); }
+    .set-meta-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 1024px) {
+    /* title and action buttons stack so the left column stops getting squeezed */
+    .set-title-row { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+    .set-title { font-size: var(--ts-2xl); }
+    .set-title-actions { flex-wrap: wrap; }
+  }
+  @media (max-width: 760px) {
+    .set-hero,
+    .wave-stage,
+    .transport-bar,
+    .tracks-header,
+    .track-row { padding-inline: var(--sp-4); }
+    .set-meta-grid { grid-template-columns: repeat(2, 1fr); }
+    /* transport: time + controls on one row, speed toggle wraps below */
+    .transport-bar { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-3); }
+    .transport-aux { grid-column: 1 / -1; justify-content: flex-start; }
+    /* tracklist row sheds the index and bpm/key columns (all rows have the
+       same six cells, so dropping two leaves a consistent four) */
+    .track-row { grid-template-columns: 60px minmax(0, 1fr) auto auto; column-gap: var(--sp-3); }
+    .track-row .pos,
+    .track-row .bpm-key { display: none; }
+  }
 </style>
 </head>
 <body>
