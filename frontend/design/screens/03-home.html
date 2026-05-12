@@ -110,6 +110,7 @@
     display: grid;
     grid-template-columns: 100px 1fr;
     gap: 0;
+    min-height: 96px;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--r-md);
@@ -144,23 +145,39 @@
   }
   .continue-card .body {
     padding: var(--sp-3) var(--sp-4);
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
   .continue-card .ttl {
     font-weight: 700;
     color: var(--text-strong);
     font-size: var(--ts-md);
     line-height: var(--lh-snug);
-    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .continue-card .artist {
     font-size: var(--ts-md);
     color: var(--text-default);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .continue-card .progress-time {
+    margin-top: auto;
+    padding-top: var(--sp-2);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .continue-card .progress-bar {
-    position: absolute;
-    bottom: var(--sp-3);
-    left: var(--sp-4); right: var(--sp-4);
+    margin-top: var(--sp-2);
     height: 3px;
     background: var(--bg-base);
     border-radius: var(--r-pill);
@@ -170,14 +187,6 @@
     height: 100%;
     background: var(--accent);
     border-radius: var(--r-pill);
-  }
-  .continue-card .progress-time {
-    position: absolute;
-    bottom: 18px;
-    left: var(--sp-4);
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-    color: var(--text-faint);
   }
 
   /* recently added grid */
