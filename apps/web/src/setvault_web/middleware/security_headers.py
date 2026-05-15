@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
-
 CSP = (
     "default-src 'self'; "
     "img-src 'self' data: blob:; "
@@ -27,5 +26,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault(
             "Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=()"
         )
-        response.headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=63072000; includeSubDomains; preload",
+        )
         return response

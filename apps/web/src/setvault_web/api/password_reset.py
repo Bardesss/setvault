@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.services.passwords import hash_password
 from setvault_core.services.tokens import expires, generate_token, hash_token, now_utc
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, require_admin
@@ -20,8 +18,10 @@ from setvault_web.rate_limit import enforce_auth_strict
 router = APIRouter(prefix="/api/password-reset", tags=["auth"])
 
 
+# `email: str` (not EmailStr) per C2/C4 precedent — login lookup,
+# no benefit to format validation; email-validator also rejects `.test` TLD.
 class RequestIn(BaseModel):
-    email: str  # str (not EmailStr) per C2/C4 precedent — login lookup, no benefit to format validation
+    email: str
 
 
 @router.post("/request", status_code=204, dependencies=[Depends(enforce_auth_strict)])
@@ -32,7 +32,7 @@ async def request_reset(body: RequestIn,
     )).scalar_one_or_none()
     if user is None:
         return  # silent: no email leak
-    plaintext, digest = generate_token()
+    _plaintext, digest = generate_token()
     token = EmailToken(user_id=user.id, email=user.email, kind="password_reset",
                        token_hash=digest, payload={}, expires_at=expires(1))
     session.add(token)
@@ -89,5 +89,5 @@ async def redeem(token: str, body: RedeemIn,
     if user is None:
         raise HTTPException(status_code=410, detail="user no longer exists")
     user.password_hash = hash_password(body.password)
-    row.used_at = datetime.now(timezone.utc)
+    row.used_at = datetime.now(UTC)
     await session.commit()

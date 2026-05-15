@@ -6,4 +6,5 @@ select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "RUF"]
 ignore = ["S101"]  # asserts in tests are fine
 
 [lint.per-file-ignores]
-"**/tests/**" = ["S105", "S106"]
+"**/tests/**" = ["S105", "S106", "S110"]
+"infra/migrations/versions/**" = ["E501"]

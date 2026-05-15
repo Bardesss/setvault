@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import secrets as _s
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.services.passwords import hash_password
 from setvault_core.services.sessions import SESSION_COOKIE, SESSION_TTL, SessionSigner
 from setvault_core.services.tokens import expires, generate_token, hash_token, now_utc
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.api.auth import UserOut
 from setvault_web.config import Settings, get_settings
@@ -98,10 +97,10 @@ async def redeem(
     user = User(
         email=row.email, username=body.username, display_name=body.display_name,
         password_hash=hash_password(body.password), role=row.payload.get("role", "user"),
-        email_verified_at=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(UTC),
     )
     session.add(user)
-    row.used_at = datetime.now(timezone.utc)
+    row.used_at = datetime.now(UTC)
     await session.commit()
 
     cookie = signer.issue(str(user.id))

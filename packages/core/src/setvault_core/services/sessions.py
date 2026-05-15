@@ -26,7 +26,9 @@ class SessionSigner:
 
     def read(self, raw: str) -> SessionData | None:
         try:
-            value = self._signer.unsign(raw, max_age=int(SESSION_TTL.total_seconds())).decode("ascii")
+            value = self._signer.unsign(
+                raw, max_age=int(SESSION_TTL.total_seconds()),
+            ).decode("ascii")
         except BadSignature:
             return None
         user_id, _ = value.split(":", 1)

@@ -1,17 +1,15 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete
-
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.services.passwords import hash_password
+from sqlalchemy import delete
 
 
 @pytest.fixture(autouse=True)
 async def _reset_rate_limit():
     import setvault_web.rate_limit as _rl
     from redis.asyncio import Redis
-
     from setvault_web.config import get_settings
 
     # Reset the module-level singleton so each test gets a fresh connection

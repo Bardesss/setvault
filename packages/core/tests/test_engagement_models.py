@@ -1,7 +1,7 @@
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.engagement import ActivityEvent, Favorite, UserSetState
 from setvault_core.models.identity import User
-from setvault_core.models.system import AuditEvent, Job, NotificationConnector
+from setvault_core.models.system import AuditEvent, NotificationConnector
 
 
 async def test_create_engagement_rows(session):

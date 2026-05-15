@@ -1,4 +1,3 @@
-import pytest
 
 
 async def test_admin_can_create_invite_and_link_is_returned(authed_admin_client):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def generate_token() -> tuple[str, str]:
@@ -17,8 +17,8 @@ def hash_token(token: str) -> str:
 
 
 def expires(hours: int) -> datetime:
-    return datetime.now(timezone.utc) + timedelta(hours=hours)
+    return datetime.now(UTC) + timedelta(hours=hours)
 
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, InvalidHashError
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 # Tuned per OWASP 2024 guidance for argon2id (m=64 MiB, t=3, p=4)
-_hasher = PasswordHasher(time_cost=3, memory_cost=64 * 1024, parallelism=4, hash_len=32, salt_len=16)
+_hasher = PasswordHasher(
+    time_cost=3, memory_cost=64 * 1024, parallelism=4, hash_len=32, salt_len=16,
+)
 
 
 def hash_password(plaintext: str) -> str:

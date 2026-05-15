@@ -4,8 +4,16 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from sqlalchemy import (BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, String,
-                        UniqueConstraint)
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -83,7 +91,9 @@ class MediaRoot(Base, UuidPkMixin, TimestampMixin):
     default_for_ingest: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     max_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     naming_template: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    last_health_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_health_check_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
     last_health_status: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
 
 
@@ -117,14 +127,18 @@ class LiveSet(Base, UuidPkMixin, TimestampMixin):
     duplicate_of: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("live_sets.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")  # draft|processing|published|failed
+    # draft|processing|published|failed
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     purge_after_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     party: Mapped[Party | None] = relationship(lazy="joined")
     venue: Mapped[Venue | None] = relationship(lazy="joined")
-    artists: Mapped[list["LiveSetArtist"]] = relationship(
-        back_populates="live_set", cascade="all, delete-orphan", lazy="selectin", order_by="LiveSetArtist.position"
+    artists: Mapped[list[LiveSetArtist]] = relationship(
+        back_populates="live_set",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="LiveSetArtist.position",
     )
 
 
@@ -156,7 +170,10 @@ class LiveSetTag(Base):
 class SetFingerprint(Base, UuidPkMixin, TimestampMixin):
     __tablename__ = "set_fingerprints"
     live_set_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("live_sets.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("live_sets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     fingerprint_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     duration_seconds: Mapped[float] = mapped_column(Float, nullable=False)

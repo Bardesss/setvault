@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from setvault_core.db import init_engine
 
 from setvault_web import __version__

@@ -34,7 +34,8 @@ async def hit(key: str, limit: int, window_seconds: int) -> int:
 
 
 async def enforce_auth_strict(request: Request) -> None:
-    ip = (request.client.host if request.client else "0.0.0.0")
+    # Fallback string keys the rate-limit bucket; not a bind address.
+    ip = (request.client.host if request.client else "0.0.0.0")  # noqa: S104
     count = await hit(f"auth:{ip}", limit=5, window_seconds=60)
     if count > 5:
         raise HTTPException(

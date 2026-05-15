@@ -1,5 +1,5 @@
 import pytest
-
+from cryptography.fernet import InvalidToken
 from setvault_core.services.crypto import Crypter
 
 
@@ -14,5 +14,5 @@ def test_decrypt_with_wrong_key_raises():
     c1 = Crypter(secret_key="a" * 48)
     c2 = Crypter(secret_key="b" * 48)
     blob = c1.encrypt(b"hello")
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidToken):
         c2.decrypt(blob)

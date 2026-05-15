@@ -5,11 +5,10 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Cookie, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from setvault_core.db import session_factory
 from setvault_core.models.identity import User
 from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
 
