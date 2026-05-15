@@ -4,6 +4,7 @@ from setvault_core.db import init_engine
 
 from setvault_web import __version__
 from setvault_web.api import auth as auth_api
+from setvault_web.api import invites as invites_api
 from setvault_web.config import get_settings
 from setvault_web.middleware.csrf import CsrfMiddleware
 from setvault_web.middleware.security_headers import SecurityHeadersMiddleware
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": __version__, "base_url": settings.base_url}
 
     app.include_router(auth_api.router)
+    app.include_router(invites_api.router)
     return app
 
 

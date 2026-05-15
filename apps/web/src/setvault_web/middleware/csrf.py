@@ -10,11 +10,14 @@ CSRF_COOKIE = "csrf_token"
 CSRF_HEADER = "x-csrf-token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 EXEMPT_PATHS = {"/api/auth/login", "/api/health", "/api/uploads/tusd-hooks"}
+EXEMPT_PATH_PREFIXES = ("/api/invites/",)  # redeem is a public unauthenticated POST
 
 
 class CsrfMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.method not in SAFE_METHODS and request.url.path not in EXEMPT_PATHS:
+        path = request.url.path
+        is_exempt = path in EXEMPT_PATHS or any(path.startswith(p) for p in EXEMPT_PATH_PREFIXES)
+        if request.method not in SAFE_METHODS and not is_exempt:
             cookie = request.cookies.get(CSRF_COOKIE)
             header = request.headers.get(CSRF_HEADER)
             if not cookie or not header or not secrets.compare_digest(cookie, header):
