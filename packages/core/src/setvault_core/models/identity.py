@@ -59,7 +59,8 @@ class NotificationPreference(Base):
     kind: Mapped[str] = mapped_column(String(64), primary_key=True)
     channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
     connector_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True  # FK added in 0004 once notification_connectors exists
+        # FK added in migration 0003 once notification_connectors exists
+        UUID(as_uuid=True), nullable=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default="now()"

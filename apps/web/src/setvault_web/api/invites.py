@@ -17,6 +17,7 @@ from setvault_web.api.auth import UserOut
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, get_signer, require_admin
 from setvault_web.middleware.csrf import CSRF_COOKIE
+from setvault_web.rate_limit import enforce_auth_strict
 
 router = APIRouter(prefix="/api/invites", tags=["invites"])
 
@@ -76,7 +77,11 @@ class LoginOut(BaseModel):
     user: UserOut
 
 
-@router.post("/{token}/redeem", response_model=LoginOut)
+@router.post(
+    "/{token}/redeem",
+    response_model=LoginOut,
+    dependencies=[Depends(enforce_auth_strict)],
+)
 async def redeem(
     token: str,
     body: InviteRedeemIn,
