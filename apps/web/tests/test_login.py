@@ -41,7 +41,8 @@ async def test_logout_clears_cookie(client, seeded_admin):
         json={"email": "admin@example.test", "password": "hunter2hunter2"},
     )
     client.cookies = login.cookies
-    response = await client.post("/api/auth/logout")
+    csrf = login.cookies.get("csrf_token")
+    response = await client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     assert response.status_code == 204
     me = await client.get("/api/auth/me")
     assert me.status_code == 401

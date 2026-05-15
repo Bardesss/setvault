@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets as _secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -12,6 +13,8 @@ from setvault_core.services.passwords import verify_password
 from setvault_core.services.sessions import SESSION_COOKIE, SESSION_TTL, SessionSigner
 
 from setvault_web.deps import current_user, db_session, get_signer
+from setvault_web.middleware.csrf import CSRF_COOKIE
+from setvault_web.rate_limit import enforce_auth_strict
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -38,7 +41,7 @@ class LoginOut(BaseModel):
     user: UserOut
 
 
-@router.post("/login", response_model=LoginOut)
+@router.post("/login", response_model=LoginOut, dependencies=[Depends(enforce_auth_strict)])
 async def login(
     body: LoginIn,
     response: Response,
@@ -56,6 +59,10 @@ async def login(
         SESSION_COOKIE, cookie,
         httponly=True, secure=True, samesite="lax",
         max_age=int(SESSION_TTL.total_seconds()), path="/",
+    )
+    response.set_cookie(
+        CSRF_COOKIE, _secrets.token_urlsafe(32),
+        httponly=False, secure=True, samesite="lax", path="/",
     )
     return LoginOut(user=UserOut.from_model(user))
 
