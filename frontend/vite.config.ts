@@ -7,5 +7,5 @@ export default defineConfig({
   server: {
     proxy: { "/api": "http://localhost:8000", "/uploads": "http://localhost:1080" },
   },
-  test: { environment: "jsdom" },
+  test: { environment: "node", exclude: ["tests/**", "node_modules/**"] },
 });

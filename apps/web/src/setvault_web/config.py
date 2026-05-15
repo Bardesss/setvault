@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault"
     redis_url: str = "redis://localhost:6379/0"
     base_url: str = "http://localhost:8000"
-    tusd_hook_secret: str = "dev-tusd-secret"
+    tusd_hook_secret: str = "dev-tusd-secret"  # noqa: S105
 
 
 @lru_cache

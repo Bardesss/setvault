@@ -1,9 +1,8 @@
 import os
 
 import pytest
+from setvault_core.db import init_engine, session_factory
 from sqlalchemy import text
-
-from setvault_core.db import session_factory, init_engine
 
 
 @pytest.fixture(autouse=True)

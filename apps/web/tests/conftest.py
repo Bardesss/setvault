@@ -1,6 +1,5 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
-
 from setvault_web.main import create_app
 
 

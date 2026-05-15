@@ -4,12 +4,11 @@ import asyncio
 import os
 from logging.config import fileConfig
 
+import setvault_core.models  # noqa: F401 — registers all model modules
 from alembic import context
+from setvault_core.models import Base
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from setvault_core.models import Base
-import setvault_core.models  # noqa: F401 — registers all model modules
 
 config = context.config
 
