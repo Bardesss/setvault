@@ -1,0 +1,12 @@
+[tool.uv.workspace]
+members = ["apps/web", "apps/worker", "packages/core"]
+
+[tool.uv.sources]
+setvault-core = { workspace = true }
+setvault-web = { workspace = true }
+setvault-worker = { workspace = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra"
+testpaths = ["apps/web/tests", "apps/worker/tests", "packages/core/tests"]
