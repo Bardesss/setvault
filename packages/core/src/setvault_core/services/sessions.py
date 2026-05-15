@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from itsdangerous import BadSignature, TimestampSigner
 
@@ -13,7 +13,6 @@ SESSION_TTL = timedelta(days=30)
 @dataclass
 class SessionData:
     user_id: str
-    issued_at: datetime
 
 
 class SessionSigner:
@@ -31,4 +30,4 @@ class SessionSigner:
         except BadSignature:
             return None
         user_id, _ = value.split(":", 1)
-        return SessionData(user_id=user_id, issued_at=datetime.now(timezone.utc))
+        return SessionData(user_id=user_id)

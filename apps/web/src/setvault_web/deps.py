@@ -33,7 +33,13 @@ async def current_user(
     data = signer.read(session_cookie)
     if not data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session")
-    user = await session.get(User, uuid.UUID(data.user_id))
+    try:
+        user_id = uuid.UUID(data.user_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
+        ) from exc
+    user = await session.get(User, user_id)
     if user is None or user.disabled_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user inactive")
     return user

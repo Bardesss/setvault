@@ -62,7 +62,9 @@ async def login(
 
 @router.post("/logout", status_code=204)
 async def logout(response: Response, _: Annotated[User, Depends(current_user)]):
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax",
+    )
 
 
 @router.get("/me", response_model=UserOut)
