@@ -6,6 +6,9 @@ setvault-core = { workspace = true }
 setvault-web = { workspace = true }
 setvault-worker = { workspace = true }
 
+[dependency-groups]
+dev = ["ruff>=0.6"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-ra --import-mode=importlib"
