@@ -1,0 +1,17 @@
+[project]
+name = "setvault-worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "setvault-core",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/setvault_worker"]

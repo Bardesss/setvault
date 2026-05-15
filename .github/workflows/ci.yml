@@ -1,0 +1,43 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: setvault, POSTGRES_PASSWORD: setvault, POSTGRES_DB: setvault }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U setvault" --health-interval=5s --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-extras --all-groups
+      - run: uv run ruff check .
+      - run: uv run alembic upgrade head
+      - run: uv run pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://setvault:setvault@localhost:5432/setvault
+          REDIS_URL: redis://localhost:6379/0
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit -- --run
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

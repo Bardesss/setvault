@@ -56,6 +56,18 @@ Thumbs.db
 data/
 volumes/
 audio/
+infra/docker/.data/
 
 # OS
 desktop.ini
+
+# uv
+.uv-cache/
+
+# Test / coverage artefacts
+coverage.xml
+playwright-report/
+test-results/
+
+# SvelteKit build output
+apps/web/static/_app/
