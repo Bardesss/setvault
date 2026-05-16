@@ -1,5 +1,23 @@
 # syntax=docker/dockerfile:1.7
 
+# ── Frontend stage ──────────────────────────────────────────────────────────
+# Builds the SvelteKit app with @sveltejs/adapter-static. The adapter is
+# configured (in frontend/svelte.config.js) to emit the static SPA bundle to
+# ../apps/web/src/setvault_web/static (relative to the frontend dir). We
+# preserve that relative layout inside the stage so the build writes to a
+# stable path we can COPY into the runtime image.
+FROM node:20-alpine AS frontend
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json frontend/
+RUN cd frontend && npm ci
+COPY frontend frontend/
+# Pre-create the target directory so adapter-static can write into it. The
+# real apps/web tree lives in the next stage; here we only need a sibling
+# directory at /build/apps/web/src/setvault_web/static for the build output.
+RUN mkdir -p /build/apps/web/src/setvault_web/static
+RUN cd frontend && npm run build
+
+# ── Base + Python deps ──────────────────────────────────────────────────────
 # Pin to bookworm: audiowaveform has no trixie package; bookworm deb is stable
 FROM python:3.12-slim-bookworm AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
@@ -27,6 +45,8 @@ FROM deps AS runtime
 COPY packages/core packages/core
 COPY apps/web apps/web
 COPY apps/worker apps/worker
+# Replace the placeholder static dir with the SvelteKit build output.
+COPY --from=frontend /build/apps/web/src/setvault_web/static apps/web/src/setvault_web/static
 RUN uv sync --no-dev
 ENV PATH="/srv/.venv/bin:${PATH}"
 WORKDIR /srv/apps/web

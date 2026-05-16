@@ -1,5 +1,9 @@
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from setvault_core.db import init_engine
+from starlette.responses import FileResponse
 
 from setvault_web import __version__
 from setvault_web.api import admin as admin_api
@@ -50,6 +54,34 @@ def create_app() -> FastAPI:
     app.include_router(me_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
+
+    # Static frontend bundle (SvelteKit adapter-static output). The build/
+    # contents are dropped here by the Docker frontend stage; only a
+    # placeholder index.html ships in source control.
+    static_root = Path(__file__).parent / "static"
+    if static_root.exists():
+        if (static_root / "_app").exists():
+            app.mount(
+                "/_app",
+                StaticFiles(directory=static_root / "_app"),
+                name="sveltekit_assets",
+            )
+        if (static_root / "fonts").exists():
+            app.mount(
+                "/fonts",
+                StaticFiles(directory=static_root / "fonts"),
+                name="fonts",
+            )
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def spa_fallback(full_path: str) -> FileResponse:
+            if full_path.startswith(("api/", "uploads/", "ws/")):
+                raise HTTPException(status_code=404)
+            candidate = static_root / full_path
+            if candidate.is_file():
+                return FileResponse(candidate)
+            return FileResponse(static_root / "index.html")
+
     return app
 
 
