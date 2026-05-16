@@ -13,7 +13,7 @@ from setvault_core.models.catalog import (
     Venue,
 )
 from setvault_core.models.identity import EmailToken, User
-from setvault_core.models.system import NotificationConnector
+from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete, select
 
@@ -195,6 +195,22 @@ async def _cleanup_notification_connectors():
     yield
     async with session_factory()() as s:
         await s.execute(delete(NotificationConnector))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_audit_events():
+    """Delete AuditEvent rows so audit tests can rerun and the test DB stays tidy."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(AuditEvent))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(AuditEvent))
         await s.commit()
 
 

@@ -6,16 +6,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from setvault_core.models.catalog import LiveSet, MediaRoot
+from setvault_core.models.identity import User
 from setvault_core.schemas.media_root import (
     MediaRootCreateIn,
     MediaRootListOut,
     MediaRootOut,
 )
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.storage import probe
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from setvault_web.deps import db_session, require_admin
+from setvault_web.deps import current_user, db_session, require_admin
 
 router = APIRouter(prefix="/api/media-roots", tags=["admin"])
 
@@ -43,6 +45,7 @@ async def list_roots(
 async def create_root(
     body: MediaRootCreateIn,
     session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(current_user)],
     _: Annotated[object, Depends(require_admin)],
 ):
     health = probe(body.host_path)
@@ -60,6 +63,15 @@ async def create_root(
         last_health_check_at=datetime.now(UTC),
     )
     session.add(row)
+    await session.flush()
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="media_root.added",
+        target_type="MediaRoot",
+        target_id=str(row.id),
+        after={"name": body.name, "host_path": body.host_path},
+    )
     await session.commit()
     return _to_out(row)
 
@@ -68,6 +80,7 @@ async def create_root(
 async def delete_root(
     root_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(current_user)],
     _: Annotated[object, Depends(require_admin)],
 ):
     row = await session.get(MediaRoot, root_id)
@@ -82,5 +95,13 @@ async def delete_root(
             status_code=409,
             detail="root has sets — move or delete them first",
         )
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="media_root.removed",
+        target_type="MediaRoot",
+        target_id=str(row.id),
+        before={"name": row.name},
+    )
     await session.delete(row)
     await session.commit()

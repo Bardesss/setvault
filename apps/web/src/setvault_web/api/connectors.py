@@ -6,6 +6,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from setvault_core.models.identity import User
 from setvault_core.models.system import NotificationConnector
 from setvault_core.schemas.connector import (
     ConnectorCreateIn,
@@ -14,11 +15,12 @@ from setvault_core.schemas.connector import (
     TestSendIn,
     TestSendOut,
 )
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.crypto import Crypter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
-from setvault_web.deps import db_session, require_admin
+from setvault_web.deps import current_user, db_session, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,7 @@ async def create_connector(
     body: ConnectorCreateIn,
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(current_user)],
     _: Annotated[object, Depends(require_admin)],
 ):
     crypter = Crypter(settings.secret_key)
@@ -54,6 +57,15 @@ async def create_connector(
         scope_filter=body.scope_filter, enabled=body.enabled,
     )
     session.add(row)
+    await session.flush()
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="connector.created",
+        target_type="NotificationConnector",
+        target_id=str(row.id),
+        after={"kind": body.kind, "name": body.name},
+    )
     await session.commit()
     return _to_out(row, crypter)
 
@@ -77,6 +89,7 @@ async def test_send(
     body: TestSendIn,
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(current_user)],
     _: Annotated[object, Depends(require_admin)],
 ):
     row = await session.get(NotificationConnector, connector_id)
@@ -85,6 +98,15 @@ async def test_send(
     config = json.loads(
         Crypter(settings.secret_key).decrypt(row.encrypted_config).decode("utf-8")
     )
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="connector.test_sent",
+        target_type="NotificationConnector",
+        target_id=str(row.id),
+        after={"to": body.to, "dry_run": body.dry_run},
+    )
+    await session.commit()
     if body.dry_run:
         return TestSendOut(accepted=True, dry_run=True)
     try:
