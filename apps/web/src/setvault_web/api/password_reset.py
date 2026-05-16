@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, require_admin
 from setvault_web.rate_limit import enforce_auth_strict
+from setvault_web.services.notifications import enqueue_email
 
 router = APIRouter(prefix="/api/password-reset", tags=["auth"])
 
@@ -41,22 +42,14 @@ async def request_reset(
     session.add(token)
     await session.commit()
 
-    from redis import Redis
-    from rq import Queue
-    from setvault_core.models.system import NotificationConnector
-    smtp = (await session.execute(
-        select(NotificationConnector).where(
-            NotificationConnector.kind == "smtp", NotificationConnector.enabled.is_(True),
-        ).limit(1)
-    )).scalar_one_or_none()
-    if smtp is not None:
-        link = f"{settings.base_url}/reset/{plaintext}"
-        Queue("default", connection=Redis.from_url(settings.redis_url)).enqueue(
-            "setvault_core.jobs.email.send_email_job",
-            connector_id=str(smtp.id), to=user.email,
-            subject="SetVault password reset",
-            text=f"Open this link to reset your password (expires in 1 hour):\n\n{link}\n",
-        )
+    link = f"{settings.base_url}/reset/{plaintext}"
+    await enqueue_email(
+        session,
+        settings,
+        to=user.email,
+        subject="SetVault password reset",
+        text=f"Open this link to reset your password (expires in 1 hour):\n\n{link}\n",
+    )
 
 
 class AdminLinkIn(BaseModel):

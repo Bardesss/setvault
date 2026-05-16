@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import email.utils
 import logging
 import smtplib
 import ssl
@@ -7,6 +8,12 @@ from email.message import EmailMessage
 from typing import TypedDict
 
 logger = logging.getLogger(__name__)
+
+# Env var names must match `setvault_web.config.Settings` field names (uppercased).
+# Centralised here so a rename in setvault_web's Settings only needs the env-var
+# constant in this module updated to match.
+SECRET_KEY_ENV = "SECRET_KEY"  # noqa: S105 — env var name, not a secret value
+DATABASE_URL_ENV = "DATABASE_URL"
 
 
 class SmtpConfig(TypedDict):
@@ -26,6 +33,8 @@ def build_message(*, from_email: str, from_name: str, to: str, subject: str,
     msg["From"] = f"{from_name} <{from_email}>"
     msg["To"] = to
     msg["Subject"] = subject
+    msg["Date"] = email.utils.formatdate(localtime=True)
+    msg["Message-ID"] = email.utils.make_msgid(domain=from_email.split("@", 1)[1])
     if reply_to:
         msg["Reply-To"] = reply_to
     msg.set_content(text)
@@ -56,7 +65,7 @@ def send_email_sync(*, config: SmtpConfig, to: str, subject: str, text: str) -> 
     finally:
         try:
             client.quit()
-        except smtplib.SMTPException:
+        except (smtplib.SMTPException, OSError):
             logger.debug("SMTP client.quit() raised on close", exc_info=True)
 
 
@@ -74,13 +83,13 @@ def send_email_job(*, connector_id: str, to: str, subject: str, text: str) -> No
     from setvault_core.services.crypto import Crypter
 
     async def _run() -> None:
-        init_engine(os.environ["DATABASE_URL"])
+        init_engine(os.environ[DATABASE_URL_ENV])
         async with session_factory()() as s:
             row = await s.get(NotificationConnector, uuid.UUID(connector_id))
             if row is None or not row.enabled or row.kind != "smtp":
                 raise RuntimeError(f"connector {connector_id} unavailable")
             config = json.loads(
-                Crypter(os.environ["SECRET_KEY"]).decrypt(row.encrypted_config).decode("utf-8")
+                Crypter(os.environ[SECRET_KEY_ENV]).decrypt(row.encrypted_config).decode("utf-8")
             )
         send_email_sync(config=config, to=to, subject=subject, text=text)
 

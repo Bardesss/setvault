@@ -11,6 +11,9 @@ def test_build_message_sets_required_headers():
     assert msg["To"] == "user@example.test"
     assert msg["Subject"] == "Hello"
     assert msg.get_content().strip() == "Body here"
+    assert msg["Date"]
+    assert msg["Message-ID"].startswith("<")
+    assert msg["Message-ID"].endswith(">")
 
 
 def test_build_message_includes_reply_to_when_set():

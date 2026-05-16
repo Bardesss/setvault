@@ -18,6 +18,7 @@ from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, get_signer, require_admin
 from setvault_web.middleware.csrf import CSRF_COOKIE
 from setvault_web.rate_limit import enforce_auth_strict
+from setvault_web.services.notifications import enqueue_email
 
 router = APIRouter(prefix="/api/invites", tags=["invites"])
 
@@ -62,26 +63,14 @@ async def create_invite(
 
 
 async def _try_send_invite_email(session, email, plaintext, settings) -> bool:
-    from redis import Redis
-    from rq import Queue
-    from setvault_core.models.system import NotificationConnector
-
-    row = (await session.execute(
-        select(NotificationConnector).where(
-            NotificationConnector.kind == "smtp", NotificationConnector.enabled.is_(True),
-        ).limit(1)
-    )).scalar_one_or_none()
-    if row is None:
-        return False
-    queue = Queue("default", connection=Redis.from_url(settings.redis_url))
     link = f"{settings.base_url}/invite/{plaintext}"
-    queue.enqueue(
-        "setvault_core.jobs.email.send_email_job",
-        connector_id=str(row.id), to=email,
+    return await enqueue_email(
+        session,
+        settings,
+        to=email,
         subject="You've been invited to SetVault",
         text=f"Open this link to set your username and password:\n\n{link}\n",
     )
-    return True
 
 
 class InviteRedeemIn(BaseModel):
