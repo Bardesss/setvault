@@ -25,18 +25,38 @@ class RequestIn(BaseModel):
 
 
 @router.post("/request", status_code=204, dependencies=[Depends(enforce_auth_strict)])
-async def request_reset(body: RequestIn,
-                        session: Annotated[AsyncSession, Depends(db_session)]):
+async def request_reset(
+    body: RequestIn,
+    settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
     user = (await session.execute(
         select(User).where(User.email == body.email)
     )).scalar_one_or_none()
     if user is None:
         return  # silent: no email leak
-    _plaintext, digest = generate_token()
+    plaintext, digest = generate_token()
     token = EmailToken(user_id=user.id, email=user.email, kind="password_reset",
                        token_hash=digest, payload={}, expires_at=expires(1))
     session.add(token)
     await session.commit()
+
+    from redis import Redis
+    from rq import Queue
+    from setvault_core.models.system import NotificationConnector
+    smtp = (await session.execute(
+        select(NotificationConnector).where(
+            NotificationConnector.kind == "smtp", NotificationConnector.enabled.is_(True),
+        ).limit(1)
+    )).scalar_one_or_none()
+    if smtp is not None:
+        link = f"{settings.base_url}/reset/{plaintext}"
+        Queue("default", connection=Redis.from_url(settings.redis_url)).enqueue(
+            "setvault_core.jobs.email.send_email_job",
+            connector_id=str(smtp.id), to=user.email,
+            subject="SetVault password reset",
+            text=f"Open this link to reset your password (expires in 1 hour):\n\n{link}\n",
+        )
 
 
 class AdminLinkIn(BaseModel):

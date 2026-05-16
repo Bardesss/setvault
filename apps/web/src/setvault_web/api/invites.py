@@ -62,9 +62,26 @@ async def create_invite(
 
 
 async def _try_send_invite_email(session, email, plaintext, settings) -> bool:
-    # Implemented properly in Task D2 of Phase 2B; for now always return False
-    # so the copy-paste fallback always applies.
-    return False
+    from redis import Redis
+    from rq import Queue
+    from setvault_core.models.system import NotificationConnector
+
+    row = (await session.execute(
+        select(NotificationConnector).where(
+            NotificationConnector.kind == "smtp", NotificationConnector.enabled.is_(True),
+        ).limit(1)
+    )).scalar_one_or_none()
+    if row is None:
+        return False
+    queue = Queue("default", connection=Redis.from_url(settings.redis_url))
+    link = f"{settings.base_url}/invite/{plaintext}"
+    queue.enqueue(
+        "setvault_core.jobs.email.send_email_job",
+        connector_id=str(row.id), to=email,
+        subject="You've been invited to SetVault",
+        text=f"Open this link to set your username and password:\n\n{link}\n",
+    )
+    return True
 
 
 class InviteRedeemIn(BaseModel):

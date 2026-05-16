@@ -2,6 +2,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.identity import EmailToken, User
+from setvault_core.models.system import NotificationConnector
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete
 
@@ -98,4 +99,23 @@ async def _cleanup_invite_users():
                 | EmailToken.email.like("%@x.test")
             )
         )
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_notification_connectors():
+    """Delete NotificationConnector rows so connector leftovers don't enable
+    SMTP-send paths in unrelated tests (e.g. invite tests expect smtp_sent=False
+    when no connector exists). Cleans both before and after to handle leftovers
+    from prior test sessions."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(NotificationConnector))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(NotificationConnector))
         await s.commit()
