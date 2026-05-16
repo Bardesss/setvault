@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
-from setvault_core.models.catalog import LiveSet, MediaRoot
+from setvault_core.models.catalog import Artist, LiveSet, MediaRoot, Party, Series, Venue
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.system import NotificationConnector
 from setvault_core.services.passwords import hash_password
@@ -148,4 +148,31 @@ async def _cleanup_notification_connectors():
     yield
     async with session_factory()() as s:
         await s.execute(delete(NotificationConnector))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_catalog():
+    """Delete Party/Series/Venue/Artist rows so catalog tests can rerun.
+
+    The catalog CRUD tests rely on unique slug constraints (see the 409 test),
+    so leftover rows from a prior run would otherwise turn the create asserts
+    into spurious 409s. Order matters: Party has FKs to Venue and Series, so
+    delete parties first; Artist is independent."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(Party))
+        await s.execute(delete(Series))
+        await s.execute(delete(Venue))
+        await s.execute(delete(Artist))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(Party))
+        await s.execute(delete(Series))
+        await s.execute(delete(Venue))
+        await s.execute(delete(Artist))
         await s.commit()

@@ -3,6 +3,7 @@ from setvault_core.db import init_engine
 
 from setvault_web import __version__
 from setvault_web.api import auth as auth_api
+from setvault_web.api import catalog as catalog_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import invites as invites_api
 from setvault_web.api import media_roots as media_roots_api
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(connectors_api.router)
     app.include_router(media_roots_api.router)
     app.include_router(uploads_api.router)
+    app.include_router(catalog_api.router)
     app.include_router(ws_api.router)
     return app
 
