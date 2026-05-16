@@ -1,6 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
+from setvault_core.models.catalog import MediaRoot
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.system import NotificationConnector
 from setvault_core.services.passwords import hash_password
@@ -99,6 +100,22 @@ async def _cleanup_invite_users():
                 | EmailToken.email.like("%@x.test")
             )
         )
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_media_roots():
+    """Delete MediaRoot rows so leftover rows with unique `name` don't break reruns."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(MediaRoot))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(MediaRoot))
         await s.commit()
 
 
