@@ -3,7 +3,8 @@ import uuid
 
 import pytest
 from setvault_core.db import init_engine, session_factory
-from setvault_core.models.catalog import MediaRoot
+from setvault_core.models.catalog import LiveSet, MediaRoot
+from setvault_core.models.identity import User
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -39,8 +40,13 @@ def uid() -> uuid.UUID:
 
 
 @pytest.fixture(autouse=True)
-async def _cleanup_media_roots():
-    """Delete MediaRoot rows so leftover rows don't accumulate across runs.
+async def _cleanup_catalog_rows():
+    """Delete LiveSet + MediaRoot + test User rows so leftover rows don't accumulate.
+
+    LiveSet.media_root_id and LiveSet.uploaded_by have ON DELETE RESTRICT, so
+    LiveSet rows must be cleared first. Test-created Users use the *@x.test
+    email pattern (see test_probe.py); the seeded admin (apps/web) lives at
+    admin@example.test and is unaffected.
 
     Kept decoupled from the web app conftest — packages/core tests must not
     depend on apps/web fixtures.
@@ -50,9 +56,13 @@ async def _cleanup_media_roots():
         "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
     ))
     async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
         await s.execute(delete(MediaRoot))
+        await s.execute(delete(User).where(User.email.like("%@x.test")))
         await s.commit()
     yield
     async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
         await s.execute(delete(MediaRoot))
+        await s.execute(delete(User).where(User.email.like("%@x.test")))
         await s.commit()
