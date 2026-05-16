@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from typing import Annotated
 
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, require_admin
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/connectors", tags=["admin"])
 
@@ -85,6 +88,8 @@ async def test_send(
     if body.dry_run:
         return TestSendOut(accepted=True, dry_run=True)
     try:
+        # Implemented properly in Task D2 of Phase 2B; import is deferred so
+        # this module remains importable until the email job lands.
         from setvault_core.jobs.email import send_email_sync
         send_email_sync(
             config=config, to=body.to,
@@ -93,4 +98,9 @@ async def test_send(
         )
         return TestSendOut(accepted=True, dry_run=False)
     except Exception as exc:
-        return TestSendOut(accepted=False, dry_run=False, error=str(exc))
+        logger.exception("SMTP test-send failed for connector %s", connector_id)
+        error = f"{type(exc).__name__}: {exc}"
+        for secret in (config.get("username"), config.get("password")):
+            if secret:
+                error = error.replace(secret, "***")
+        return TestSendOut(accepted=False, dry_run=False, error=error)
