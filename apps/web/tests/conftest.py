@@ -65,7 +65,21 @@ async def client():
 @pytest.fixture
 async def seeded_admin():
     init_engine(__import__("os").environ["TEST_DATABASE_URL"])
+    # Idempotent: remove any stale "admin@example.test" / "admin" user that may
+    # have been left behind by the dev-seed e2e endpoint (or a prior crashed
+    # test run). LiveSets created by that user are cleared first to avoid the
+    # ON DELETE RESTRICT on LiveSet.uploaded_by.
     async with session_factory()() as s:
+        existing = (await s.execute(
+            select(User).where(
+                (User.email == "admin@example.test") | (User.username == "admin")
+            )
+        )).scalars().all()
+        for prior in existing:
+            await s.execute(delete(LiveSet).where(LiveSet.uploaded_by == prior.id))
+            await s.delete(prior)
+        await s.commit()
+
         user = User(
             email="admin@example.test", username="admin", display_name="Admin",
             password_hash=hash_password("hunter2hunter2"), role="admin",

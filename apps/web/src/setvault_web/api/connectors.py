@@ -17,6 +17,7 @@ from setvault_core.schemas.connector import (
 )
 from setvault_core.services.audit import log as audit_log
 from setvault_core.services.crypto import Crypter
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
@@ -40,6 +41,21 @@ def _to_out(c: NotificationConnector, crypter: Crypter) -> ConnectorOut:
             reply_to=config.get("reply_to"),
         ),
     )
+
+
+@router.get("")
+async def list_connectors(
+    settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+):
+    rows = (
+        await session.execute(
+            select(NotificationConnector).order_by(NotificationConnector.created_at)
+        )
+    ).scalars().all()
+    crypter = Crypter(settings.secret_key)
+    return {"items": [_to_out(r, crypter).model_dump() for r in rows]}
 
 
 @router.post("", response_model=ConnectorOut, status_code=201)

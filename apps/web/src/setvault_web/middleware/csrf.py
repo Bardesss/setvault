@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets
 
 from fastapi import Request, status
@@ -9,8 +10,21 @@ from starlette.middleware.base import BaseHTTPMiddleware
 CSRF_COOKIE = "csrf_token"
 CSRF_HEADER = "x-csrf-token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-EXEMPT_PATHS = {"/api/auth/login", "/api/health", "/api/uploads/tusd-hooks"}
+EXEMPT_PATHS = {
+    "/api/auth/login",
+    "/api/health",
+    "/api/uploads/tusd-hooks",
+    "/api/dev/seed-e2e",  # gated by SETVAULT_DEV_SEED; router not registered otherwise
+}
 EXEMPT_PATH_PREFIXES = ("/api/invites/", "/api/password-reset/")
+
+
+def _cookie_secure() -> bool:
+    return os.environ.get("SETVAULT_ALLOW_INSECURE_COOKIE", "").lower() not in (
+        "1",
+        "true",
+        "yes",
+    )
 # /api/password-reset/ is exempted because /request and /{token}/redeem are anonymous endpoints
 # (no session cookie yet, so no CSRF cookie to validate against).
 # Trade-off: the /admin-link sub-path also matches the prefix and loses CSRF enforcement,
@@ -34,6 +48,6 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         if request.cookies.get(CSRF_COOKIE) is None:
             response.set_cookie(
                 CSRF_COOKIE, secrets.token_urlsafe(32),
-                httponly=False, secure=True, samesite="lax", path="/",
+                httponly=False, secure=_cookie_secure(), samesite="lax", path="/",
             )
         return response
