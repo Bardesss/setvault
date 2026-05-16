@@ -1,0 +1,153 @@
+"""Dev-only e2e seed endpoint.
+
+This module exposes ``POST /api/dev/seed-e2e`` which idempotently provisions an
+admin user, a MediaRoot at a stable temp path, and a published LiveSet with
+slug ``seeded-set`` so Playwright tests can sign in and exercise the player
+without uploading real audio. A 1-second silent WAV is written to disk to back
+the stream endpoint.
+
+It is **only** registered by ``setvault_web.main.create_app`` when the
+environment variable ``SETVAULT_DEV_SEED`` is set to a truthy value. Do not
+enable this in production: the response includes the seed admin's password.
+"""
+
+from __future__ import annotations
+
+import os
+import struct
+import tempfile
+import uuid
+import wave
+from pathlib import Path
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from setvault_core.models.catalog import LiveSet, MediaRoot
+from setvault_core.models.identity import User
+from setvault_core.services.passwords import hash_password
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from setvault_web.deps import db_session
+
+router = APIRouter(prefix="/api/dev", tags=["dev"])
+
+SEED_ADMIN_EMAIL = "admin@example.test"
+SEED_ADMIN_PASSWORD = "hunter2hunter2"  # noqa: S105 — dev-only fixture
+SEED_SLUG = "seeded-set"
+SEED_MEDIA_ROOT_NAME = "e2e-seed"
+SEED_STREAMING_REL = "test/silent.wav"
+
+
+def _seed_root_path() -> Path:
+    """Stable path under the OS temp dir so reruns reuse the same on-disk fixture."""
+    root = Path(tempfile.gettempdir()) / "setvault-e2e-seed"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _ensure_silent_wav(root: Path) -> Path:
+    """Write a tiny 1-second silent mono 8kHz 16-bit WAV if not already present."""
+    target = root / SEED_STREAMING_REL
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        with wave.open(str(target), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(8000)
+            w.writeframes(struct.pack("<" + "h" * 8000, *([0] * 8000)))
+    return target
+
+
+class SeedAdminOut(BaseModel):
+    email: str
+    password: str
+
+
+class SeedSetOut(BaseModel):
+    slug: str
+
+
+class SeedOut(BaseModel):
+    admin: SeedAdminOut
+    set: SeedSetOut
+
+
+@router.post("/seed-e2e", response_model=SeedOut)
+async def seed_e2e(session: Annotated[AsyncSession, Depends(db_session)]) -> SeedOut:
+    # 1. Ensure admin
+    admin = (
+        await session.execute(select(User).where(User.email == SEED_ADMIN_EMAIL))
+    ).scalar_one_or_none()
+    if admin is None:
+        admin = User(
+            email=SEED_ADMIN_EMAIL,
+            username="admin",
+            display_name="Admin",
+            password_hash=hash_password(SEED_ADMIN_PASSWORD),
+            role="admin",
+        )
+        session.add(admin)
+        await session.flush()
+    elif admin.password_hash is None:
+        admin.password_hash = hash_password(SEED_ADMIN_PASSWORD)
+
+    # 2. Ensure on-disk silent fixture + MediaRoot row
+    root_path = _seed_root_path()
+    _ensure_silent_wav(root_path)
+    media_root = (
+        await session.execute(
+            select(MediaRoot).where(MediaRoot.name == SEED_MEDIA_ROOT_NAME)
+        )
+    ).scalar_one_or_none()
+    if media_root is None:
+        media_root = MediaRoot(
+            name=SEED_MEDIA_ROOT_NAME,
+            host_path=str(root_path),
+            enabled=True,
+            default_for_ingest=False,
+            last_health_status="ok",
+        )
+        session.add(media_root)
+        await session.flush()
+    else:
+        # Keep host_path in sync (e.g. if tmp dir changes between runs)
+        media_root.host_path = str(root_path)
+
+    # 3. Ensure LiveSet
+    live = (
+        await session.execute(select(LiveSet).where(LiveSet.slug == SEED_SLUG))
+    ).scalar_one_or_none()
+    if live is None:
+        live = LiveSet(
+            id=uuid.uuid4(),
+            slug=SEED_SLUG,
+            title="seeded set",
+            media_root_id=media_root.id,
+            audio_path="originals/seed/audio.wav",
+            streaming_path=SEED_STREAMING_REL,
+            duration_seconds=1,
+            status="published",
+            source_type="upload",
+            uploaded_by=admin.id,
+            deleted_at=None,
+        )
+        session.add(live)
+    else:
+        # Re-publish in case earlier runs soft-deleted it
+        live.deleted_at = None
+        live.purge_after_at = None
+        live.status = "published"
+        live.streaming_path = SEED_STREAMING_REL
+        live.media_root_id = media_root.id
+
+    await session.commit()
+    return SeedOut(
+        admin=SeedAdminOut(email=SEED_ADMIN_EMAIL, password=SEED_ADMIN_PASSWORD),
+        set=SeedSetOut(slug=SEED_SLUG),
+    )
+
+
+def is_enabled() -> bool:
+    return os.environ.get("SETVAULT_DEV_SEED", "").lower() in ("1", "true", "yes")

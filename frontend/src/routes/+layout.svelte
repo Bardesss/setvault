@@ -6,6 +6,7 @@
   import { page } from "$app/stores";
   import { session } from "$lib/stores/session";
   import NavRail from "$lib/components/NavRail.svelte";
+  import MiniPlayer from "$lib/components/MiniPlayer.svelte";
 
   export let data: { user: import("$lib/api/auth").CurrentUser | null };
   $: session.set(data.user);
@@ -20,6 +21,7 @@
   {#if showShell && user}<NavRail {user} />{/if}
   <main class="main"><slot /></main>
 </div>
+{#if showShell}<MiniPlayer />{/if}
 
 <style>
   .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }

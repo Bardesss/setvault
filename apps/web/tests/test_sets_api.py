@@ -35,3 +35,41 @@ async def test_soft_delete_hides_from_list(authed_admin_client, seeded_live_set)
     await authed_admin_client.delete(f"/api/sets/{slug}")
     listed = await authed_admin_client.get("/api/sets")
     assert listed.json()["items"] == []
+
+
+async def test_get_state_defaults_to_zero(authed_admin_client, seeded_live_set):
+    slug = seeded_live_set["slug"]
+    response = await authed_admin_client.get(f"/api/sets/{slug}/state")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["position_seconds"] == 0
+    assert body["completed"] is False
+
+
+async def test_put_state_persists(authed_admin_client, seeded_live_set):
+    slug = seeded_live_set["slug"]
+    put = await authed_admin_client.put(
+        f"/api/sets/{slug}/state",
+        json={"position_seconds": 42.5, "completed": False},
+    )
+    assert put.status_code == 204
+    response = await authed_admin_client.get(f"/api/sets/{slug}/state")
+    body = response.json()
+    assert body["position_seconds"] == 42.5
+    assert body["completed"] is False
+
+
+async def test_put_state_updates_existing(authed_admin_client, seeded_live_set):
+    slug = seeded_live_set["slug"]
+    await authed_admin_client.put(
+        f"/api/sets/{slug}/state",
+        json={"position_seconds": 10.0, "completed": False},
+    )
+    await authed_admin_client.put(
+        f"/api/sets/{slug}/state",
+        json={"position_seconds": 90.0, "completed": True},
+    )
+    response = await authed_admin_client.get(f"/api/sets/{slug}/state")
+    body = response.json()
+    assert body["position_seconds"] == 90.0
+    assert body["completed"] is True

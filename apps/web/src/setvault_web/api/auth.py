@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets as _secrets
 from typing import Annotated
 
@@ -14,6 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from setvault_web.deps import current_user, db_session, get_signer
 from setvault_web.middleware.csrf import CSRF_COOKIE
 from setvault_web.rate_limit import enforce_auth_strict
+
+
+def _cookie_secure() -> bool:
+    """Cookie Secure attribute. Defaults to True; opt-out via env var for local
+    HTTP-only development/e2e (Playwright over http://localhost). Never disable
+    in production."""
+    return os.environ.get("SETVAULT_ALLOW_INSECURE_COOKIE", "").lower() not in (
+        "1",
+        "true",
+        "yes",
+    )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -60,14 +72,15 @@ async def login(
     if user.disabled_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="account disabled")
     cookie = signer.issue(str(user.id))
+    secure = _cookie_secure()
     response.set_cookie(
         SESSION_COOKIE, cookie,
-        httponly=True, secure=True, samesite="lax",
+        httponly=True, secure=secure, samesite="lax",
         max_age=int(SESSION_TTL.total_seconds()), path="/",
     )
     response.set_cookie(
         CSRF_COOKIE, _secrets.token_urlsafe(32),
-        httponly=False, secure=True, samesite="lax", path="/",
+        httponly=False, secure=secure, samesite="lax", path="/",
     )
     return LoginOut(user=UserOut.from_model(user))
 
@@ -75,7 +88,7 @@ async def login(
 @router.post("/logout", status_code=204)
 async def logout(response: Response, _: Annotated[User, Depends(current_user)]):
     response.delete_cookie(
-        SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax",
+        SESSION_COOKIE, path="/", secure=_cookie_secure(), httponly=True, samesite="lax",
     )
 
 

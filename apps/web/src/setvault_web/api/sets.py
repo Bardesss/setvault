@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -7,7 +8,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from setvault_core.models.catalog import LiveSet, LiveSetTag, MediaRoot, Tag
+from setvault_core.models.engagement import UserSetState
+from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import PartyOut, SeriesOut, VenueOut
 from setvault_core.schemas.sets import (
     SetArtistOut,
@@ -232,7 +236,10 @@ async def stream_set(
         raise HTTPException(status_code=404, detail="not ready")
     root = await session.get(MediaRoot, row.media_root_id)
     path = Path(root.host_path) / row.streaming_path
-    return FileResponse(path, media_type="audio/ogg")
+    # Detect media type from extension so test fixtures (e.g. silent.wav) work too;
+    # production sets streaming_path to an .opus file so audio/ogg remains the norm.
+    guessed, _ = mimetypes.guess_type(str(path))
+    return FileResponse(path, media_type=guessed or "audio/ogg")
 
 
 @router.get("/{slug}/waveform")
@@ -255,3 +262,63 @@ async def waveform(
         Path(root.host_path) / row.waveform_path,
         media_type="application/json",
     )
+
+
+class StateOut(BaseModel):
+    position_seconds: float
+    completed: bool
+
+
+class StateIn(BaseModel):
+    position_seconds: float
+    completed: bool
+
+
+@router.get("/{slug}/state", response_model=StateOut)
+async def get_state(
+    slug: str,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live = (
+        await session.execute(
+            select(LiveSet).where(LiveSet.slug == slug, LiveSet.deleted_at.is_(None))
+        )
+    ).scalar_one_or_none()
+    if live is None:
+        raise HTTPException(status_code=404, detail="not found")
+    state = await session.get(UserSetState, (user.id, live.id))
+    return StateOut(
+        position_seconds=state.position_seconds if state else 0.0,
+        completed=state.completed if state else False,
+    )
+
+
+@router.put("/{slug}/state", status_code=204)
+async def put_state(
+    slug: str,
+    body: StateIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live = (
+        await session.execute(
+            select(LiveSet).where(LiveSet.slug == slug, LiveSet.deleted_at.is_(None))
+        )
+    ).scalar_one_or_none()
+    if live is None:
+        raise HTTPException(status_code=404, detail="not found")
+    state = await session.get(UserSetState, (user.id, live.id))
+    if state is None:
+        session.add(
+            UserSetState(
+                user_id=user.id,
+                live_set_id=live.id,
+                position_seconds=body.position_seconds,
+                completed=body.completed,
+            )
+        )
+    else:
+        state.position_seconds = body.position_seconds
+        state.completed = body.completed
+    await session.commit()
