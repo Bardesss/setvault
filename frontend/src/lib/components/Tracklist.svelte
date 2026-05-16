@@ -1,11 +1,12 @@
 <script lang="ts">
   // Phase 2: no parsed tracks yet. Cue-point parsing + chapter markers land
   // in Phase 3 alongside fingerprint-driven track detection.
+  import { _ } from "svelte-i18n";
 </script>
 
 <aside class="tracklist-empty" aria-label="tracklist">
-  <h2>Tracklist</h2>
-  <p>Track-level metadata arrives in Phase 3 — fingerprint detection plus user-curated cue points.</p>
+  <h2>{$_("set_detail.tracklist")}</h2>
+  <p>{$_("set_detail.tracklist_empty")}</p>
 </aside>
 
 <style>

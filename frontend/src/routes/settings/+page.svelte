@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, ApiError } from "$lib/api/client";
   import { session } from "$lib/stores/session";
+  import { _ } from "svelte-i18n";
 
   let currentPassword = "";
   let newPassword = "";
@@ -20,11 +21,11 @@
           new_password: newPassword,
         }),
       });
-      success = "password updated";
+      success = $_("settings.password_updated");
       currentPassword = "";
       newPassword = "";
     } catch (e) {
-      error = e instanceof ApiError ? e.detail : "failed";
+      error = e instanceof ApiError ? e.detail : $_("settings.failed");
     } finally {
       busy = false;
     }
@@ -32,24 +33,24 @@
 </script>
 
 <section class="settings">
-  <h1>Settings</h1>
+  <h1>{$_("settings.heading")}</h1>
 
   {#if $session}
     <div class="card profile">
-      <h2>Profile</h2>
+      <h2>{$_("settings.profile")}</h2>
       <dl>
-        <dt>Display name</dt><dd>{$session.display_name}</dd>
-        <dt>Username</dt><dd>{$session.username}</dd>
-        <dt>Email</dt><dd>{$session.email}</dd>
-        <dt>Role</dt><dd>{$session.role}</dd>
+        <dt>{$_("settings.display_name")}</dt><dd>{$session.display_name}</dd>
+        <dt>{$_("settings.username")}</dt><dd>{$session.username}</dd>
+        <dt>{$_("settings.email")}</dt><dd>{$session.email}</dd>
+        <dt>{$_("settings.role")}</dt><dd>{$session.role}</dd>
       </dl>
     </div>
   {/if}
 
   <form class="card" on:submit|preventDefault={submit}>
-    <h2>Change password</h2>
+    <h2>{$_("settings.change_password")}</h2>
     <label>
-      <span>Current password</span>
+      <span>{$_("settings.current_password")}</span>
       <input
         type="password"
         bind:value={currentPassword}
@@ -58,7 +59,7 @@
       />
     </label>
     <label>
-      <span>New password</span>
+      <span>{$_("settings.new_password")}</span>
       <input
         type="password"
         bind:value={newPassword}
@@ -70,7 +71,7 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if success}<p class="success" role="status">{success}</p>{/if}
     <button type="submit" disabled={busy}>
-      {busy ? "Saving…" : "Change password"}
+      {busy ? $_("settings.saving") : $_("settings.change_password")}
     </button>
   </form>
 </section>

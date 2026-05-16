@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { invalidateAll } from "$app/navigation";
+  import { _ } from "svelte-i18n";
   import { login } from "$lib/api/auth";
   import { ApiError } from "$lib/api/client";
   let email = "";
@@ -16,24 +17,24 @@
       await goto("/");
     } catch (e) {
       error = e instanceof ApiError && e.status === 429
-        ? "too many attempts — try again in a minute"
-        : "invalid credentials";
+        ? $_("auth.login.rate_limited")
+        : $_("auth.login.invalid_credentials");
     } finally { busy = false; }
   }
 </script>
 
 <form class="login-card" on:submit|preventDefault={submit}>
-  <h1>Sign in</h1>
+  <h1>{$_("auth.login.heading")}</h1>
   <label>
-    <span>Email</span>
+    <span>{$_("auth.login.email")}</span>
     <input type="email" bind:value={email} required autocomplete="email" />
   </label>
   <label>
-    <span>Password</span>
+    <span>{$_("auth.login.password")}</span>
     <input type="password" bind:value={password} required autocomplete="current-password" />
   </label>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+  <button type="submit" disabled={busy}>{busy ? $_("auth.login.submitting") : $_("auth.login.submit")}</button>
 </form>
 
 <style>

@@ -5,8 +5,11 @@
   import "$lib/styles/components.css";
   import { page } from "$app/stores";
   import { session } from "$lib/stores/session";
+  import { setupI18n } from "$lib/i18n";
   import NavRail from "$lib/components/NavRail.svelte";
   import MiniPlayer from "$lib/components/MiniPlayer.svelte";
+
+  setupI18n();
 
   export let data: { user: import("$lib/api/auth").CurrentUser | null };
   $: session.set(data.user);

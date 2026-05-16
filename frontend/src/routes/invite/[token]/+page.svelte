@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { invalidateAll, goto } from "$app/navigation";
+  import { _ } from "svelte-i18n";
   import { api, ApiError } from "$lib/api/client";
   let username = "", display_name = "", password = "", error: string | null = null;
 
@@ -14,18 +15,18 @@
       await invalidateAll();
       await goto("/");
     } catch (e) {
-      error = e instanceof ApiError ? e.detail : "unknown error";
+      error = e instanceof ApiError ? e.detail : $_("auth.invite.unknown_error");
     }
   }
 </script>
 
 <form class="card" on:submit|preventDefault={accept}>
-  <h1>Accept invite</h1>
-  <label><span>Username</span><input bind:value={username} required minlength="2" /></label>
-  <label><span>Display name</span><input bind:value={display_name} required /></label>
-  <label><span>Password</span><input type="password" bind:value={password} required minlength="12" /></label>
+  <h1>{$_("auth.invite.heading")}</h1>
+  <label><span>{$_("auth.invite.username")}</span><input bind:value={username} required minlength="2" /></label>
+  <label><span>{$_("auth.invite.display_name")}</span><input bind:value={display_name} required /></label>
+  <label><span>{$_("auth.invite.password")}</span><input type="password" bind:value={password} required minlength="12" /></label>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <button type="submit">Accept invite</button>
+  <button type="submit">{$_("auth.invite.accept_invite")}</button>
 </form>
 
 <style>

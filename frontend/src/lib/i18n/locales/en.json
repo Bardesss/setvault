@@ -1,0 +1,48 @@
+{
+  "auth": {
+    "login": {
+      "heading": "Sign in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "invalid_credentials": "invalid credentials",
+      "rate_limited": "too many attempts — try again in a minute"
+    },
+    "invite": {
+      "heading": "Accept invite",
+      "username": "Username",
+      "display_name": "Display name",
+      "password": "Password",
+      "accept_invite": "Accept invite",
+      "unknown_error": "unknown error"
+    }
+  },
+  "settings": {
+    "heading": "Settings",
+    "profile": "Profile",
+    "display_name": "Display name",
+    "username": "Username",
+    "email": "Email",
+    "role": "Role",
+    "change_password": "Change password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "saving": "Saving…",
+    "password_updated": "password updated",
+    "failed": "failed"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "upload": "Upload",
+    "search": "Search",
+    "settings": "Settings",
+    "admin": "Admin",
+    "sign_out": "Sign out"
+  },
+  "set_detail": {
+    "tracklist": "Tracklist",
+    "tracklist_empty": "Track-level metadata arrives in Phase 3 — fingerprint detection plus user-curated cue points."
+  }
+}
