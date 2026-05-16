@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
-from setvault_core.models.catalog import MediaRoot
+from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.system import NotificationConnector
 from setvault_core.services.passwords import hash_password
@@ -62,8 +62,15 @@ async def seeded_admin():
         )
         s.add(user)
         await s.commit()
+        user_id = user.id
         yield user
-        await s.delete(user)
+    # Re-open a session for teardown — the yielded session may be stale, and we
+    # must clear LiveSets first (LiveSet.uploaded_by has ON DELETE RESTRICT).
+    async with session_factory()() as s:
+        await s.execute(delete(LiveSet).where(LiveSet.uploaded_by == user_id))
+        row = await s.get(User, user_id)
+        if row is not None:
+            await s.delete(row)
         await s.commit()
 
 
@@ -105,16 +112,22 @@ async def _cleanup_invite_users():
 
 @pytest.fixture(autouse=True)
 async def _cleanup_media_roots():
-    """Delete MediaRoot rows so leftover rows with unique `name` don't break reruns."""
+    """Delete LiveSet + MediaRoot rows so leftover rows don't break reruns.
+
+    LiveSet.media_root_id has ON DELETE RESTRICT, so any LiveSet rows from the
+    upload tests must be deleted first or the MediaRoot delete fails.
+    """
     init_engine(__import__("os").environ.get(
         "TEST_DATABASE_URL",
         "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
     ))
     async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
         await s.execute(delete(MediaRoot))
         await s.commit()
     yield
     async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
         await s.execute(delete(MediaRoot))
         await s.commit()
 
