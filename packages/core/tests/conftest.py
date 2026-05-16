@@ -2,6 +2,9 @@ import os
 import uuid
 
 import pytest
+from setvault_core.db import init_engine, session_factory
+from setvault_core.models.catalog import MediaRoot
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -33,3 +36,23 @@ async def session():
 @pytest.fixture
 def uid() -> uuid.UUID:
     return uuid.uuid4()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_media_roots():
+    """Delete MediaRoot rows so leftover rows don't accumulate across runs.
+
+    Kept decoupled from the web app conftest — packages/core tests must not
+    depend on apps/web fixtures.
+    """
+    init_engine(os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(MediaRoot))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(MediaRoot))
+        await s.commit()
