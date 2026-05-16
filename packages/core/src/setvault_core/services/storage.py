@@ -14,7 +14,10 @@ def probe(host_path: str, *, near_full_pct: float = 95.0) -> HealthStatus:
         return "unreachable"
     if not os.access(p, os.W_OK):
         return "readonly"
-    usage = shutil.disk_usage(p)
+    try:
+        usage = shutil.disk_usage(p)
+    except OSError:
+        return "unknown"
     pct = (usage.used / usage.total) * 100 if usage.total else 0
     if pct >= near_full_pct:
         return "near_full"

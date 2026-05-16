@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
-HealthStatus = Literal["ok", "unreachable", "readonly", "near_full", "unknown"]
+from setvault_core.services.storage import HealthStatus  # re-exported for schema consumers
+
+__all__ = [
+    "HealthStatus",
+    "MediaRootCreateIn",
+    "MediaRootListOut",
+    "MediaRootOut",
+]
 
 
 class MediaRootCreateIn(BaseModel):

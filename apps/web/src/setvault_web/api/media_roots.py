@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from setvault_core.models.catalog import MediaRoot
+from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.schemas.media_root import (
     MediaRootCreateIn,
     MediaRootListOut,
@@ -46,6 +46,8 @@ async def create_root(
     _: Annotated[object, Depends(require_admin)],
 ):
     health = probe(body.host_path)
+    # Best-effort mutex: race is acceptable for admin-only Phase 2. A partial-unique
+    # index `WHERE default_for_ingest` would enforce strictly; deferred to follow-up.
     if body.default_for_ingest:
         for existing in (await session.execute(
             select(MediaRoot).where(MediaRoot.default_for_ingest.is_(True))
@@ -71,8 +73,7 @@ async def delete_root(
     row = await session.get(MediaRoot, root_id)
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
-    # Phase 2 keeps this simple: refuse delete if any LiveSet still references the root.
-    from setvault_core.models.catalog import LiveSet
+    # Refuse delete if any LiveSet still references the root.
     in_use = (await session.execute(
         select(LiveSet.id).where(LiveSet.media_root_id == row.id).limit(1)
     )).first()
