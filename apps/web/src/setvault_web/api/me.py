@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.engagement import ActivityEvent, UserSetState
 from setvault_core.models.identity import User
+from setvault_core.services.passwords import hash_password, verify_password
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +29,23 @@ class ActivityItem(BaseModel):
     subject_id: str | None
     payload: dict
     created_at: str
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=12)
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    body: ChangePasswordIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    if not user.password_hash or not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="current password incorrect")
+    user.password_hash = hash_password(body.new_password)
+    await session.commit()
 
 
 @router.get("/continue-listening", response_model=list[ContinueItem])

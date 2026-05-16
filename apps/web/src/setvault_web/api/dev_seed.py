@@ -90,7 +90,9 @@ async def seed_e2e(session: Annotated[AsyncSession, Depends(db_session)]) -> See
         )
         session.add(admin)
         await session.flush()
-    elif admin.password_hash is None:
+    else:
+        # Always reset to the known seed password so tests that change it
+        # (e.g. the settings change-password e2e) don't leak between runs.
         admin.password_hash = hash_password(SEED_ADMIN_PASSWORD)
 
     # 2. Ensure on-disk silent fixture + MediaRoot row
