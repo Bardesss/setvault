@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from setvault_core.models.identity import EmailToken, User
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.passwords import hash_password
 from setvault_core.services.sessions import SESSION_COOKIE, SESSION_TTL, SessionSigner
 from setvault_core.services.tokens import expires, generate_token, hash_token, now_utc
@@ -18,6 +19,7 @@ from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, get_signer, require_admin
 from setvault_web.middleware.csrf import CSRF_COOKIE
 from setvault_web.rate_limit import enforce_auth_strict
+from setvault_web.services.notifications import enqueue_email
 
 router = APIRouter(prefix="/api/invites", tags=["invites"])
 
@@ -42,7 +44,7 @@ async def create_invite(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[User, Depends(require_admin)],
+    admin: Annotated[User, Depends(require_admin)],
 ):
     plaintext, digest = generate_token()
     token = EmailToken(
@@ -50,6 +52,15 @@ async def create_invite(
         payload={"role": body.role}, expires_at=expires(72),
     )
     session.add(token)
+    await session.flush()
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="invite.created",
+        target_type="EmailToken",
+        target_id=str(token.id),
+        after={"email": body.email, "role": body.role},
+    )
     await session.commit()
     smtp_sent = await _try_send_invite_email(session, body.email, plaintext, settings)
     # Derive base URL from the incoming request so tests and local dev use the correct origin.
@@ -62,9 +73,14 @@ async def create_invite(
 
 
 async def _try_send_invite_email(session, email, plaintext, settings) -> bool:
-    # Implemented properly in Task D2 of Phase 2B; for now always return False
-    # so the copy-paste fallback always applies.
-    return False
+    link = f"{settings.base_url}/invite/{plaintext}"
+    return await enqueue_email(
+        session,
+        settings,
+        to=email,
+        subject="You've been invited to SetVault",
+        text=f"Open this link to set your username and password:\n\n{link}\n",
+    )
 
 
 class InviteRedeemIn(BaseModel):

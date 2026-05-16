@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session, require_admin
 from setvault_web.rate_limit import enforce_auth_strict
+from setvault_web.services.notifications import enqueue_email
 
 router = APIRouter(prefix="/api/password-reset", tags=["auth"])
 
@@ -25,18 +26,30 @@ class RequestIn(BaseModel):
 
 
 @router.post("/request", status_code=204, dependencies=[Depends(enforce_auth_strict)])
-async def request_reset(body: RequestIn,
-                        session: Annotated[AsyncSession, Depends(db_session)]):
+async def request_reset(
+    body: RequestIn,
+    settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
     user = (await session.execute(
         select(User).where(User.email == body.email)
     )).scalar_one_or_none()
     if user is None:
         return  # silent: no email leak
-    _plaintext, digest = generate_token()
+    plaintext, digest = generate_token()
     token = EmailToken(user_id=user.id, email=user.email, kind="password_reset",
                        token_hash=digest, payload={}, expires_at=expires(1))
     session.add(token)
     await session.commit()
+
+    link = f"{settings.base_url}/reset/{plaintext}"
+    await enqueue_email(
+        session,
+        settings,
+        to=user.email,
+        subject="SetVault password reset",
+        text=f"Open this link to reset your password (expires in 1 hour):\n\n{link}\n",
+    )
 
 
 class AdminLinkIn(BaseModel):

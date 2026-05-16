@@ -1,9 +1,21 @@
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
+from setvault_core.models.catalog import (
+    Artist,
+    LiveSet,
+    MediaRoot,
+    Party,
+    Series,
+    Tag,
+    Venue,
+)
 from setvault_core.models.identity import EmailToken, User
+from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.services.passwords import hash_password
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 
 @pytest.fixture(autouse=True)
@@ -60,8 +72,15 @@ async def seeded_admin():
         )
         s.add(user)
         await s.commit()
+        user_id = user.id
         yield user
-        await s.delete(user)
+    # Re-open a session for teardown — the yielded session may be stale, and we
+    # must clear LiveSets first (LiveSet.uploaded_by has ON DELETE RESTRICT).
+    async with session_factory()() as s:
+        await s.execute(delete(LiveSet).where(LiveSet.uploaded_by == user_id))
+        row = await s.get(User, user_id)
+        if row is not None:
+            await s.delete(row)
         await s.commit()
 
 
@@ -72,6 +91,43 @@ async def authed_admin_client(client, seeded_admin):
     client.cookies = login.cookies
     client.headers["X-CSRF-Token"] = login.cookies["csrf_token"]
     yield client
+
+
+@pytest.fixture
+async def seeded_live_set(authed_admin_client, tmp_path):
+    """Seed a published LiveSet with a MediaRoot; returns {slug, id}.
+
+    Creates the MediaRoot via the public API (covers health probing) and the
+    LiveSet directly via the session — no public POST /api/sets exists yet.
+    Cleanup of the LiveSet/MediaRoot is handled by the autouse
+    ``_cleanup_media_roots`` fixture (which wipes both tables)."""
+    mr = await authed_admin_client.post("/api/media-roots", json={
+        "name": "seed-primary",
+        "host_path": str(tmp_path),
+        "default_for_ingest": True,
+        "naming_template": None,
+        "max_bytes": None,
+    })
+    mr_id = mr.json()["id"]
+
+    async with session_factory()() as s:
+        admin = (await s.execute(
+            select(User).where(User.email == "admin@example.test")
+        )).scalar_one()
+        live = LiveSet(
+            slug=f"seeded-set-{uuid.uuid4().hex[:6]}",
+            title="seeded set",
+            media_root_id=uuid.UUID(mr_id),
+            audio_path="originals/seed/audio.flac",
+            status="published",
+            source_type="upload",
+            uploaded_by=admin.id,
+        )
+        s.add(live)
+        await s.commit()
+        sid = live.id
+        slug = live.slug
+    yield {"id": str(sid), "slug": slug}
 
 
 @pytest.fixture(autouse=True)
@@ -98,4 +154,93 @@ async def _cleanup_invite_users():
                 | EmailToken.email.like("%@x.test")
             )
         )
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_media_roots():
+    """Delete LiveSet + MediaRoot rows so leftover rows don't break reruns.
+
+    LiveSet.media_root_id has ON DELETE RESTRICT, so any LiveSet rows from the
+    upload tests must be deleted first or the MediaRoot delete fails.
+    """
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
+        await s.execute(delete(MediaRoot))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(LiveSet))
+        await s.execute(delete(MediaRoot))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_notification_connectors():
+    """Delete NotificationConnector rows so connector leftovers don't enable
+    SMTP-send paths in unrelated tests (e.g. invite tests expect smtp_sent=False
+    when no connector exists). Cleans both before and after to handle leftovers
+    from prior test sessions."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(NotificationConnector))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(NotificationConnector))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_audit_events():
+    """Delete AuditEvent rows so audit tests can rerun and the test DB stays tidy."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(AuditEvent))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(AuditEvent))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_catalog():
+    """Delete Party/Series/Venue/Artist/Tag rows so catalog tests can rerun.
+
+    The catalog CRUD tests rely on unique slug constraints (see the 409 test),
+    so leftover rows from a prior run would otherwise turn the create asserts
+    into spurious 409s. Order matters: Party has FKs to Venue and Series, so
+    delete parties first; Artist is independent. Tag rows are also cleaned so
+    set-edit tests that create tags by name (e.g. "techno", "vinyl") stay
+    idempotent — LiveSetTag rows cascade on Tag delete via FK.
+    """
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(Party))
+        await s.execute(delete(Series))
+        await s.execute(delete(Venue))
+        await s.execute(delete(Artist))
+        await s.execute(delete(Tag))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(Party))
+        await s.execute(delete(Series))
+        await s.execute(delete(Venue))
+        await s.execute(delete(Artist))
+        await s.execute(delete(Tag))
         await s.commit()
