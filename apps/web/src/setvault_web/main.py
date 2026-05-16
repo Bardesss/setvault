@@ -8,6 +8,7 @@ from setvault_web.api import catalog as catalog_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import dev_seed as dev_seed_api
 from setvault_web.api import invites as invites_api
+from setvault_web.api import jobs as jobs_api
 from setvault_web.api import me as me_api
 from setvault_web.api import media_roots as media_roots_api
 from setvault_web.api import password_reset as password_reset_api
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(search_api.router)
     app.include_router(ws_api.router)
     app.include_router(admin_api.router)
+    app.include_router(jobs_api.router)
     app.include_router(users_api.router)
     app.include_router(me_api.router)
     if dev_seed_api.is_enabled():

@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from setvault_core.models.catalog import LiveSet
+from setvault_core.models.identity import User
 from setvault_core.models.system import AuditEvent
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web import __version__
 from setvault_web.deps import db_session, require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+_REDACT_SUFFIXES = ("_KEY", "_SECRET", "_TOKEN", "_PASSWORD", "_HOOK_SECRET")
 
 
 @router.get("/audit")
@@ -37,4 +43,28 @@ async def audit_list(
             }
             for e in rows
         ]
+    }
+
+
+@router.get("/system")
+async def system_info(
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+):
+    user_count = (await session.execute(select(func.count(User.id)))).scalar_one()
+    set_count = (await session.execute(
+        select(func.count(LiveSet.id)).where(LiveSet.deleted_at.is_(None))
+    )).scalar_one()
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not any(k.upper().endswith(suf) for suf in _REDACT_SUFFIXES)
+        and "PASS" not in k.upper()
+        and "TOKEN" not in k.upper()
+    }
+    return {
+        "version": __version__,
+        "user_count": int(user_count),
+        "set_count": int(set_count),
+        "env": env,
     }
