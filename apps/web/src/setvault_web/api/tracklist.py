@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from setvault_core.jobs.tracklist_url_1001tl import HostRejected, scrape_1001tracklists
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.identity import User
 from setvault_core.models.tracklist import TracklistEntry, TracklistImportJob
@@ -34,7 +35,9 @@ from setvault_core.services.tracklist_parse import parse_tracklist_text
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.config import Settings
 from setvault_web.deps import current_user, db_session
+from setvault_web.rate_limit import hit
 
 router = APIRouter(prefix="/api/sets", tags=["tracklist"])
 
@@ -258,9 +261,42 @@ async def import_tracklist(
         job.status = "succeeded"
         job.result = {"parsed": normalized}
         job.finished_at = datetime.now(UTC)
-    elif body.kind in ("url_1001tl", "ocr"):
-        # 3A: enqueue worker job (Task A8/A9 wire this); for now stub status=queued
-        job.status = "queued"
+    elif body.kind == "url_1001tl":
+        # ToS-grey source: gated behind an admin opt-in flag, then rate limited.
+        if not Settings().allow_1001tl_scrape:
+            raise HTTPException(
+                status_code=403, detail="1001tracklists scraping disabled by admin"
+            )
+        count = await hit(f"tl_scrape:{user.id}", limit=1, window_seconds=60)
+        if count > 1:
+            raise HTTPException(
+                status_code=429,
+                detail="1001tracklists scrape rate limit (1/min)",
+                headers={"Retry-After": "60"},
+            )
+        url = body.payload.get("url", "")
+        try:
+            scraped = await scrape_1001tracklists(url)
+        except HostRejected as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:  # any fetch/parse failure marks the job failed
+            job.status = "failed"
+            job.result = {"error": str(exc)}
+            job.finished_at = datetime.now(UTC)
+            await session.commit()
+            return _import_to_out(job)
+        # Normalize None start_seconds the same way paste does
+        next_t = 0
+        normalized = []
+        for s in scraped:
+            t = s.start_seconds if s.start_seconds is not None else next_t
+            next_t = t
+            normalized.append({"start_seconds": t, "raw_label": s.raw_label})
+        job.status = "succeeded"
+        job.result = {"parsed": normalized}
+        job.finished_at = datetime.now(UTC)
+    elif body.kind == "ocr":
+        job.status = "queued"  # handled in Task A9
     else:
         raise HTTPException(status_code=400, detail=f"unknown kind: {body.kind}")
 
