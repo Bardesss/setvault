@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "setvault-core",
+    "setvault-providers",
     "setvault-web",
     "setvault-worker",
 ]
@@ -1036,6 +1037,7 @@ dependencies = [
     { name = "redis" },
     { name = "rq" },
     { name = "rq-scheduler" },
+    { name = "setvault-providers" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
 ]
@@ -1064,10 +1066,40 @@ requires-dist = [
     { name = "redis", specifier = ">=5.0" },
     { name = "rq", specifier = ">=1.16" },
     { name = "rq-scheduler", specifier = ">=0.13" },
+    { name = "setvault-providers", editable = "packages/providers" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.30" },
     { name = "structlog", specifier = ">=24.1" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "setvault-providers"
+version = "0.1.0"
+source = { editable = "packages/providers" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "respx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "pydantic", specifier = ">=2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=0.23" },
+    { name = "respx", specifier = ">=0.21" },
+]
 
 [[package]]
 name = "setvault-web"
@@ -1083,6 +1115,7 @@ dependencies = [
     { name = "redis" },
     { name = "rq" },
     { name = "setvault-core" },
+    { name = "setvault-providers" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1109,6 +1142,7 @@ requires-dist = [
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "rq", specifier = ">=1.16" },
     { name = "setvault-core", editable = "packages/core" },
+    { name = "setvault-providers", editable = "packages/providers" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
 provides-extras = ["dev"]

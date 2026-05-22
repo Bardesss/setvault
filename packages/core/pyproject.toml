@@ -3,6 +3,7 @@ name = "setvault-core"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+  "setvault-providers",
   "sqlalchemy[asyncio]>=2.0.30",
   "asyncpg>=0.29",
   "alembic>=1.13",
