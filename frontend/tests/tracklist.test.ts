@@ -1,0 +1,61 @@
+import { expect, test } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
+
+// These tests run against the shared "seeded-set" LiveSet. The dev-seed
+// endpoint does not clear tracklist rows, so assertions are relative to the
+// row count observed at the start of each test rather than absolute.
+
+const rowsOf = (page: import("@playwright/test").Page) =>
+  page.locator("aside.tracklist ol li");
+
+test.describe("tracklist editor", () => {
+  test("M key adds an entry at the playhead", async ({ page, request }) => {
+    await loginAs(page, request);
+    await page.goto("/sets/seeded-set");
+    await page.waitForSelector("aside.tracklist");
+    const rows = rowsOf(page);
+    const before = await rows.count();
+    await page.keyboard.press("m");
+    await expect(rows).toHaveCount(before + 1);
+  });
+
+  test("paste import materializes parsed entries", async ({ page, request }) => {
+    await loginAs(page, request);
+    await page.goto("/sets/seeded-set");
+    await page.waitForSelector("aside.tracklist");
+    const rows = rowsOf(page);
+    const before = await rows.count();
+
+    await page.getByRole("button", { name: "Import" }).click();
+    await page
+      .locator("section.modal textarea")
+      .fill("0:30 Paste One - Track\n5:00 Paste Two - Track");
+    await page.getByRole("button", { name: "Parse" }).click();
+    await page.getByRole("button", { name: /accept .* selected/i }).click();
+
+    await expect(rows).toHaveCount(before + 2);
+    await expect(rows).toContainText(["Paste One - Track", "Paste Two - Track"]);
+  });
+
+  test("time-shift dialog reports affected entries and applies", async ({
+    page,
+    request,
+  }) => {
+    await loginAs(page, request);
+    await page.goto("/sets/seeded-set");
+    await page.waitForSelector("aside.tracklist");
+
+    // Guarantee at least one entry past the shift threshold.
+    await page.getByRole("button", { name: "Import" }).click();
+    await page.locator("section.modal textarea").fill("9:00 Shift Target - Track");
+    await page.getByRole("button", { name: "Parse" }).click();
+    await page.getByRole("button", { name: /accept .* selected/i }).click();
+
+    await page.getByRole("button", { name: "Time shift" }).click();
+    const dialog = page.locator("section.dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("p.preview")).toContainText(/shift \d+ entr/i);
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toBeHidden();
+  });
+});
