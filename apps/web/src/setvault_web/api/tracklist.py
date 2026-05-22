@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import base64
+import tempfile
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from setvault_core.jobs.tracklist_ocr import OcrFailed, ocr_to_entries
 from setvault_core.jobs.tracklist_url_1001tl import HostRejected, scrape_1001tracklists
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.identity import User
@@ -296,7 +300,33 @@ async def import_tracklist(
         job.result = {"parsed": normalized}
         job.finished_at = datetime.now(UTC)
     elif body.kind == "ocr":
-        job.status = "queued"  # handled in Task A9
+        b64 = body.payload.get("image_b64", "")
+        try:
+            data = base64.b64decode(b64, validate=True)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="invalid image_b64") from exc
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = Path(tmp.name)
+        try:
+            parsed = ocr_to_entries(tmp_path)
+        except OcrFailed as exc:
+            job.status = "failed"
+            job.result = {"error": str(exc)}
+            job.finished_at = datetime.now(UTC)
+            await session.commit()
+            return _import_to_out(job)
+        finally:
+            tmp_path.unlink(missing_ok=True)  # noqa: ASYNC240 — trivial cleanup of our own temp file
+        next_t = 0
+        normalized = []
+        for p in parsed:
+            t = p.start_seconds if p.start_seconds is not None else next_t
+            next_t = t
+            normalized.append({"start_seconds": t, "raw_label": p.raw_label})
+        job.status = "succeeded"
+        job.result = {"parsed": normalized}
+        job.finished_at = datetime.now(UTC)
     else:
         raise HTTPException(status_code=400, detail=f"unknown kind: {body.kind}")
 
