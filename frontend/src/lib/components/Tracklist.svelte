@@ -4,6 +4,9 @@
   import { createEntry, listTracklist, type TracklistEntry } from "$lib/api/tracklist";
   import { player, seekTo } from "$lib/stores/player";
   import { tracklist, setEntries, upsertEntry, removeEntry } from "$lib/stores/tracklist";
+  import TracklistEditDrawer from "./TracklistEditDrawer.svelte";
+  import TracklistImportModal from "./TracklistImportModal.svelte";
+  import TimeShiftDialog from "./TimeShiftDialog.svelte";
 
   export let slug: string;
 
@@ -137,30 +140,15 @@
 </aside>
 
 {#if drawerEntry}
-  {#await import("./TracklistEditDrawer.svelte") then mod}
-    <svelte:component
-      this={mod.default}
-      {slug}
-      entry={drawerEntry}
-      on:close={() => (drawerEntry = null)}
-    />
-  {/await}
+  <TracklistEditDrawer {slug} entry={drawerEntry} on:close={() => (drawerEntry = null)} />
 {/if}
 
 {#if importModalOpen}
-  {#await import("./TracklistImportModal.svelte") then mod}
-    <svelte:component
-      this={mod.default}
-      {slug}
-      on:close={() => (importModalOpen = false)}
-    />
-  {/await}
+  <TracklistImportModal {slug} on:close={() => (importModalOpen = false)} />
 {/if}
 
 {#if shiftOpen}
-  {#await import("./TimeShiftDialog.svelte") then mod}
-    <svelte:component this={mod.default} {slug} on:close={() => (shiftOpen = false)} />
-  {/await}
+  <TimeShiftDialog {slug} on:close={() => (shiftOpen = false)} />
 {/if}
 
 <style>
