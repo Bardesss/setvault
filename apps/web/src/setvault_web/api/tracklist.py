@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.identity import User
-from setvault_core.models.tracklist import TracklistEntry
+from setvault_core.models.tracklist import TracklistEntry, TracklistImportJob
 from setvault_core.schemas.tracklist import (
+    ParsedEntry,
     TimeShiftIn,
     TracklistEntryCreateIn,
     TracklistEntryMoveIn,
     TracklistEntryOut,
     TracklistEntryPatchIn,
+    TracklistImportAcceptIn,
+    TracklistImportIn,
+    TracklistImportOut,
 )
 from setvault_core.services.audit import log as audit_log
 from setvault_core.services.tracklist import (
@@ -25,6 +30,7 @@ from setvault_core.services.tracklist import (
     time_shift_entries,
     update_entry,
 )
+from setvault_core.services.tracklist_parse import parse_tracklist_text
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -210,3 +216,98 @@ async def time_shift_tracklist(
     )
     await session.commit()
     return TimeShiftOut(affected_count=count)
+
+
+def _import_to_out(job: TracklistImportJob) -> TracklistImportOut:
+    result = job.result or {}
+    return TracklistImportOut(
+        id=str(job.id),
+        kind=job.kind,
+        status=job.status,
+        parsed=[ParsedEntry(**p) for p in result.get("parsed", [])],
+        error=result.get("error"),
+        created_at=job.created_at,
+    )
+
+
+@router.post("/{slug}/tracklist/import", response_model=TracklistImportOut)
+async def import_tracklist(
+    slug: str,
+    body: TracklistImportIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live = await _load_set(session, slug)
+    job = TracklistImportJob(
+        live_set_id=live.id, kind=body.kind, payload=body.payload,
+        created_by=user.id, created_at=datetime.now(UTC),
+    )
+    session.add(job)
+    await session.flush()
+
+    if body.kind == "paste":
+        text = body.payload.get("text", "")
+        parsed = parse_tracklist_text(text)
+        # Assign sequential start_seconds for entries with None — keep ordering
+        next_t = 0
+        normalized = []
+        for p in parsed:
+            t = p.start_seconds if p.start_seconds is not None else next_t
+            next_t = t
+            normalized.append({"start_seconds": t, "raw_label": p.raw_label})
+        job.status = "succeeded"
+        job.result = {"parsed": normalized}
+        job.finished_at = datetime.now(UTC)
+    elif body.kind in ("url_1001tl", "ocr"):
+        # 3A: enqueue worker job (Task A8/A9 wire this); for now stub status=queued
+        job.status = "queued"
+    else:
+        raise HTTPException(status_code=400, detail=f"unknown kind: {body.kind}")
+
+    await session.commit()
+    return _import_to_out(job)
+
+
+@router.post("/{slug}/tracklist/import/{job_id}/accept", response_model=TracklistOut)
+async def accept_import(
+    slug: str,
+    job_id: str,
+    body: TracklistImportAcceptIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live = await _load_set(session, slug)
+    job = (await session.execute(
+        select(TracklistImportJob).where(
+            TracklistImportJob.id == uuid.UUID(job_id),
+            TracklistImportJob.live_set_id == live.id,
+        )
+    )).scalar_one_or_none()
+    if job is None or job.status != "succeeded":
+        raise HTTPException(status_code=404, detail="import not ready")
+    parsed = (job.result or {}).get("parsed", [])
+    # Materialize accepted entries appended after current end
+    existing = await list_entries(session, live.id)
+    next_pos = len(existing)
+    for idx in body.accepted_indexes:
+        if idx < 0 or idx >= len(parsed):
+            continue
+        p = parsed[idx]
+        e = TracklistEntry(
+            live_set_id=live.id,
+            position=next_pos,
+            start_seconds=int(p["start_seconds"]),
+            raw_label=p["raw_label"],
+            created_by=user.id,
+        )
+        session.add(e)
+        next_pos += 1
+    await audit_log(
+        session, actor_user_id=user.id, actor_kind="user",
+        action="tracklist.import.accepted",
+        target_type="tracklist_import_job", target_id=str(job.id),
+        after={"accepted": body.accepted_indexes},
+    )
+    await session.commit()
+    refreshed = await list_entries(session, live.id)
+    return TracklistOut(entries=[_to_out(e) for e in refreshed])
