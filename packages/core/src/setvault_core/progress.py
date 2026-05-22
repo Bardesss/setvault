@@ -12,7 +12,10 @@ def channel_for_set(live_set_id: str) -> str:
 
 
 class ProgressEvent(BaseModel):
-    kind: Literal["probe", "fingerprint", "transcode", "normalize", "waveform", "ready", "failed"]
+    kind: Literal[
+        "probe", "fingerprint", "transcode", "normalize", "waveform", "ready", "failed",
+        "bulk_resolve",
+    ]
     live_set_id: str
     job_id: str
     progress_pct: int = 0
