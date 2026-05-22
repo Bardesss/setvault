@@ -9,6 +9,7 @@ from setvault_core.models.catalog import LiveSet
 from setvault_core.models.identity import User
 from setvault_core.models.tracklist import TracklistEntry
 from setvault_core.schemas.tracklist import (
+    TimeShiftIn,
     TracklistEntryCreateIn,
     TracklistEntryMoveIn,
     TracklistEntryOut,
@@ -21,6 +22,7 @@ from setvault_core.services.tracklist import (
     delete_entry,
     list_entries,
     reorder_entries,
+    time_shift_entries,
     update_entry,
 )
 from sqlalchemy import select
@@ -181,3 +183,30 @@ async def delete_tracklist_entry(
         before={"raw_label": raw_label},
     )
     await session.commit()
+
+
+class TimeShiftOut(BaseModel):
+    affected_count: int
+
+
+@router.post("/{slug}/tracklist/time-shift", response_model=TimeShiftOut)
+async def time_shift_tracklist(
+    slug: str,
+    body: TimeShiftIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live = await _load_set(session, slug)
+    count = await time_shift_entries(
+        session, live.id,
+        after_seconds=body.after_seconds, delta_seconds=body.delta_seconds,
+    )
+    await audit_log(
+        session, actor_user_id=user.id, actor_kind="user",
+        action="tracklist.time_shift",
+        target_type="live_set", target_id=str(live.id),
+        after={"after_seconds": body.after_seconds,
+               "delta_seconds": body.delta_seconds, "affected": count},
+    )
+    await session.commit()
+    return TimeShiftOut(affected_count=count)
