@@ -38,7 +38,7 @@
     </section>
   {/if}
 
-  <Tracklist />
+  <Tracklist slug={set.slug} />
 </section>
 
 <style>
