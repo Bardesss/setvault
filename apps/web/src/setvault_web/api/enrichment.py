@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from setvault_core.models.catalog import LiveSet
+from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.enrichment import ProviderConfig
 from setvault_core.models.identity import User
 from setvault_core.models.tracklist import TracklistEntry
@@ -152,3 +153,42 @@ async def bulk_resolve(
         ))
     await session.commit()
     return BulkResolveOut(results=rows)
+
+
+@router.post("/{slug}/tracklist/entries/{entry_id}/id-this", response_model=ResolveOut)
+async def id_this(
+    slug: str,
+    entry_id: str,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    live, entry = await _load_entry(session, slug, entry_id)
+    if not live.streaming_path:
+        raise HTTPException(status_code=404, detail="streaming audio not ready")
+    root = await session.get(MediaRoot, live.media_root_id)
+    audio_path = str(Path(root.host_path) / live.streaming_path)
+
+    configs = (await session.execute(
+        select(ProviderConfig).where(
+            ProviderConfig.provider_kind == "acoustid",
+            ProviderConfig.enabled.is_(True),
+        )
+    )).scalars().all()
+    insts = select_providers_for_capability(
+        configs, Capability.FINGERPRINT, secret_key=get_settings().secret_key
+    )
+    if not insts:
+        raise HTTPException(status_code=400, detail="acoustid not configured")
+    p = insts[0]
+    try:
+        cands = await p.fingerprint(audio_path, start_seconds=entry.start_seconds,
+                                    window_seconds=15)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"acoustid error: {exc}") from exc
+    return ResolveOut(
+        entry_id=entry_id,
+        candidates=[ResolveCandidate(
+            title=c.title, artist_name=c.artist_name, confidence=c.confidence,
+            source_kind="acoustid", external_ids=c.external_ids,
+        ) for c in cands],
+    )
