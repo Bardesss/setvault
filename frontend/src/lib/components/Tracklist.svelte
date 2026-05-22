@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { _ } from "svelte-i18n";
+  import { bulkResolve } from "$lib/api/enrichment";
   import { createEntry, listTracklist, type TracklistEntry } from "$lib/api/tracklist";
   import { player, seekTo } from "$lib/stores/player";
   import { tracklist, setEntries, upsertEntry, removeEntry } from "$lib/stores/tracklist";
+  import ResolveCandidatesPopover from "./ResolveCandidatesPopover.svelte";
   import TracklistEditDrawer from "./TracklistEditDrawer.svelte";
   import TracklistImportModal from "./TracklistImportModal.svelte";
   import TimeShiftDialog from "./TimeShiftDialog.svelte";
@@ -13,6 +15,9 @@
   let drawerEntry: TracklistEntry | null = null;
   let importModalOpen = false;
   let shiftOpen = false;
+  let popoverEntry: TracklistEntry | null = null;
+  let bulkBusy = false;
+  let bulkStatus: string | null = null;
 
   onMount(async () => {
     try {
@@ -97,6 +102,22 @@
     }
   }
 
+  async function runBulkResolve() {
+    bulkBusy = true;
+    bulkStatus = null;
+    try {
+      const results = await bulkResolve(slug);
+      const withCands = results.filter((r) => r.candidates.length > 0).length;
+      bulkStatus = $_("tracklist.bulk_resolve_done", {
+        values: { found: withCands, total: results.length },
+      });
+    } catch (e) {
+      bulkStatus = e instanceof Error ? e.message : "error";
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
   $: currentIdx = indexAtPlayhead();
 </script>
 
@@ -109,8 +130,13 @@
       <button on:click={addAtPlayhead} title={$_("tracklist.add_at_playhead")}>+ M</button>
       <button on:click={() => (importModalOpen = true)}>{$_("tracklist.import")}</button>
       <button on:click={() => (shiftOpen = true)}>{$_("tracklist.time_shift")}</button>
+      <button on:click={runBulkResolve} disabled={bulkBusy}>
+        {$_("tracklist.bulk_resolve")}
+      </button>
     </div>
   </header>
+
+  {#if bulkStatus}<p class="bulk-status">{bulkStatus}</p>{/if}
 
   {#if $tracklist.entries.length === 0}
     <p class="empty">{$_("tracklist.empty")}</p>
@@ -127,6 +153,11 @@
             <span class="t mono">{fmtTime(entry.start_seconds)}</span>
             <span class="label">{entry.raw_label}</span>
           </button>
+          {#if entry.status === "raw"}
+            <button class="resolve" on:click={() => (popoverEntry = entry)}>
+              {$_("tracklist.resolve")}
+            </button>
+          {/if}
           <span class="badge" data-status={entry.status}>{entry.status}</span>
           <button
             class="edit"
@@ -149,6 +180,14 @@
 
 {#if shiftOpen}
   <TimeShiftDialog {slug} on:close={() => (shiftOpen = false)} />
+{/if}
+
+{#if popoverEntry}
+  <ResolveCandidatesPopover
+    {slug}
+    entry={popoverEntry}
+    on:close={() => (popoverEntry = null)}
+  />
 {/if}
 
 <style>
@@ -180,7 +219,7 @@
   ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
   li {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: var(--sp-2);
     align-items: center;
     padding: var(--sp-2);
@@ -188,15 +227,34 @@
   }
   li.current { background: var(--bg-now); }
   button.seek {
-    display: contents;
+    display: flex;
+    gap: var(--sp-2);
+    align-items: baseline;
+    min-width: 0;
     background: none;
     border: none;
     cursor: pointer;
     color: inherit;
     text-align: left;
+    padding: 0;
   }
   .t { font-family: var(--font-mono); color: var(--text-muted); min-width: 5ch; }
-  .label { color: var(--text-default); }
+  .label { color: var(--text-default); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .resolve {
+    background: none;
+    border: 1px solid var(--accent-warning);
+    border-radius: var(--r-sm);
+    padding: 2px var(--sp-2);
+    color: var(--accent-warning);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+  }
+  .bulk-status {
+    margin: 0 0 var(--sp-2);
+    color: var(--text-muted);
+    font-size: var(--ts-sm);
+  }
   .badge {
     font-family: var(--font-mono);
     font-size: var(--ts-xs);
