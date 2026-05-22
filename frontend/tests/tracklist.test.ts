@@ -1,18 +1,28 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 // These tests run against the shared "seeded-set" LiveSet. The dev-seed
 // endpoint does not clear tracklist rows, so assertions are relative to the
 // row count observed at the start of each test rather than absolute.
 
-const rowsOf = (page: import("@playwright/test").Page) =>
-  page.locator("aside.tracklist ol li");
+const rowsOf = (page: Page) => page.locator("aside.tracklist ol li");
+
+async function openSet(page: Page): Promise<void> {
+  await page.goto("/sets/seeded-set");
+  await page.waitForSelector("aside.tracklist");
+  // The set page fetches its data in two passes on first load; wait for the
+  // network to settle so interactions land on the stable component tree.
+  await page.waitForLoadState("networkidle");
+}
 
 test.describe("tracklist editor", () => {
   test("M key adds an entry at the playhead", async ({ page, request }) => {
     await loginAs(page, request);
-    await page.goto("/sets/seeded-set");
-    await page.waitForSelector("aside.tracklist");
+    await openSet(page);
+    // Click a neutral element so keyboard events reach the window handler
+    // (mirrors set-detail.test.ts, which clicks before keyboard.press).
+    await page.locator("aside.tracklist h3").click();
     const rows = rowsOf(page);
     const before = await rows.count();
     await page.keyboard.press("m");
@@ -21,12 +31,12 @@ test.describe("tracklist editor", () => {
 
   test("paste import materializes parsed entries", async ({ page, request }) => {
     await loginAs(page, request);
-    await page.goto("/sets/seeded-set");
-    await page.waitForSelector("aside.tracklist");
+    await openSet(page);
     const rows = rowsOf(page);
     const before = await rows.count();
 
     await page.getByRole("button", { name: "Import" }).click();
+    await expect(page.locator("section.modal")).toBeVisible();
     await page
       .locator("section.modal textarea")
       .fill("0:30 Paste One - Track\n5:00 Paste Two - Track");
@@ -42,11 +52,11 @@ test.describe("tracklist editor", () => {
     request,
   }) => {
     await loginAs(page, request);
-    await page.goto("/sets/seeded-set");
-    await page.waitForSelector("aside.tracklist");
+    await openSet(page);
 
     // Guarantee at least one entry past the shift threshold.
     await page.getByRole("button", { name: "Import" }).click();
+    await expect(page.locator("section.modal")).toBeVisible();
     await page.locator("section.modal textarea").fill("9:00 Shift Target - Track");
     await page.getByRole("button", { name: "Parse" }).click();
     await page.getByRole("button", { name: /accept .* selected/i }).click();
