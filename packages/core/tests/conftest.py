@@ -5,6 +5,8 @@ import pytest
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.identity import User
+from setvault_core.models.tracklist import TracklistEntry
+from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -37,6 +39,35 @@ async def session():
 @pytest.fixture
 def uid() -> uuid.UUID:
     return uuid.uuid4()
+
+
+@pytest.fixture
+async def session_with_set(session):
+    """Returns (session, live_set_id, [entry_id, entry_id, entry_id])."""
+    s = session
+    mr = MediaRoot(name=f"r-{uuid.uuid4().hex[:6]}", host_path="/srv/test-media")
+    s.add(mr)
+    await s.flush()
+    user = User(email=f"u-{uuid.uuid4().hex[:6]}@x.test",
+                username=f"u{uuid.uuid4().hex[:6]}",
+                display_name="u", password_hash=hash_password("aaaaaaaa"))
+    s.add(user)
+    await s.flush()
+    live = LiveSet(slug=f"s-{uuid.uuid4().hex[:6]}", title="t",
+                   media_root_id=mr.id, audio_path="x/y.flac",
+                   status="published", source_type="upload", uploaded_by=user.id)
+    s.add(live)
+    await s.flush()
+    entry_ids = []
+    for i, sec in enumerate([0, 60, 120]):
+        e = TracklistEntry(live_set_id=live.id, position=i,
+                           start_seconds=sec, raw_label=f"e{i}",
+                           created_by=user.id)
+        s.add(e)
+        await s.flush()
+        entry_ids.append(str(e.id))
+    await s.commit()
+    yield s, live.id, entry_ids
 
 
 @pytest.fixture(autouse=True)
