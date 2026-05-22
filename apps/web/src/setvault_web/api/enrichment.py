@@ -12,6 +12,7 @@ from setvault_core.models.identity import User
 from setvault_core.models.tracklist import TracklistEntry
 from setvault_core.progress import ProgressEvent, publish
 from setvault_core.schemas.enrichment import ResolveAcceptIn, ResolveCandidate, ResolveOut
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.enrichment import (
     accept_candidate,
     resolve_entry,
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import get_settings
 from setvault_web.deps import current_user, db_session
+from setvault_web.rate_limit import hit
 
 router = APIRouter(prefix="/api/sets", tags=["enrichment"])
 
@@ -76,6 +78,11 @@ async def resolve_one(
     user: Annotated[User, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
+    if await hit(f"resolve:{user.id}", limit=30, window_seconds=60) > 30:
+        raise HTTPException(
+            status_code=429, detail="resolve rate limit (30/min)",
+            headers={"Retry-After": "60"},
+        )
     _, entry = await _load_entry(session, slug, entry_id)
     configs = await _enabled_configs(session)
     providers = select_providers_for_capability(
@@ -108,6 +115,14 @@ async def resolve_accept(
         confirmed_via_acoustid=body.confirmed_via_acoustid,
         field_priority=field_priority, providers=providers,
     )
+    await audit_log(
+        session, actor_user_id=user.id, actor_kind="user",
+        action=("tracklist.entry.acoustid_confirmed" if body.confirmed_via_acoustid
+                else "tracklist.entry.resolved"),
+        target_type="tracklist_entry", target_id=str(entry.id),
+        after={"track_id": str(track.id), "title": body.title,
+               "artist": body.artist_name},
+    )
     await session.commit()
     return {"track_id": str(track.id), "status": entry.status}
 
@@ -127,6 +142,11 @@ async def bulk_resolve(
     user: Annotated[User, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
+    if await hit(f"bulk_resolve:{user.id}", limit=1, window_seconds=60) > 1:
+        raise HTTPException(
+            status_code=429, detail="bulk-resolve rate limit (1/min)",
+            headers={"Retry-After": "60"},
+        )
     live = (await session.execute(
         select(LiveSet).where(LiveSet.slug == slug, LiveSet.deleted_at.is_(None))
     )).scalar_one_or_none()
@@ -162,6 +182,11 @@ async def id_this(
     user: Annotated[User, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
+    if await hit(f"id_this:{user.id}", limit=3, window_seconds=60) > 3:
+        raise HTTPException(
+            status_code=429, detail="ID-this rate limit (3/min)",
+            headers={"Retry-After": "60"},
+        )
     live, entry = await _load_entry(session, slug, entry_id)
     if not live.streaming_path:
         raise HTTPException(status_code=404, detail="streaming audio not ready")
