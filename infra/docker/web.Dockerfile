@@ -24,6 +24,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 # audiowaveform is not in Debian repos; download deb and install with its deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg libmagic1 libchromaprint-tools tini ca-certificates curl \
+      tesseract-ocr \
       libmad0 libid3tag0 libgd3 \
       libboost-program-options1.74.0 libboost-filesystem1.74.0 libboost-regex1.74.0 \
     && curl -fsSL https://github.com/bbc/audiowaveform/releases/download/1.10.1/audiowaveform_1.10.1-1-12_amd64.deb \

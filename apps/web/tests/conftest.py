@@ -14,6 +14,13 @@ from setvault_core.models.catalog import (
 )
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.system import AuditEvent, NotificationConnector
+from setvault_core.models.tracklist import (
+    Label,
+    Release,
+    Track,
+    TracklistEntry,
+    TracklistImportJob,
+)
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete, select
 
@@ -225,6 +232,36 @@ async def _cleanup_audit_events():
     yield
     async with session_factory()() as s:
         await s.execute(delete(AuditEvent))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_tracklist():
+    """Wipe tracklist + Track DB rows between tests so reruns stay idempotent.
+
+    TracklistEntry / TracklistImportJob cascade off LiveSet deletes, but Track,
+    Release and Label are independent and must be cleared explicitly. Order:
+    entries reference tracks (SET NULL) and tracks reference releases/labels
+    (SET NULL), so child rows first is safe either way — kept explicit anyway.
+    """
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(TracklistEntry))
+        await s.execute(delete(TracklistImportJob))
+        await s.execute(delete(Track))
+        await s.execute(delete(Release))
+        await s.execute(delete(Label))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(TracklistEntry))
+        await s.execute(delete(TracklistImportJob))
+        await s.execute(delete(Track))
+        await s.execute(delete(Release))
+        await s.execute(delete(Label))
         await s.commit()
 
 

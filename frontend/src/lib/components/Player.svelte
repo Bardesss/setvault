@@ -3,7 +3,7 @@
   import WaveSurfer from "wavesurfer.js";
   import type { SetDetail } from "$lib/api/sets";
   import { getSetState, putSetState } from "$lib/api/sets";
-  import { player } from "$lib/stores/player";
+  import { player, registerSeek } from "$lib/stores/player";
 
   export let set: SetDetail;
 
@@ -179,6 +179,9 @@
       void saveState();
     });
 
+    // Expose absolute seeking to other components (the tracklist sidebar).
+    registerSeek((s: number) => ws?.setTime(Math.max(0, s)));
+
     window.addEventListener("keydown", onKey);
     saveTimer = setInterval(() => {
       void saveState();
@@ -188,6 +191,7 @@
   onDestroy(() => {
     if (typeof window === "undefined") return;
     if (saveTimer) clearInterval(saveTimer);
+    registerSeek(null);
     window.removeEventListener("keydown", onKey);
     void saveState();
     ws?.destroy();

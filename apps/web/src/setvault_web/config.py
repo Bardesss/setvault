@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     base_url: str = "http://localhost:8000"
     tusd_hook_secret: str = "dev-tusd-secret"  # noqa: S105
+    allow_1001tl_scrape: bool = Field(default=False, alias="SETVAULT_ALLOW_1001TL_SCRAPE")
 
 
 @lru_cache
