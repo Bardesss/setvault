@@ -9,10 +9,14 @@ test.describe("enrichment", () => {
     // The set page fetches its data in two passes; wait for it to settle.
     await page.waitForLoadState("networkidle");
 
-    // Add a raw entry so a Resolve button exists, then close the edit drawer.
+    // Add a raw entry so a Resolve button exists. M adds the entry and opens
+    // the edit drawer (after an async create) — wait for it, then dismiss it.
     await page.locator("aside.tracklist h3").click();
     await page.keyboard.press("m");
+    const drawer = page.locator("aside.drawer");
+    await expect(drawer).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
 
     await page.locator("aside.tracklist button.resolve").first().click();
     await expect(page.locator("section.popover")).toBeVisible();
