@@ -41,8 +41,36 @@
     "admin": "Admin",
     "sign_out": "Sign out"
   },
-  "set_detail": {
-    "tracklist": "Tracklist",
-    "tracklist_empty": "Track-level metadata arrives in Phase 3 — fingerprint detection plus user-curated cue points."
+  "tracklist": {
+    "heading": "Tracklist",
+    "empty": "No entries yet. Press M while playing to add one, or import from paste/URL/OCR.",
+    "new_entry": "(new entry)",
+    "add_at_playhead": "Add at playhead (M)",
+    "edit_entry": "Edit entry",
+    "field_label": "Label (Artist – Title …)",
+    "field_start_seconds": "Start (seconds)",
+    "field_notes": "Notes",
+    "delete": "Delete",
+    "save": "Save",
+    "confirm_delete": "Delete this entry?",
+    "import": "Import",
+    "tab_paste": "Paste",
+    "tab_url": "URL (1001tracklists)",
+    "tab_ocr": "Image (OCR)",
+    "paste_placeholder": "Paste a tracklist — supports 0:00 Artist - Title and N. Artist - Title formats.",
+    "import_1001tl_warning": "1001tracklists scraping is ToS-grey and rate-limited. Personal use only.",
+    "import_ocr_warning": "OCR uses Tesseract on the server. Quality depends on the image.",
+    "import_disabled": "Admin has disabled this import source.",
+    "import_choose_image": "Choose an image first.",
+    "import_review": "Review {count} parsed entries:",
+    "accept_selected": "Accept {count} selected",
+    "parse": "Parse",
+    "cancel": "Cancel",
+    "back": "Back",
+    "time_shift": "Time shift",
+    "shift_after": "Shift entries after timestamp (s)",
+    "shift_delta": "Delta (±s)",
+    "shift_preview": "Will shift {count} entries.",
+    "apply": "Apply"
   }
 }
