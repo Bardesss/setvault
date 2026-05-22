@@ -82,7 +82,11 @@ class ReleaseTrack(Base):
 class TracklistEntry(Base, UuidPkMixin, TimestampMixin):
     __tablename__ = "tracklist_entries"
     __table_args__ = (
-        UniqueConstraint("live_set_id", "position", name="ix_tracklist_entries_live_set_position"),
+        UniqueConstraint(
+            "live_set_id", "position",
+            name="uq_tracklist_entries_live_set_position",
+            deferrable=True, initially="DEFERRED",
+        ),
     )
     live_set_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("live_sets.id", ondelete="CASCADE"), nullable=False

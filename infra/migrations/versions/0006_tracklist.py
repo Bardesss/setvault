@@ -126,8 +126,14 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True),
                   server_default=sa.text("now()"), nullable=False),
     )
-    op.create_index("ix_tracklist_entries_live_set_position",
-                    "tracklist_entries", ["live_set_id", "position"], unique=True)
+    # Deferrable so reorder / insert can renumber positions within a transaction
+    # without tripping the constraint on intermediate (duplicate) states; it is
+    # validated once at commit.
+    op.create_unique_constraint(
+        "uq_tracklist_entries_live_set_position",
+        "tracklist_entries", ["live_set_id", "position"],
+        deferrable=True, initially="DEFERRED",
+    )
     op.create_index("ix_tracklist_entries_track_id",
                     "tracklist_entries", ["track_id"])
 
