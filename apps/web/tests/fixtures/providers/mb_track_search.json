@@ -1,0 +1,11 @@
+{
+  "recordings": [{
+    "id": "11111111-2222-3333-4444-555555555555",
+    "title": "Xtal",
+    "length": 280000,
+    "isrcs": ["GBARL0500001"],
+    "artist-credit": [{"artist": {"id": "aaaa", "name": "Aphex Twin"}}],
+    "releases": [{"id": "rel-1", "title": "Selected Ambient Works 85-92", "date": "1992-02-09"}]
+  }],
+  "count": 1
+}
