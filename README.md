@@ -1,7 +1,34 @@
 # SetVault
 
-Self-hosted vault for DJ live sets. Upload FLAC/WAV/MP3, get waveforms,
-metadata, and a private streaming player.
+Self-hosted vault for DJ live sets. Upload FLAC/WAV/MP3 (or rip from
+YouTube/SoundCloud/Mixcloud via `yt-dlp`), get waveforms, EBU R128
+loudness normalization, time-coded tracklists, and a private streaming
+player. Built for a small private group of DJ-music enthusiasts.
+
+Think Mixcloud × 1001tracklists × a Plex-style self-hosted media server —
+but for **DJ live sets specifically**, not for individual tracks.
+
+## Status
+
+Iterating in numbered phases against the spec at
+`docs/superpowers/specs/2026-05-08-setvault-design.md`. Each phase is its
+own implementation plan under `docs/superpowers/plans/`.
+
+| Phase | Status | What landed |
+|---|---|---|
+| 1 — Design & visual identity | ✅ merged | Design tokens, top-5 HTML mockups, landing-page direction (`frontend/design/`) |
+| 2A — Foundations & Auth | ✅ merged | Monorepo (`apps/web`, `apps/worker`, `packages/*`), Postgres data model, local auth, invites + password reset |
+| 2B — Pipeline & Catalog | ✅ merged | ffmpeg → Opus transcode · EBU R128 normalize · waveform peaks · artist / venue / series / party CRUD · LiveSet CRUD + streaming · Postgres FTS · audit events |
+| 2C — Frontend, Player & Production | ✅ merged | SvelteKit UI (login, home, library, set detail with wavesurfer player, settings, admin) · tus.io resumable uploads · `svelte-i18n` + Crowdin sync · multi-arch bundled web image + production compose |
+| 3A — Tracklist editor (raw) | ✅ merged | Track DB · per-set tracklist CRUD + reorder + time-shift · M-key live add · paste-parse · 1001tracklists scrape (admin-gated) · Tesseract OCR |
+| 3B — Provider framework + enrichment | ✅ merged | Pluggable `setvault-providers` package · MusicBrainz / Discogs / AcoustID · response cache + per-field priority + locks · `/admin/providers` UI · per-row Resolve + Bulk resolve + AcoustID "ID this" |
+| 3C — Engagement | ⏳ planned | Comments, bookmarks, `@mention` notifications (in-app + email) |
+| 4 — Ingest & distribution | ⏳ planned | yt-dlp URL rip · RSS feeds · embeddable player · mobile PWA polish |
+| 5 — Compatibility | ⏳ planned | Subsonic API + scrobbling |
+| 6 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
+| 7 — Sonos | ⏳ planned | SMAPI sidecar |
+| 8 — Polish | ⏳ planned | Smart playlists, pgvector similarity, BPM/key detection, Snapcast |
+| 9 — OIDC + landing page release | ⏳ planned | OIDC, admin polish, GitHub Pages landing page |
 
 ## Quick start (production)
 
@@ -38,3 +65,42 @@ npm run dev -- --port 4173
 
 See `infra/docker/compose.dev.yml` for the Postgres + Redis + tusd stack
 used during development.
+
+## Translations
+
+SetVault is translation-ready via [Crowdin](https://crowdin.com). The
+project lives at **https://crowdin.com/project/setvault** — anyone is
+welcome to contribute.
+
+### How to translate
+
+1. Sign in (or create a free account) at
+   [crowdin.com/project/setvault](https://crowdin.com/project/setvault).
+2. Pick a target language (or request a new one from a maintainer).
+3. Translate the strings in the in-browser editor. You can leave
+   suggestions even without proofreader access — they'll be reviewed.
+
+### How translations flow back
+
+The Crowdin GitHub Integration handles the round-trip:
+- New English source strings in `frontend/src/lib/i18n/locales/en.json`
+  are pushed to Crowdin automatically when they reach `main`.
+- When translations are ready, Crowdin opens a PR back to this repo
+  (typically on an `l10n_main` branch) with the locale JSON files.
+- The SvelteKit app picks them up automatically once merged — no manual
+  wiring per locale.
+
+### Tips for translators
+
+- The UI is **dense** by design (track lists, status badges, keyboard
+  hints). Aim for compact translations where possible; layouts target
+  English-sized strings but tolerate ~30% expansion (DE/NL/FR fit).
+- `{placeholders}` in source strings (`Review {count} parsed entries:`)
+  must stay intact and in matching grammatical position.
+- Status badge labels (`raw`, `resolved`, `acoustid_confirmed`) and
+  keyboard hints (`space play/pause`) are short by design — keep them
+  short.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
