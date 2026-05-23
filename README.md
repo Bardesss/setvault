@@ -8,6 +8,13 @@ player. Built for a small private group of DJ-music enthusiasts.
 Think Mixcloud × 1001tracklists × a Plex-style self-hosted media server —
 but for **DJ live sets specifically**, not for individual tracks.
 
+> **AI-assisted disclosure.** SetVault is built with substantial help from
+> AI coding assistants (primarily Claude Code). Every change is reviewed,
+> tested, and shipped by the human maintainer — but the bulk of the code
+> is co-authored with an LLM and the commits are marked as such. If that
+> matters to your threat model or licensing posture, you now know up
+> front rather than discovering it later.
+
 ## Status
 
 Iterating in numbered phases against the spec at
