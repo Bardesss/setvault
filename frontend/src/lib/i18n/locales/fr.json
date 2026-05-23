@@ -1,0 +1,99 @@
+{
+  "auth": {
+    "login": {
+      "heading": "Sign in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "invalid_credentials": "invalid credentials",
+      "rate_limited": "too many attempts — try again in a minute"
+    },
+    "invite": {
+      "heading": "Accept invite",
+      "username": "Username",
+      "display_name": "Display name",
+      "password": "Password",
+      "accept_invite": "Accept invite",
+      "unknown_error": "unknown error"
+    }
+  },
+  "settings": {
+    "heading": "Settings",
+    "profile": "Profile",
+    "display_name": "Display name",
+    "username": "Username",
+    "email": "Email",
+    "role": "Role",
+    "change_password": "Change password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "saving": "Saving…",
+    "password_updated": "password updated",
+    "failed": "failed"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "upload": "Upload",
+    "search": "Search",
+    "settings": "Settings",
+    "admin": "Admin",
+    "sign_out": "Sign out"
+  },
+  "tracklist": {
+    "heading": "Tracklist",
+    "empty": "No entries yet. Press M while playing to add one, or import from paste/URL/OCR.",
+    "new_entry": "(new entry)",
+    "add_at_playhead": "Add at playhead (M)",
+    "edit_entry": "Edit entry",
+    "field_label": "Label (Artist – Title …)",
+    "field_start_seconds": "Start (seconds)",
+    "field_notes": "Notes",
+    "delete": "Delete",
+    "save": "Save",
+    "confirm_delete": "Delete this entry?",
+    "import": "Import",
+    "tab_paste": "Paste",
+    "tab_url": "URL (1001tracklists)",
+    "tab_ocr": "Image (OCR)",
+    "paste_placeholder": "Paste a tracklist — supports 0:00 Artist - Title and N. Artist - Title formats.",
+    "import_1001tl_warning": "1001tracklists scraping is ToS-grey and rate-limited. Personal use only.",
+    "import_ocr_warning": "OCR uses Tesseract on the server. Quality depends on the image.",
+    "import_disabled": "Admin has disabled this import source.",
+    "import_choose_image": "Choose an image first.",
+    "import_review": "Review {count} parsed entries:",
+    "accept_selected": "Accept {count} selected",
+    "parse": "Parse",
+    "cancel": "Cancel",
+    "back": "Back",
+    "time_shift": "Time shift",
+    "shift_after": "Shift entries after timestamp (s)",
+    "shift_delta": "Delta (±s)",
+    "shift_preview": "Will shift {count} entries.",
+    "apply": "Apply",
+    "resolve": "Resolve",
+    "bulk_resolve": "Bulk resolve",
+    "bulk_resolve_done": "Found candidates for {found} of {total} entries."
+  },
+  "resolve": {
+    "heading": "Resolve entry",
+    "mode_metadata": "Metadata search",
+    "mode_fingerprint": "Fingerprint (ID this)",
+    "loading": "Searching…",
+    "no_candidates": "No candidates found.",
+    "accept": "Accept"
+  },
+  "admin": {
+    "providers": {
+      "title": "Metadata providers",
+      "kind": "Provider",
+      "enabled": "Enabled",
+      "priority": "Priority",
+      "actions": "Actions",
+      "test": "Test",
+      "add_or_update": "Add / update provider",
+      "save": "Save"
+    }
+  }
+}
