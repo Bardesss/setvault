@@ -12,6 +12,7 @@ from setvault_core.models.catalog import (
     Tag,
     Venue,
 )
+from setvault_core.models.enrichment import ProviderConfig, ProviderResponse, ResolveJob
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.models.tracklist import (
@@ -232,6 +233,26 @@ async def _cleanup_audit_events():
     yield
     async with session_factory()() as s:
         await s.execute(delete(AuditEvent))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_provider_configs():
+    """Wipe provider configs / response cache / resolve jobs between tests."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(ResolveJob))
+        await s.execute(delete(ProviderResponse))
+        await s.execute(delete(ProviderConfig))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(ResolveJob))
+        await s.execute(delete(ProviderResponse))
+        await s.execute(delete(ProviderConfig))
         await s.commit()
 
 

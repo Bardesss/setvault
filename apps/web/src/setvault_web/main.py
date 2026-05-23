@@ -11,11 +11,13 @@ from setvault_web.api import auth as auth_api
 from setvault_web.api import catalog as catalog_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import dev_seed as dev_seed_api
+from setvault_web.api import enrichment as enrichment_api
 from setvault_web.api import invites as invites_api
 from setvault_web.api import jobs as jobs_api
 from setvault_web.api import me as me_api
 from setvault_web.api import media_roots as media_roots_api
 from setvault_web.api import password_reset as password_reset_api
+from setvault_web.api import providers as providers_api
 from setvault_web.api import search as search_api
 from setvault_web.api import sets as sets_api
 from setvault_web.api import tracklist as tracklist_api
@@ -48,9 +50,11 @@ def create_app() -> FastAPI:
     app.include_router(catalog_api.router)
     app.include_router(sets_api.router)
     app.include_router(tracklist_api.router)
+    app.include_router(enrichment_api.router)
     app.include_router(search_api.router)
     app.include_router(ws_api.router)
     app.include_router(admin_api.router)
+    app.include_router(providers_api.router)
     app.include_router(jobs_api.router)
     app.include_router(users_api.router)
     app.include_router(me_api.router)

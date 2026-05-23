@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "setvault-core",
+  "setvault-providers",
   "fastapi>=0.111",
   "uvicorn[standard]>=0.30",
   "itsdangerous>=2.2",

@@ -1,10 +1,11 @@
 [tool.uv.workspace]
-members = ["apps/web", "apps/worker", "packages/core"]
+members = ["apps/web", "apps/worker", "packages/core", "packages/providers"]
 
 [tool.uv.sources]
 setvault-core = { workspace = true }
 setvault-web = { workspace = true }
 setvault-worker = { workspace = true }
+setvault-providers = { workspace = true }
 
 [dependency-groups]
 dev = ["ruff>=0.6"]
@@ -12,4 +13,4 @@ dev = ["ruff>=0.6"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-ra --import-mode=importlib"
-testpaths = ["apps/web/tests", "apps/worker/tests", "packages/core/tests"]
+testpaths = ["apps/web/tests", "apps/worker/tests", "packages/core/tests", "packages/providers/tests"]

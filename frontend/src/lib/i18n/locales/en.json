@@ -71,6 +71,29 @@
     "shift_after": "Shift entries after timestamp (s)",
     "shift_delta": "Delta (±s)",
     "shift_preview": "Will shift {count} entries.",
-    "apply": "Apply"
+    "apply": "Apply",
+    "resolve": "Resolve",
+    "bulk_resolve": "Bulk resolve",
+    "bulk_resolve_done": "Found candidates for {found} of {total} entries."
+  },
+  "resolve": {
+    "heading": "Resolve entry",
+    "mode_metadata": "Metadata search",
+    "mode_fingerprint": "Fingerprint (ID this)",
+    "loading": "Searching…",
+    "no_candidates": "No candidates found.",
+    "accept": "Accept"
+  },
+  "admin": {
+    "providers": {
+      "title": "Metadata providers",
+      "kind": "Provider",
+      "enabled": "Enabled",
+      "priority": "Priority",
+      "actions": "Actions",
+      "test": "Test",
+      "add_or_update": "Add / update provider",
+      "save": "Save"
+    }
   }
 }

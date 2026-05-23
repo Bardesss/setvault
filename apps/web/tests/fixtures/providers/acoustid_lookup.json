@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "results": [{
+    "id": "aid-1",
+    "score": 0.93,
+    "recordings": [{
+      "id": "mb-1",
+      "title": "Xtal",
+      "artists": [{"id": "ax", "name": "Aphex Twin"}]
+    }]
+  }]
+}
