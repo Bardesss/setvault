@@ -6,3 +6,7 @@ preserve_hierarchy: true
 files:
   - source: /frontend/src/lib/i18n/locales/en.json
     translation: /frontend/src/lib/i18n/locales/%two_letters_code%.json
+    # English is the source — never target it (Crowdin can otherwise list it
+    # as a target language and try to round-trip en.json back over itself).
+    excluded_target_languages:
+      - en
