@@ -95,5 +95,13 @@
       "add_or_update": "Add / update provider",
       "save": "Save"
     }
+  },
+  "comments": {
+    "heading": "Comments",
+    "composer_placeholder": "Write a comment — supports Markdown and @mentions",
+    "attach_timestamp": "Pin to current playback time",
+    "send": "Send",
+    "reply": "Reply",
+    "delete": "Delete"
   }
 }

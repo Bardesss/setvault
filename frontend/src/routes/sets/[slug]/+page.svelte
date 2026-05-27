@@ -1,6 +1,7 @@
 <script lang="ts">
   import Player from "$lib/components/Player.svelte";
   import Tracklist from "$lib/components/Tracklist.svelte";
+  import CommentThread from "$lib/components/CommentThread.svelte";
   import type { PageData } from "./$types";
 
   export let data: PageData;
@@ -39,6 +40,8 @@
   {/if}
 
   <Tracklist slug={set.slug} />
+
+  <CommentThread slug={set.slug} />
 </section>
 
 <style>
