@@ -9,6 +9,7 @@ from setvault_web import __version__
 from setvault_web.api import admin as admin_api
 from setvault_web.api import auth as auth_api
 from setvault_web.api import catalog as catalog_api
+from setvault_web.api import comments as comments_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import dev_seed as dev_seed_api
 from setvault_web.api import enrichment as enrichment_api
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs_api.router)
     app.include_router(users_api.router)
     app.include_router(me_api.router)
+    app.include_router(comments_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 
