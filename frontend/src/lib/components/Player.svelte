@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import WaveSurfer from "wavesurfer.js";
+  import { listComments } from "$lib/api/comments";
   import type { SetDetail } from "$lib/api/sets";
   import { getSetState, putSetState } from "$lib/api/sets";
   import { player, registerSeek } from "$lib/stores/player";
@@ -14,6 +15,23 @@
   let duration = 0;
   let saveTimer: ReturnType<typeof setInterval> | null = null;
   let ready = false;
+  let commentMarkers: Array<{ id: string; t: number; author: string; excerpt: string }> = [];
+
+  async function loadCommentMarkers(): Promise<void> {
+    try {
+      const data = await listComments(set.slug);
+      commentMarkers = data.items
+        .filter((c) => c.position_seconds !== null && !c.deleted_at)
+        .map((c) => ({
+          id: c.id,
+          t: c.position_seconds as number,
+          author: c.author.display_name ?? c.author.username,
+          excerpt: (c.body_md ?? "").slice(0, 80),
+        }));
+    } catch {
+      /* best-effort; no markers if API fails */
+    }
+  }
 
   function formatTime(seconds: number): string {
     if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -186,6 +204,7 @@
     saveTimer = setInterval(() => {
       void saveState();
     }, 5000);
+    void loadCommentMarkers();
   });
 
   onDestroy(() => {
@@ -206,6 +225,19 @@
     bind:this={container}
     aria-label="audio waveform"
   ></div>
+  {#if duration > 0 && commentMarkers.length > 0}
+    <div class="markers" aria-hidden="true">
+      {#each commentMarkers as m (m.id)}
+        <button
+          type="button"
+          class="marker"
+          style="left: {(m.t / duration) * 100}%"
+          title="{m.author}: {m.excerpt}"
+          on:click={() => ws?.setTime(Math.max(0, m.t))}
+        ></button>
+      {/each}
+    </div>
+  {/if}
   <div class="controls" aria-label="player controls">
     <button
       type="button"
@@ -265,4 +297,22 @@
     letter-spacing: var(--ls-loose);
   }
   .mono { font-variant-numeric: tabular-nums; }
+  .markers {
+    position: relative;
+    height: 8px;
+    margin-top: calc(var(--sp-2) * -1 + 2px);
+  }
+  .marker {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .marker:hover { transform: translateX(-50%) scale(1.4); }
 </style>
