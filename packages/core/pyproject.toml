@@ -20,6 +20,8 @@ dependencies = [
   "beautifulsoup4>=4.12",
   "pytesseract>=0.3.10",
   "pillow>=10.0",
+  "bleach>=6.1",
+  "markdown>=3.6",
 ]
 
 [project.optional-dependencies]
