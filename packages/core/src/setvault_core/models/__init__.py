@@ -12,6 +12,12 @@ from setvault_core.models.catalog import (
                                           Venue,
 )
 from setvault_core.models.engagement import ActivityEvent, Favorite, ListeningHistory, UserSetState
+from setvault_core.models.engagement_3c import (
+                                          Bookmark,
+                                          Comment,
+                                          InAppNotification,
+                                          PrivateNote,
+)
 from setvault_core.models.identity import EmailToken, NotificationPreference, User
 from setvault_core.models.system import AuditEvent, Job, NotificationConnector
 
@@ -20,8 +26,11 @@ __all__ = [
                                           "Artist",
                                           "AuditEvent",
                                           "Base",
+                                          "Bookmark",
+                                          "Comment",
                                           "EmailToken",
                                           "Favorite",
+                                          "InAppNotification",
                                           "Job",
                                           "ListeningHistory",
                                           "LiveSet",
@@ -31,6 +40,7 @@ __all__ = [
                                           "NotificationConnector",
                                           "NotificationPreference",
                                           "Party",
+                                          "PrivateNote",
                                           "Series",
                                           "SetFingerprint",
                                           "Tag",
