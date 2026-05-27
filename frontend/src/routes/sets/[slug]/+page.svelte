@@ -3,6 +3,7 @@
   import Tracklist from "$lib/components/Tracklist.svelte";
   import CommentThread from "$lib/components/CommentThread.svelte";
   import BookmarkButton from "$lib/components/BookmarkButton.svelte";
+  import PrivateNotesPanel from "$lib/components/PrivateNotesPanel.svelte";
   import type { PageData } from "./$types";
 
   export let data: PageData;
@@ -43,6 +44,8 @@
   {/if}
 
   <Tracklist slug={set.slug} />
+
+  <PrivateNotesPanel slug={set.slug} />
 
   <CommentThread slug={set.slug} />
 </section>

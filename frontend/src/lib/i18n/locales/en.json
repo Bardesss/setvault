@@ -112,5 +112,13 @@
     "entire_set": "Whole set",
     "remove": "Remove bookmark",
     "empty": "No bookmarks yet."
+  },
+  "notes": {
+    "heading": "Private notes",
+    "placeholder": "Notes — only you can see these. Markdown supported.",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "done": "Done",
+    "empty": "Nothing yet — click Edit to start."
   }
 }
