@@ -27,7 +27,12 @@
 </script>
 
 <form class="composer" on:submit|preventDefault={send}>
-  <textarea bind:value={body} placeholder={$_("comments.composer_placeholder")} rows="3"></textarea>
+  <textarea
+    bind:value={body}
+    placeholder={$_("comments.composer_placeholder")}
+    aria-label={$_("comments.composer_placeholder")}
+    rows="3"
+  ></textarea>
   <label class="ts">
     <input type="checkbox" bind:checked={attachTimestamp} />
     {$_("comments.attach_timestamp")}

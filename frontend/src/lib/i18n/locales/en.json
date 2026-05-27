@@ -102,6 +102,7 @@
     "attach_timestamp": "Pin to current playback time",
     "send": "Send",
     "reply": "Reply",
-    "delete": "Delete"
+    "delete": "Delete",
+    "deleted_placeholder": "[deleted]"
   }
 }

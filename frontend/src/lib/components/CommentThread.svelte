@@ -51,7 +51,7 @@
           <time>{new Date(c.created_at).toLocaleString()}</time>
         </header>
         {#if c.deleted_at}
-          <p class="placeholder">[deleted]</p>
+          <p class="placeholder">{$_("comments.deleted_placeholder")}</p>
         {:else}
           {@html c.body_html}
           <footer>
@@ -71,7 +71,7 @@
                   <time>{new Date(r.created_at).toLocaleString()}</time>
                 </header>
                 {#if r.deleted_at}
-                  <p class="placeholder">[deleted]</p>
+                  <p class="placeholder">{$_("comments.deleted_placeholder")}</p>
                 {:else}
                   {@html r.body_html}
                 {/if}
