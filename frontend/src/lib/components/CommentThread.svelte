@@ -3,9 +3,13 @@
   import { _ } from "svelte-i18n";
   import { deleteComment, listComments, type Comment } from "$lib/api/comments";
   import { seekTo } from "$lib/stores/player";
+  import { session } from "$lib/stores/session";
   import CommentComposer from "./CommentComposer.svelte";
 
   export let slug: string;
+
+  $: canModerate = (c: Comment): boolean =>
+    !!$session && ($session.id === c.author.id || $session.role === "admin");
 
   let items: Comment[] = [];
   let replyingTo: string | null = null;
@@ -56,7 +60,9 @@
           {@html c.body_html}
           <footer>
             <button on:click={() => (replyingTo = c.id)}>{$_("comments.reply")}</button>
-            <button on:click={() => remove(c.id)}>{$_("comments.delete")}</button>
+            {#if canModerate(c)}
+              <button on:click={() => remove(c.id)}>{$_("comments.delete")}</button>
+            {/if}
           </footer>
           {#if replyingTo === c.id}
             <CommentComposer {slug} parent_id={c.id} on:posted={(e) => onPosted(e.detail)} />

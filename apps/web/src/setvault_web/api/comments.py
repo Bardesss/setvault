@@ -22,7 +22,7 @@ from setvault_core.services.comments import (
     render_markdown_safe,
     soft_delete_comment,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session
@@ -73,7 +73,9 @@ async def list_comments(
         select(Comment).where(Comment.live_set_id == live.id)
         .order_by(Comment.created_at).limit(limit).offset(offset)
     )).scalars().all()
-    total = len(rows)  # small-set assumption; switch to count() if datasets grow
+    total = (await session.execute(
+        select(func.count()).select_from(Comment).where(Comment.live_set_id == live.id)
+    )).scalar_one()
     items: list[CommentOut] = []
     for c in rows:
         items.append(await _out(session, c))
