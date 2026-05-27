@@ -1,4 +1,3 @@
-import pytest
 from setvault_core.services.comments import (
     extract_mention_usernames,
     render_markdown_safe,
