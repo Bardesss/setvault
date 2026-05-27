@@ -104,5 +104,13 @@
     "reply": "Reply",
     "delete": "Delete",
     "deleted_placeholder": "[deleted]"
+  },
+  "bookmarks": {
+    "save_set": "Bookmark",
+    "unsave_set": "Bookmarked",
+    "my_title": "My bookmarks",
+    "entire_set": "Whole set",
+    "remove": "Remove bookmark",
+    "empty": "No bookmarks yet."
   }
 }
