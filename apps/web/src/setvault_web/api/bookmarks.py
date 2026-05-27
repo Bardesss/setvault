@@ -18,6 +18,7 @@ from setvault_core.services.bookmarks import (
     list_bookmarks_for_user,
 )
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session
@@ -69,8 +70,8 @@ async def create_for_set(
             session, user_id=user.id, live_set_id=live.id,
             position_seconds=body.position_seconds, label=body.label,
         )
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=f"duplicate bookmark: {exc}") from exc
+    except IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="bookmark already exists") from exc
     await session.commit()
     return _out(b)
 

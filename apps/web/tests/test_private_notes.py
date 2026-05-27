@@ -18,10 +18,3 @@ async def test_upsert_and_render(authed_admin_client, seeded_live_set):
     assert "<strong>bold</strong>" in body["body_html"]
     g = (await authed_admin_client.get(f"/api/sets/{slug}/note")).json()
     assert "<strong>bold</strong>" in g["body_html"]
-
-
-@pytest.mark.asyncio
-async def test_note_isolated_per_user(client, seeded_admin, seeded_live_set):
-    # admin already used the seeded_live_set fixture; create a second user via invite
-    # ... omitted for brevity; the autouse cleanup ensures each test starts clean.
-    pass
