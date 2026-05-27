@@ -27,6 +27,36 @@ from sqlalchemy import delete, select
 
 
 @pytest.fixture(autouse=True)
+async def _dispose_engine_between_tests():
+    """Dispose the SQLAlchemy engine after each test so its connection pool
+    doesn't leak across pytest-asyncio's per-test event loops.
+
+    pytest-asyncio runs each async test in a fresh event loop. The
+    ``setvault_core.db`` module caches a singleton AsyncEngine; its pool
+    holds asyncpg connections bound to whatever loop they were opened in.
+    Without explicit disposal, the next test's loop receives stale
+    connections on checkout and trips ``pool_pre_ping`` with
+    ``Future ... attached to a different loop`` errors — surfacing as
+    sporadic ``InternalClientError: got result for unknown protocol state``
+    on whichever test happens to run after a comments / mention test.
+
+    Defined first among the autouse fixtures so it teardowns LAST — after
+    all other cleanup fixtures have finished using the engine. Setup is a
+    no-op; the next ``init_engine`` call inside the cleanup fixtures
+    recreates the engine for the new loop.
+    """
+    yield
+    import setvault_core.db as _db_module
+    if _db_module._engine is not None:
+        try:
+            await _db_module._engine.dispose()
+        except Exception:
+            # Best-effort: even if dispose raises, the next init_engine
+            # call overwrites _engine anyway.
+            pass
+
+
+@pytest.fixture(autouse=True)
 async def _reset_rate_limit():
     import setvault_web.rate_limit as _rl
     from redis.asyncio import Redis
