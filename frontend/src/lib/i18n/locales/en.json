@@ -30,7 +30,20 @@
     "new_password": "New password",
     "saving": "Saving…",
     "password_updated": "password updated",
-    "failed": "failed"
+    "failed": "failed",
+    "notifications": "Notification preferences",
+    "loading": "Loading…",
+    "notification_kinds": {
+      "account_security": "Account security",
+      "mention": "Mentions",
+      "comment_reply": "Replies to your comments"
+    },
+    "channel": {
+      "in_app": "In-app",
+      "email": "Email",
+      "both": "Both",
+      "off": "Off"
+    }
   },
   "nav": {
     "home": "Home",
@@ -95,5 +108,37 @@
       "add_or_update": "Add / update provider",
       "save": "Save"
     }
+  },
+  "comments": {
+    "heading": "Comments",
+    "composer_placeholder": "Write a comment — supports Markdown and @mentions",
+    "attach_timestamp": "Pin to current playback time",
+    "send": "Send",
+    "reply": "Reply",
+    "delete": "Delete",
+    "deleted_placeholder": "[deleted]"
+  },
+  "bookmarks": {
+    "save_set": "Bookmark",
+    "unsave_set": "Bookmarked",
+    "my_title": "My bookmarks",
+    "entire_set": "Whole set",
+    "remove": "Remove bookmark",
+    "empty": "No bookmarks yet."
+  },
+  "notes": {
+    "heading": "Private notes",
+    "placeholder": "Notes — only you can see these. Markdown supported.",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "done": "Done",
+    "empty": "Nothing yet — click Edit to start."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all read",
+    "empty": "Nothing here.",
+    "mentioned_you": "mentioned you",
+    "replied_to_you": "replied to your comment"
   }
 }

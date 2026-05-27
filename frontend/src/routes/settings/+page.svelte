@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
   import { session } from "$lib/stores/session";
   import { _ } from "svelte-i18n";
@@ -8,6 +9,49 @@
   let error: string | null = null;
   let success: string | null = null;
   let busy = false;
+
+  type Kind = "account_security" | "mention" | "comment_reply";
+  type Channel = "in_app" | "email" | "both" | "off";
+
+  interface Pref {
+    kind: string;
+    channel: Channel;
+    connector_id: string | null;
+  }
+
+  const KINDS: Kind[] = ["account_security", "mention", "comment_reply"];
+
+  let prefs: Record<string, Channel> = {};
+  let prefsLoaded = false;
+
+  async function loadPrefs() {
+    try {
+      const r = await api<{ items: Pref[] }>("/api/me/notification-preferences");
+      for (const p of r.items) prefs[p.kind] = p.channel;
+    } finally {
+      prefsLoaded = true;
+    }
+  }
+
+  async function setPref(kind: Kind, channel: Channel) {
+    prefs[kind] = channel;
+    prefs = prefs;
+    try {
+      await api(`/api/me/notification-preferences/${kind}`, {
+        method: "PUT",
+        body: JSON.stringify({ channel }),
+      });
+    } catch {
+      /* surface as a separate concern; minimal UI for now */
+    }
+  }
+
+  function onPrefChange(kind: Kind, ev: Event) {
+    const target = ev.currentTarget as HTMLSelectElement;
+    void setPref(kind, target.value as Channel);
+  }
+
+  onMount(loadPrefs);
 
   async function submit() {
     error = null;
@@ -74,6 +118,31 @@
       {busy ? $_("settings.saving") : $_("settings.change_password")}
     </button>
   </form>
+
+  <section class="card prefs">
+    <h2>{$_("settings.notifications")}</h2>
+    {#if !prefsLoaded}
+      <p>{$_("settings.loading")}</p>
+    {:else}
+      <dl>
+        {#each KINDS as kind (kind)}
+          <dt>{$_(`settings.notification_kinds.${kind}`)}</dt>
+          <dd>
+            <select
+              value={prefs[kind] ?? "both"}
+              on:change={(e) => onPrefChange(kind, e)}
+              aria-label={$_(`settings.notification_kinds.${kind}`)}
+            >
+              <option value="in_app">{$_("settings.channel.in_app")}</option>
+              <option value="email">{$_("settings.channel.email")}</option>
+              <option value="both">{$_("settings.channel.both")}</option>
+              <option value="off">{$_("settings.channel.off")}</option>
+            </select>
+          </dd>
+        {/each}
+      </dl>
+    {/if}
+  </section>
 </section>
 
 <style>
@@ -86,14 +155,26 @@
     border: 1px solid var(--border-default);
     border-radius: var(--r-md);
   }
-  .profile dl {
+  .profile dl,
+  .prefs dl {
     display: grid;
     grid-template-columns: max-content 1fr;
-    gap: var(--sp-1) var(--sp-3);
+    gap: var(--sp-2) var(--sp-3);
     margin: 0;
+    align-items: center;
   }
-  .profile dt { color: var(--text-faint); }
-  .profile dd { margin: 0; }
+  .profile dt,
+  .prefs dt { color: var(--text-faint); }
+  .profile dd,
+  .prefs dd { margin: 0; }
+  .prefs select {
+    padding: var(--sp-1) var(--sp-2);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    color: inherit;
+    font: inherit;
+  }
   label { display: grid; gap: var(--sp-1); }
   input {
     padding: var(--sp-2);

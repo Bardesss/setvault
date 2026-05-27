@@ -1,0 +1,29 @@
+import { expect, test } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
+
+test("/me/bookmarks page renders heading", async ({ page, request }) => {
+  await loginAs(page, request);
+  await page.goto("/me/bookmarks");
+  await expect(page.locator("h1")).toContainText(/bookmarks/i);
+});
+
+test("set-level bookmark toggles via button", async ({ page, request }) => {
+  const seed = await loginAs(page, request);
+  await page.goto(`/sets/${seed.set.slug}`);
+  // Wait for the initial listForSet fetch to settle before reading the
+  // initial aria-pressed state — otherwise a pre-existing bookmark from a
+  // prior test run can land between our read and our click, making the
+  // direction of the toggle non-deterministic.
+  await page.waitForLoadState("networkidle");
+
+  const btn = page.locator("button.bookmark");
+  await btn.waitFor({ state: "visible", timeout: 15_000 });
+
+  const initial = await btn.getAttribute("aria-pressed");
+  await btn.click();
+
+  // State must change to the opposite of whatever it was. Direction-
+  // agnostic so the test survives whatever leftover state exists.
+  const expected = initial === "true" ? "false" : "true";
+  await expect(btn).toHaveAttribute("aria-pressed", expected, { timeout: 10_000 });
+});

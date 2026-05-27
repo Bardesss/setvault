@@ -287,6 +287,33 @@ async def _cleanup_tracklist():
 
 
 @pytest.fixture(autouse=True)
+async def _cleanup_engagement_3c():
+    from setvault_core.models.engagement_3c import (
+        Bookmark,
+        Comment,
+        InAppNotification,
+        PrivateNote,
+    )
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(InAppNotification))
+        await s.execute(delete(Bookmark))
+        await s.execute(delete(PrivateNote))
+        await s.execute(delete(Comment))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(InAppNotification))
+        await s.execute(delete(Bookmark))
+        await s.execute(delete(PrivateNote))
+        await s.execute(delete(Comment))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
 async def _cleanup_catalog():
     """Delete Party/Series/Venue/Artist/Tag rows so catalog tests can rerun.
 

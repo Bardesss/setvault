@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Annotated
+import uuid
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.engagement import ActivityEvent, UserSetState
-from setvault_core.models.identity import User
+from setvault_core.models.identity import NotificationPreference, User
 from setvault_core.services.passwords import hash_password, verify_password
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,3 +97,79 @@ async def activity(
         )
         for e in rows
     ]
+
+
+class NotificationPreferenceOut(BaseModel):
+    kind: str
+    channel: Literal["email", "in_app", "both", "off"]
+    connector_id: str | None = None
+
+
+class NotificationPreferencesListOut(BaseModel):
+    items: list[NotificationPreferenceOut]
+
+
+class NotificationPreferenceUpsertIn(BaseModel):
+    channel: Literal["email", "in_app", "both", "off"]
+    connector_id: str | None = None
+
+
+_ALLOWED_KINDS = {"account_security", "mention", "comment_reply"}
+
+
+@router.get("/notification-preferences", response_model=NotificationPreferencesListOut)
+async def list_my_prefs(
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    rows = (
+        await session.execute(
+            select(NotificationPreference).where(NotificationPreference.user_id == user.id)
+        )
+    ).scalars().all()
+    return NotificationPreferencesListOut(
+        items=[
+            NotificationPreferenceOut(
+                kind=p.kind,
+                channel=p.channel,
+                connector_id=str(p.connector_id) if p.connector_id else None,
+            )
+            for p in rows
+        ]
+    )
+
+
+@router.put("/notification-preferences/{kind}", response_model=NotificationPreferenceOut)
+async def upsert_my_pref(
+    kind: str,
+    body: NotificationPreferenceUpsertIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    if kind not in _ALLOWED_KINDS:
+        raise HTTPException(status_code=400, detail="unknown notification kind")
+    existing = (
+        await session.execute(
+            select(NotificationPreference).where(
+                NotificationPreference.user_id == user.id,
+                NotificationPreference.kind == kind,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        existing = NotificationPreference(
+            user_id=user.id,
+            kind=kind,
+            channel=body.channel,
+            connector_id=uuid.UUID(body.connector_id) if body.connector_id else None,
+        )
+        session.add(existing)
+    else:
+        existing.channel = body.channel
+        existing.connector_id = uuid.UUID(body.connector_id) if body.connector_id else None
+    await session.commit()
+    return NotificationPreferenceOut(
+        kind=existing.kind,
+        channel=existing.channel,
+        connector_id=str(existing.connector_id) if existing.connector_id else None,
+    )

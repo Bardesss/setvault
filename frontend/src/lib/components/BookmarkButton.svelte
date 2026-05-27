@@ -1,0 +1,113 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { _ } from "svelte-i18n";
+  import { createBookmark, deleteBookmark, listForSet, type Bookmark } from "$lib/api/bookmarks";
+  import { player, seekTo } from "$lib/stores/player";
+
+  export let slug: string;
+
+  let bookmarks: Bookmark[] = [];
+
+  onMount(async () => {
+    try {
+      bookmarks = await listForSet(slug);
+    } catch {
+      /* best-effort */
+    }
+  });
+
+  $: setBookmark = bookmarks.find((b) => b.position_seconds === null) ?? null;
+
+  function fmt(s: number): string {
+    const m = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${m}:${String(ss).padStart(2, "0")}`;
+  }
+
+  async function toggleSetLevel() {
+    if (setBookmark) {
+      const id = setBookmark.id;
+      await deleteBookmark(slug, id);
+      bookmarks = bookmarks.filter((b) => b.id !== id);
+    } else {
+      const b = await createBookmark(slug, null, null);
+      bookmarks = [...bookmarks, b];
+    }
+  }
+
+  async function bookmarkPlayhead() {
+    const t = Math.floor($player.position ?? 0);
+    const b = await createBookmark(slug, t, null);
+    bookmarks = [...bookmarks, b];
+  }
+
+  async function removeTimestamped(id: string) {
+    await deleteBookmark(slug, id);
+    bookmarks = bookmarks.filter((b) => b.id !== id);
+  }
+
+  function onKey(ev: KeyboardEvent) {
+    const target = ev.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return;
+    }
+    if (ev.key === "b" || ev.key === "B") {
+      ev.preventDefault();
+      void bookmarkPlayhead();
+    }
+  }
+</script>
+
+<svelte:window on:keydown={onKey} />
+
+<button class="bookmark" on:click={toggleSetLevel} aria-pressed={!!setBookmark}>
+  {setBookmark ? "★" : "☆"}
+  {$_(setBookmark ? "bookmarks.unsave_set" : "bookmarks.save_set")}
+</button>
+
+<ul class="ts-bookmarks">
+  {#each bookmarks.filter((b) => b.position_seconds !== null) as b (b.id)}
+    {@const pos = b.position_seconds ?? 0}
+    <li>
+      <button class="seek" on:click={() => seekTo(pos)}>{fmt(pos)}</button>
+      <button class="remove" aria-label={$_("bookmarks.remove")} on:click={() => removeTimestamped(b.id)}>✕</button>
+    </li>
+  {/each}
+</ul>
+
+<style>
+  .bookmark {
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    background: var(--surface-1);
+    cursor: pointer;
+    color: var(--text-default);
+    font: inherit;
+  }
+  .ts-bookmarks {
+    list-style: none;
+    padding: 0;
+    margin: var(--sp-2) 0 0 0;
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+  }
+  .ts-bookmarks li {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: 2px var(--sp-2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-pill);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+  }
+  .ts-bookmarks button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+  }
+</style>
