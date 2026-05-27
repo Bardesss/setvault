@@ -36,6 +36,11 @@ def _author_for(user: User) -> CommentAuthor:
 
 
 async def _out(session: AsyncSession, c: Comment) -> CommentOut:
+    # TODO(perf): N+1 — list_comments calls _out per row, so each comment
+    # triggers an author session.get + up to one mention IN-query. Fine for
+    # the small-private-group target (<10 users, threads in the tens). When
+    # threads grow into the hundreds, hydrate authors + mentions in two bulk
+    # queries upstream and pass them in.
     author = await session.get(User, c.user_id)
     mentions: list[CommentAuthor] = []
     if c.mentions_user_ids:
