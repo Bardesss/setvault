@@ -19,6 +19,7 @@ from setvault_web.api import jobs as jobs_api
 from setvault_web.api import me as me_api
 from setvault_web.api import media_roots as media_roots_api
 from setvault_web.api import notes as notes_api
+from setvault_web.api import notifications as notifications_api
 from setvault_web.api import password_reset as password_reset_api
 from setvault_web.api import providers as providers_api
 from setvault_web.api import search as search_api
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(comments_api.router)
     app.include_router(bookmarks_api.router)
     app.include_router(notes_api.router)
+    app.include_router(notifications_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 
