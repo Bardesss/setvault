@@ -1,16 +1,23 @@
-"""Notification dispatcher — extends Phase 2B notification-connector framework
-with in-app delivery and the new `mention` / `comment_reply` kinds.
+"""Notification dispatcher — extends the Phase 2B notification-connector
+framework with in-app delivery and the new ``mention`` / ``comment_reply``
+kinds.
 
-NOTE: Email delivery is intentionally NOT wired here yet. The enqueue helper
-lives in `apps/web/services/notifications.py` (it depends on the web Settings
-object for Redis URL) which packages/core can't import. A follow-up will
-either move enqueue_email into packages/core or have the API layer call it
-separately after dispatch. For now, only in-app InAppNotification rows are
-written — the notification bell + dropdown in the frontend (C13) is the
-primary delivery channel for the small private group target.
+Channel semantics follow Phase 3 spec §5.3.4: when a user has no
+``NotificationPreference`` row for ``mention`` or ``comment_reply``, the
+default is ``both`` (in-app + email). The model's column-level
+``default="email"`` is for explicit ORM inserts that omit the channel; the
+upsert endpoint always passes one, so that default never fires for engagement
+kinds in practice.
+
+Email enqueueing reaches into the Phase 2B SMTP connector framework via
+:func:`setvault_core.services.email_dispatch.enqueue_email`. When no SMTP
+connector is configured the email call returns False silently — in-app
+delivery still lands and the small-private-group user's bell badge updates.
 """
 from __future__ import annotations
 
+import logging
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -19,18 +26,33 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_core.models.engagement_3c import InAppNotification
-from setvault_core.models.identity import NotificationPreference
+from setvault_core.models.identity import NotificationPreference, User
+from setvault_core.services.email_dispatch import enqueue_email
 
 if TYPE_CHECKING:
     from setvault_core.models.catalog import LiveSet
     from setvault_core.models.engagement_3c import Comment
-    from setvault_core.models.identity import User
+
+logger = logging.getLogger(__name__)
+
+_EMAIL_SUBJECTS = {
+    "mention": "You were mentioned on SetVault",
+    "comment_reply": "Someone replied to your comment on SetVault",
+}
+
+
+def _redis_url() -> str:
+    return os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 
 async def _preference_for(
     session: AsyncSession, user_id: uuid.UUID, kind: str,
 ) -> NotificationPreference | None:
-    """Returns the user's NotificationPreference for this kind, or None (default: both)."""
+    """Returns the user's NotificationPreference for this kind, or None.
+
+    A None return indicates "no row" — callers default to channel ``both`` per
+    spec §5.3.4.
+    """
     return (await session.execute(
         select(NotificationPreference).where(
             NotificationPreference.user_id == user_id,
@@ -51,6 +73,38 @@ async def _deliver_in_app(
     await session.flush()
 
 
+async def _deliver_email(
+    session: AsyncSession, *, user_id: uuid.UUID, kind: str, payload: dict,
+) -> None:
+    """Enqueue an email for this notification; no-op if no SMTP connector.
+
+    The job runs through the Phase 2B SMTP connector framework. Failure to
+    enqueue (no connector, Redis down) returns False from ``enqueue_email``
+    and we swallow it — email is best-effort, in-app delivery is the
+    authoritative channel for the bell badge.
+    """
+    user = await session.get(User, user_id)
+    if user is None or not user.email:
+        return
+    set_slug = payload.get("set_slug", "")
+    set_title = payload.get("set_title", "")
+    author = payload.get("author_username", "")
+    excerpt = payload.get("excerpt", "")
+    subject = _EMAIL_SUBJECTS.get(kind, "SetVault notification")
+    body = (
+        f"@{author} {('mentioned you' if kind == 'mention' else 'replied to your comment')} "
+        f"on \"{set_title}\":\n\n"
+        f"  {excerpt}\n\n"
+        f"Open the set: /sets/{set_slug}\n"
+    )
+    try:
+        await enqueue_email(
+            session, redis_url=_redis_url(), to=user.email, subject=subject, text=body,
+        )
+    except Exception:
+        logger.exception("notification email enqueue failed")
+
+
 async def dispatch_for_comment(
     session: AsyncSession,
     comment: Comment,
@@ -69,6 +123,7 @@ async def dispatch_for_comment(
     for uid in recipients:
         kind = kind_for[uid]
         pref = await _preference_for(session, uid, kind)
+        # Spec §5.3.4: no row → default to "both" (in-app + email).
         channel = pref.channel if pref else "both"
         payload = {
             "set_slug": live_set.slug,
@@ -82,4 +137,5 @@ async def dispatch_for_comment(
                 session, user_id=uid, kind=kind,
                 subject_type="comment", subject_id=comment.id, payload=payload,
             )
-        # Email delivery: deferred — see module docstring.
+        if channel in ("email", "both"):
+            await _deliver_email(session, user_id=uid, kind=kind, payload=payload)

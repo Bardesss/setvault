@@ -12,6 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from setvault_core.models.engagement_3c import Comment
 from setvault_core.models.identity import User
 
+# Spec 2026-05-17 §5.3.1: bleach whitelist is emphasis / strong / links /
+# code spans+blocks / paragraphs / lists. Headings, images, and raw HTML are
+# deliberately excluded — `# Heading` renders as inline text (the `<h1>` tag
+# is stripped and the content remains). Document this in the composer help
+# if it ever surprises a user.
 ALLOWED_TAGS = {
     "p", "br", "em", "strong", "a", "code", "pre", "ul", "ol", "li", "blockquote",
 }
