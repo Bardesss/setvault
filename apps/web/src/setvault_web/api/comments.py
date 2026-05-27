@@ -14,7 +14,7 @@ from setvault_core.schemas.comments import (
     CommentOut,
     CommentsListOut,
 )
-from setvault_core.services.audit import log as record_audit_event
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.comments import (
     CommentValidationError,
     create_comment,
@@ -142,7 +142,7 @@ async def delete_comment(
     except CommentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if is_admin and c.user_id != user.id:
-        await record_audit_event(
+        await audit_log(
             session, actor_user_id=user.id, actor_kind="user",
             action="comment.deleted_by_admin",
             target_type="comment", target_id=str(c.id),
