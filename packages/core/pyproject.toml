@@ -22,10 +22,15 @@ dependencies = [
   "pillow>=10.0",
   "bleach>=6.1",
   "markdown>=3.6",
+  "yt-dlp>=2026.1.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.2", "pytest-asyncio>=0.23"]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "pytest-rerunfailures>=14",
+]
 
 [build-system]
 requires = ["hatchling"]

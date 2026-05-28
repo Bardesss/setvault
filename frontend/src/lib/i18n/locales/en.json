@@ -140,5 +140,26 @@
     "empty": "Nothing here.",
     "mentioned_you": "mentioned you",
     "replied_to_you": "replied to your comment"
+  },
+  "url_rip": {
+    "tab_label": "URL",
+    "tab_upload": "Upload",
+    "url_label": "Source URL",
+    "submit": "Add",
+    "submitting": "Submitting…",
+    "recent_rips": "Recent rips",
+    "open_set": "Open set →",
+    "dismiss": "Got it",
+    "disclaimer": "yt-dlp downloads audio from third-party sites. Make sure you have the right to keep what you ingest — for personal use, public-domain works, or content you have a license for. SetVault doesn't enforce platform ToS.",
+    "status": {
+      "queued": "Queued",
+      "probing": "Probing",
+      "downloading": "Downloading",
+      "transcoding": "Transcoding",
+      "normalizing": "Normalizing",
+      "waveform": "Rendering waveform",
+      "ready": "Ready",
+      "failed": "Failed"
+    }
   }
 }

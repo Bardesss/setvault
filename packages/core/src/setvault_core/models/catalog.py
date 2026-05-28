@@ -112,6 +112,7 @@ class LiveSet(Base, UuidPkMixin, TimestampMixin):
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_type: Mapped[SourceType] = mapped_column(String(16), nullable=False, default="upload")
     source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    source_external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     media_root_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("media_roots.id", ondelete="RESTRICT"), nullable=False
     )
