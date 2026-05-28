@@ -65,6 +65,39 @@ async def test_submit_duplicate_url_returns_409(authed_admin_client, monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_submit_url_rip_rate_limit_per_user(authed_admin_client, monkeypatch):
+    """6th submission within the hourly window returns 429."""
+    from setvault_core.models.url_rip import RipJob
+    from setvault_core.services import url_rip as _service
+
+    async def _fake_submit(session, *, user_id, url):
+        job = RipJob(
+            submitted_by=user_id, source_url=url,
+            source_platform="youtube", source_external_id=f"id-{uuidmod.uuid4().hex[:6]}",
+            status="queued", progress_pct=0,
+            created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+        )
+        session.add(job)
+        await session.flush()
+        return job
+
+    monkeypatch.setattr(_service, "submit_rip", _fake_submit)
+
+    for _ in range(5):
+        r = await authed_admin_client.post(
+            "/api/sets/url-rip",
+            json={"url": f"https://www.youtube.com/watch?v={uuidmod.uuid4().hex[:11]}"},
+        )
+        assert r.status_code == 201, r.text
+
+    r = await authed_admin_client.post(
+        "/api/sets/url-rip",
+        json={"url": f"https://www.youtube.com/watch?v={uuidmod.uuid4().hex[:11]}"},
+    )
+    assert r.status_code == 429, r.text
+
+
+@pytest.mark.asyncio
 async def test_my_rip_jobs_lists_recent(authed_admin_client, seeded_admin):
     """GET /api/me/rip-jobs returns the user's recent rip jobs newest-first."""
     from setvault_core.db import session_factory
