@@ -245,6 +245,21 @@ redis + tusd), see `infra/docker/compose.yml` (builds from source) or
 
 ---
 
+## 🎨 Design language
+
+The visual identity — **Underground Terminal**: phosphor mint on deep
+blue-black, Bricolage Grotesque + JetBrains Mono, dense modular layouts,
+keyboard-native interactions — lives in `frontend/design/`. That folder
+holds the design tokens, font files, component patterns, and reference
+mockups for every main screen plus the marketing landing. Tokens,
+fonts, and base CSS are the single source of truth shared by the
+SvelteKit app and the deployed landing page.
+
+Open `frontend/design/index.html` for a live local preview, or
+`npx serve frontend/design` to browse from a local server.
+
+---
+
 ## 🔒 Security
 
 - Argon2 password hashing
