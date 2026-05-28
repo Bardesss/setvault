@@ -371,11 +371,13 @@ async def waveform(
 class StateOut(BaseModel):
     position_seconds: float
     completed: bool
+    playback_rate: float = 1.0
 
 
 class StateIn(BaseModel):
     position_seconds: float
     completed: bool
+    playback_rate: float | None = None
 
 
 @router.get("/{slug}/state", response_model=StateOut)
@@ -395,6 +397,7 @@ async def get_state(
     return StateOut(
         position_seconds=state.position_seconds if state else 0.0,
         completed=state.completed if state else False,
+        playback_rate=state.playback_rate if state else 1.0,
     )
 
 
@@ -420,9 +423,12 @@ async def put_state(
                 live_set_id=live.id,
                 position_seconds=body.position_seconds,
                 completed=body.completed,
+                playback_rate=body.playback_rate if body.playback_rate is not None else 1.0,
             )
         )
     else:
         state.position_seconds = body.position_seconds
         state.completed = body.completed
+        if body.playback_rate is not None:
+            state.playback_rate = body.playback_rate
     await session.commit()

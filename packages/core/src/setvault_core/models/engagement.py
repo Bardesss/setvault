@@ -19,6 +19,7 @@ class UserSetState(Base):
         UUID(as_uuid=True), ForeignKey("live_sets.id", ondelete="CASCADE"), primary_key=True
     )
     position_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    playback_rate: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
