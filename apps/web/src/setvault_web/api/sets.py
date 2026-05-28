@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from setvault_core.models.catalog import LiveSet, LiveSetTag, MediaRoot, Tag
@@ -20,13 +20,58 @@ from setvault_core.schemas.sets import (
     SetPatchIn,
     SetSummaryOut,
 )
+from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
 from setvault_core.services.sets import replace_artists, replace_tags
+from setvault_core.services.signed_urls import verify_stream_sig
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.config import Settings, get_settings
 from setvault_web.deps import current_user, db_session, require_admin
 
 router = APIRouter(prefix="/api/sets", tags=["sets"])
+
+
+def _stream_authorize(
+    live: LiveSet,
+    *,
+    sig: str | None,
+    exp: int | None,
+    session_cookie: str | None,
+    signer: SessionSigner,
+    secret_key: str,
+) -> None:
+    """Authorize access to a set's stream/waveform.
+
+    Order:
+      1. If LiveSet.embed_allowed is True, anonymous access is permitted.
+      2. If a valid ``?sig=&exp=`` pair is present for this slug, allow. The
+         signature is HMAC-SHA256 over ``slug:exp`` with secret_key; this is
+         the path podcast apps use, via short-TTL URLs embedded in RSS
+         enclosures.
+      3. If a valid session cookie is present, allow.
+      4. Otherwise, 401.
+
+    The rss-scope ApiToken does *not* authorize stream access by itself - it
+    only authorizes feed-XML fetches. Embedding a long-lived token in every
+    enclosure URL would leak it via referer/log/CDN; signatures bind a stream
+    URL to one slug and a 24h window instead.
+    """
+    if live.embed_allowed:
+        return
+    if sig and exp is not None and verify_stream_sig(
+        secret_key=secret_key, slug=live.slug, exp=exp, sig=sig,
+    ):
+        return
+    if session_cookie:
+        data = signer.read(session_cookie)
+        if data is not None:
+            try:
+                uuid.UUID(data.user_id)
+                return
+            except ValueError:
+                pass
+    raise HTTPException(status_code=401, detail="not authenticated")
 
 
 async def _tag_names_for(session: AsyncSession, live_id: uuid.UUID) -> list[str]:
@@ -159,6 +204,7 @@ async def show_set(
         audio_stream_url=f"/api/sets/{slug}/stream",
         waveform_url=f"/api/sets/{slug}/waveform" if row.waveform_path else None,
         normalized_lufs=row.normalized_lufs,
+        embed_allowed=row.embed_allowed,
     )
 
 
@@ -198,6 +244,46 @@ async def edit_set(
     return await show_set(slug, session, None)  # type: ignore[arg-type]
 
 
+class EmbedToggleIn(BaseModel):
+    allowed: bool
+
+
+class EmbedToggleOut(BaseModel):
+    slug: str
+    embed_allowed: bool
+
+
+@router.patch("/{slug}/embed", response_model=EmbedToggleOut)
+async def toggle_embed(
+    slug: str,
+    body: EmbedToggleIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(require_admin)],
+):
+    """Admin-only embed toggle. Writes a set.embed_toggled audit event."""
+    from setvault_core.services.audit import log as audit_log
+
+    live = (
+        await session.execute(
+            select(LiveSet).where(
+                LiveSet.slug == slug, LiveSet.deleted_at.is_(None)
+            )
+        )
+    ).scalar_one_or_none()
+    if live is None:
+        raise HTTPException(status_code=404, detail="not found")
+    before = {"embed_allowed": live.embed_allowed}
+    live.embed_allowed = body.allowed
+    await audit_log(
+        session, actor_user_id=admin.id, actor_kind="user",
+        action="set.embed_toggled",
+        target_type="live_set", target_id=str(live.id),
+        before=before, after={"embed_allowed": live.embed_allowed},
+    )
+    await session.commit()
+    return EmbedToggleOut(slug=slug, embed_allowed=live.embed_allowed)
+
+
 @router.delete("/{slug}", status_code=204)
 async def delete_set(
     slug: str,
@@ -223,7 +309,10 @@ async def delete_set(
 async def stream_set(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    sig: str | None = None,
+    exp: int | None = None,
+    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
         await session.execute(
@@ -234,6 +323,12 @@ async def stream_set(
     ).scalar_one_or_none()
     if row is None or row.streaming_path is None:
         raise HTTPException(status_code=404, detail="not ready")
+    _stream_authorize(
+        row, sig=sig, exp=exp,
+        session_cookie=session_cookie,
+        signer=SessionSigner(settings.secret_key),
+        secret_key=settings.secret_key,
+    )
     root = await session.get(MediaRoot, row.media_root_id)
     path = Path(root.host_path) / row.streaming_path
     # Detect media type from extension so test fixtures (e.g. silent.wav) work too;
@@ -246,7 +341,10 @@ async def stream_set(
 async def waveform(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    sig: str | None = None,
+    exp: int | None = None,
+    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
         await session.execute(
@@ -257,6 +355,12 @@ async def waveform(
     ).scalar_one_or_none()
     if row is None or row.waveform_path is None:
         raise HTTPException(status_code=404, detail="not ready")
+    _stream_authorize(
+        row, sig=sig, exp=exp,
+        session_cookie=session_cookie,
+        signer=SessionSigner(settings.secret_key),
+        secret_key=settings.secret_key,
+    )
     root = await session.get(MediaRoot, row.media_root_id)
     return FileResponse(
         Path(root.host_path) / row.waveform_path,

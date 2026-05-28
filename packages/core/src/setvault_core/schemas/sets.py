@@ -36,6 +36,7 @@ class SetDetailOut(SetSummaryOut):
     audio_stream_url: str
     waveform_url: str | None
     normalized_lufs: float | None
+    embed_allowed: bool
 
 
 class SetListOut(BaseModel):

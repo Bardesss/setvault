@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import {
+    createRssToken,
+    listMyRssTokens,
+    revokeRssToken,
+    type RssToken,
+    type RssTokenWithPlaintext,
+  } from "$lib/api/feeds";
   import { session } from "$lib/stores/session";
   import { _ } from "svelte-i18n";
 
@@ -9,6 +16,52 @@
   let error: string | null = null;
   let success: string | null = null;
   let busy = false;
+
+  let rssTokens: RssToken[] = [];
+  let rssTokensLoaded = false;
+  let rssBusy = false;
+  let rssNewName = "";
+  let rssJustMinted: RssTokenWithPlaintext | null = null;
+  let rssError: string | null = null;
+
+  async function loadRssTokens() {
+    try {
+      rssTokens = await listMyRssTokens();
+    } finally {
+      rssTokensLoaded = true;
+    }
+  }
+
+  async function mintRssToken() {
+    rssError = null;
+    rssBusy = true;
+    try {
+      const minted = await createRssToken(rssNewName.trim() || "RSS");
+      rssJustMinted = minted;
+      rssNewName = "";
+      await loadRssTokens();
+    } catch (e) {
+      rssError = e instanceof ApiError ? e.detail : "failed";
+    } finally {
+      rssBusy = false;
+    }
+  }
+
+  async function doRevoke(id: string) {
+    rssError = null;
+    try {
+      await revokeRssToken(id);
+      rssTokens = rssTokens.filter((t) => t.id !== id);
+    } catch (e) {
+      rssError = e instanceof ApiError ? e.detail : "failed";
+    }
+  }
+
+  function copyToClipboard(text: string) {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(text);
+    }
+  }
 
   type Kind = "account_security" | "mention" | "comment_reply";
   type Channel = "in_app" | "email" | "both" | "off";
@@ -51,7 +104,10 @@
     void setPref(kind, target.value as Channel);
   }
 
-  onMount(loadPrefs);
+  onMount(() => {
+    void loadPrefs();
+    void loadRssTokens();
+  });
 
   async function submit() {
     error = null;
@@ -118,6 +174,65 @@
       {busy ? $_("settings.saving") : $_("settings.change_password")}
     </button>
   </form>
+
+  <section class="card feeds">
+    <h2>{$_("feeds.heading")}</h2>
+    <p class="muted">{$_("feeds.description")}</p>
+
+    {#if rssJustMinted}
+      {@const minted = rssJustMinted}
+      <aside class="just-minted" role="status">
+        <p><strong>{$_("feeds.shown_once")}</strong></p>
+        <ul>
+          <li>
+            <span>{$_("feeds.favorites")}</span>
+            <code>{minted.favorites_url}</code>
+            <button type="button" on:click={() => copyToClipboard(minted.favorites_url)}>
+              {$_("feeds.copy")}
+            </button>
+          </li>
+          <li>
+            <span>{$_("feeds.recent")}</span>
+            <code>{minted.recent_url}</code>
+            <button type="button" on:click={() => copyToClipboard(minted.recent_url)}>
+              {$_("feeds.copy")}
+            </button>
+          </li>
+          <li>
+            <span>{$_("feeds.everything")}</span>
+            <code>{minted.everything_url}</code>
+            <button type="button" on:click={() => copyToClipboard(minted.everything_url)}>
+              {$_("feeds.copy")}
+            </button>
+          </li>
+        </ul>
+        <button type="button" on:click={() => (rssJustMinted = null)}>OK</button>
+      </aside>
+    {/if}
+
+    <form on:submit|preventDefault={mintRssToken}>
+      <label>
+        <span>{$_("feeds.name_label")}</span>
+        <input type="text" bind:value={rssNewName} disabled={rssBusy} placeholder="Podcast app" />
+      </label>
+      <button type="submit" disabled={rssBusy}>
+        {$_("feeds.create")}
+      </button>
+      {#if rssError}<p class="error">{rssError}</p>{/if}
+    </form>
+
+    {#if rssTokensLoaded && rssTokens.length > 0}
+      <ul class="token-list">
+        {#each rssTokens as t (t.id)}
+          <li>
+            <strong>{t.name}</strong>
+            <span class="muted">— {t.last_used_at ? `used ${t.last_used_at.slice(0, 10)}` : "unused"}</span>
+            <button type="button" on:click={() => doRevoke(t.id)}>{$_("feeds.revoke")}</button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </section>
 
   <section class="card prefs">
     <h2>{$_("settings.notifications")}</h2>
@@ -195,4 +310,28 @@
     cursor: pointer;
   }
   button:disabled { opacity: 0.6; cursor: progress; }
+  .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
+  .feeds form { display: grid; gap: var(--sp-2); }
+  .feeds .token-list { list-style: none; padding: 0; margin: 0;
+                        display: grid; gap: var(--sp-1); }
+  .feeds .token-list li { display: flex; gap: var(--sp-2);
+                          align-items: baseline; flex-wrap: wrap; }
+  .feeds .token-list button { padding: var(--sp-1) var(--sp-2);
+                              background: transparent; color: inherit;
+                              border: 1px solid var(--border-default);
+                              font-weight: 400; }
+  .feeds .just-minted {
+    padding: var(--sp-2); background: var(--bg-base);
+    border: 1px dashed var(--accent); border-radius: var(--r-sm);
+    display: grid; gap: var(--sp-2);
+  }
+  .feeds .just-minted ul { list-style: none; padding: 0; margin: 0;
+                            display: grid; gap: var(--sp-1); }
+  .feeds .just-minted li { display: grid;
+                            grid-template-columns: max-content 1fr max-content;
+                            gap: var(--sp-2); align-items: center; }
+  .feeds .just-minted code {
+    font-family: var(--font-mono); font-size: var(--ts-xs);
+    overflow-wrap: anywhere;
+  }
 </style>

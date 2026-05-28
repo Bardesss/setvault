@@ -26,6 +26,7 @@ export interface SetDetail extends SetSummary {
   normalized_lufs: number | null;
   venue: { id: string; name: string; slug: string } | null;
   party: { id: string; name: string; slug: string } | null;
+  embed_allowed: boolean;
 }
 
 export interface SetState {

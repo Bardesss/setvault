@@ -3,13 +3,16 @@
   import Tracklist from "$lib/components/Tracklist.svelte";
   import CommentThread from "$lib/components/CommentThread.svelte";
   import BookmarkButton from "$lib/components/BookmarkButton.svelte";
+  import EmbedToggleAdmin from "$lib/components/EmbedToggleAdmin.svelte";
   import PrivateNotesPanel from "$lib/components/PrivateNotesPanel.svelte";
+  import { session } from "$lib/stores/session";
   import type { PageData } from "./$types";
 
   export let data: PageData;
 
   $: set = data.set;
   $: artistNames = set.artists.map((a) => a.name).join(", ") || "Unknown artist";
+  $: isAdmin = $session?.role === "admin";
 </script>
 
 <svelte:head><title>{set.title} - SetVault</title></svelte:head>
@@ -33,6 +36,10 @@
   </header>
 
   <BookmarkButton slug={set.slug} />
+
+  {#if isAdmin}
+    <EmbedToggleAdmin slug={set.slug} allowed={set.embed_allowed} />
+  {/if}
 
   <Player {set} />
 

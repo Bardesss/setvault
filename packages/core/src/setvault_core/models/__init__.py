@@ -1,3 +1,4 @@
+from setvault_core.models.api_token import ApiToken
 from setvault_core.models.base import Base, TimestampMixin, UuidPkMixin
 from setvault_core.models.catalog import (
                                           Artist,
@@ -24,6 +25,7 @@ from setvault_core.models.url_rip import RipJob
 
 __all__ = [
                                           "ActivityEvent",
+                                          "ApiToken",
                                           "Artist",
                                           "AuditEvent",
                                           "Base",

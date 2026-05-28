@@ -13,7 +13,9 @@ from setvault_web.api import catalog as catalog_api
 from setvault_web.api import comments as comments_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import dev_seed as dev_seed_api
+from setvault_web.api import embed as embed_api
 from setvault_web.api import enrichment as enrichment_api
+from setvault_web.api import feeds as feeds_api
 from setvault_web.api import invites as invites_api
 from setvault_web.api import jobs as jobs_api
 from setvault_web.api import me as me_api
@@ -68,6 +70,8 @@ def create_app() -> FastAPI:
     app.include_router(notes_api.router)
     app.include_router(notifications_api.router)
     app.include_router(url_rip_api.router)
+    app.include_router(feeds_api.router)
+    app.include_router(embed_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 

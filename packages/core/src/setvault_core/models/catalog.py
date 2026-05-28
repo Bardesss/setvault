@@ -132,6 +132,7 @@ class LiveSet(Base, UuidPkMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     purge_after_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    embed_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     party: Mapped[Party | None] = relationship(lazy="joined")
     venue: Mapped[Venue | None] = relationship(lazy="joined")
