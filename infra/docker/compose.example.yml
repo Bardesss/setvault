@@ -1,0 +1,117 @@
+# SetVault — self-host compose stack
+#
+# Pulls published multi-arch images from GitHub Container Registry.
+# Save this as `compose.yml` next to a `.env` file (see .env.example),
+# then:
+#
+#     docker compose pull
+#     docker compose up -d
+#
+# See https://github.com/Bardesss/setvault for the full README.
+
+name: setvault
+
+x-image-tag: &image_tag
+  # Pin to a specific version for production; floats with `latest` if you
+  # want auto-bumps on each release (re-pull required).
+  SETVAULT_VERSION: ${SETVAULT_VERSION:-0.1.0}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-setvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-setvault}
+    volumes:
+      - ${SETVAULT_DB_PATH:-./.data/db}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-setvault}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${SETVAULT_REDIS_PATH:-./.data/redis}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+
+  tusd:
+    image: tusproject/tusd:v2.4
+    command: >
+      -behind-proxy
+      -base-path /uploads/
+      -hooks-http http://web:8000/api/uploads/tusd-hooks
+      -hooks-http-forward-headers Authorization,Cookie
+      -upload-dir /uploads
+    volumes:
+      - ${SETVAULT_CACHE_PATH:-./.data/cache}/tus:/uploads
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+
+  web:
+    image: ghcr.io/bardesss/setvault-web:${SETVAULT_VERSION:-0.1.0}
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${SETVAULT_HTTP_PORT:-8000}:8000"
+    volumes:
+      # Media roots are bind-mounted into the web service so streams can
+      # be served from local disk. Add additional `- /host:/host` lines
+      # to mirror each MediaRoot.host_path you configure in the admin UI.
+      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  worker:
+    image: ghcr.io/bardesss/setvault-worker:${SETVAULT_VERSION:-0.1.0}
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
+      - ${SETVAULT_CACHE_PATH:-./.data/cache}:/srv/cache
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  # Filesystem watcher — subscribes to admin-configured WatchFolder paths,
+  # enqueues a watch_folder_ingest job per audio file detected. Shares the
+  # worker image. Mount each WatchFolder's host_path into this container
+  # at the same path the admin configured, so watchdog can see the events.
+  # Disable this service if you don't use watch folders.
+  watcher:
+    image: ghcr.io/bardesss/setvault-worker:${SETVAULT_VERSION:-0.1.0}
+    command: ["python", "-m", "setvault_core.services.watcher"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ${SETVAULT_WATCH_FOLDERS_PATH:-./.data/watch}:/srv/watch
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]

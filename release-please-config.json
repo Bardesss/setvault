@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactors", "hidden": false },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "build", "section": "Build", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "chore", "section": "Chores", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "package-name": "setvault",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "toml", "path": "apps/web/pyproject.toml",       "jsonpath": "$.project.version" },
+        { "type": "toml", "path": "apps/worker/pyproject.toml",    "jsonpath": "$.project.version" },
+        { "type": "toml", "path": "packages/core/pyproject.toml",  "jsonpath": "$.project.version" },
+        { "type": "toml", "path": "packages/providers/pyproject.toml", "jsonpath": "$.project.version" }
+      ]
+    }
+  }
+}

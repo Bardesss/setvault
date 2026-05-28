@@ -1,0 +1,169 @@
+# Changelog
+
+All notable changes to SetVault are documented here. Format adheres to
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
+follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] — 2026-05-28
+
+**The inaugural release.** Eleven months of design, twenty-one merged
+phase PRs, and one private group of DJ-music nerds finally getting the
+self-hosted vault they always wanted. SetVault v0.1.0 is the first
+publicly tagged build — multi-arch container images on GHCR, SBOMs on
+every artifact, cosign signatures on every push.
+
+### Why this exists
+
+Mixcloud went paywall. SoundCloud kept rotting. 1001tracklists is a
+read-only museum. Nothing on the market combines **lossless live-set
+storage**, **time-coded tracklists**, **provider-enriched metadata**, and
+a **private streaming player you actually own** — for the specific shape
+of DJ live sets, not for individual tracks. SetVault is that
+combination, self-hosted, GPL-3.0, ready to live behind your reverse
+proxy.
+
+### ✨ Highlights
+
+- **Resumable multi-GB uploads** via tus.io — pause your laptop, resume
+  on your phone
+- **Paste-URL ingest** from YouTube / SoundCloud / Mixcloud / Internet
+  Archive / Bandcamp via `yt-dlp` (SSRF-allowlisted, rate-limited)
+- **Watch-folder auto-ingest** — drop files into a host directory and
+  SetVault picks them up via `watchdog`
+- **Time-coded tracklists** with paste-parse, OCR import, 1001tracklists
+  scrape, and an in-player **M-key live add**
+- **Provider-enriched metadata** — pluggable framework, MusicBrainz +
+  Discogs + AcoustID shipped, response cache + per-field priority + locks
+- **wavesurfer.js player** with variable speed (0.5×–2×, pitch-preserved),
+  A↔B looping, persisted per-user position, and `mediaSession` controls
+  that jump between tracklist entries
+- **Engagement layer**: comments with `@mentions` and waveform markers,
+  per-set + timestamped bookmarks, private notes, in-app + email
+  notifications
+- **Per-user RSS feeds** (favorites / recent / everything) with
+  `ApiToken` auth and HMAC-signed short-TTL enclosure URLs
+- **Embeddable `/embed/[slug]` player** with admin `embed_allowed` toggle
+  and a dedicated per-route CSP
+- **Installable PWA** with offline set-detail, audio cache cap (admin-
+  configurable, oldest-first eviction) and a phone-width pass across the
+  whole UI
+- **Internationalization-ready** via Crowdin GitHub Integration — English
+  source, de / es / fr / nl stubs in place
+- **Hardened by default** — Argon2 password hashing, CSRF middleware,
+  strict CSP + HSTS, SSRF allowlist on URL-rip, rate-limited login,
+  `no-new-privileges` + `cap_drop: ALL` on every container
+
+### Ingest
+
+- ffmpeg → Opus transcode with EBU R128 loudness normalization
+- waveform peak extraction cached on disk
+- chromaprint dedup via AcoustID fingerprints
+- per-`MediaRoot` naming templates
+- URL-rip rate limit: 5/hour, 50/day per user
+
+### Catalog
+
+- LiveSet model with first-class Artists, Venues, Series, Parties, Tags,
+  and MediaRoots
+- Postgres full-text search across titles, artists, tags, venues
+- Soft delete with a 14-day purge grace and a recycle-bin UI
+- Bulk editor: `soft_delete` / `retag` / `move_root` over selected sets
+
+### Player polish (§5D)
+
+- Variable speed slider (0.5× – 2.0×, 0.05 step) with pitch preservation
+- A↔B loop region (`[` set A, `]` set B, `\` clear) with visual band
+- Playback rate persisted per user per set via `UserSetState`
+- Keyboard: `space` play/pause, `←` `→` seek, `<` `>` rate ±0.05,
+  `[` `]` `\` loop, `M` live-add tracklist entry
+
+### Admin surface (§5C)
+
+- Library webhooks with HMAC signing and exponential-backoff retries
+- Scheduled tasks (cron-style + `rq-scheduler`)
+- Storage health monitor (capacity per `MediaRoot`, oversized-set alarms)
+- Watch-folder configuration UI with unmatched-file queue
+- Streaming backup endpoint (`pg_dump` + `tar` over chunked response)
+
+### PWA (§4C / §5E)
+
+- Manifest + maskable icons + theme-color
+- Service worker: cache-first static, network-first navigation, audio
+  cache-first with capacity enforcement
+- Offline set-detail page works after first online load
+- Audio cap is admin-configurable; lowering it triggers immediate
+  eviction via a `MessageChannel` round-trip
+- Phone-width responsive across login / library / set detail / settings
+
+### Distribution (§4B)
+
+- Per-user RSS at `/api/feeds/{kind}/feed.rss?token=...` (kinds:
+  `favorites`, `recent`, `everything`)
+- `ApiToken` model with revocable tokens, listed in settings
+- HMAC-signed enclosure URLs with admin-configurable TTL (default 1 h)
+- Embeddable player at `/embed/[slug]` with per-route CSP allowing
+  `frame-ancestors *`
+
+### Internationalization
+
+- Source strings: 145 keys in `frontend/src/lib/i18n/locales/en.json`
+- de / es / fr / nl scaffolded; svelte-i18n falls back to English while
+  Crowdin contributors catch up
+- Crowdin GitHub Integration handles both directions automatically
+
+### Tech stack
+
+- **Backend**: FastAPI on async SQLAlchemy 2 (Postgres 16), Redis 7 + RQ
+  + `rq-scheduler`, Alembic migrations, structlog
+- **Frontend**: SvelteKit (adapter-static, bundled into the web image),
+  wavesurfer.js 7, svelte-i18n
+- **Workers**: Python `rq` worker + a `watchdog`-driven watcher process
+- **Uploads**: tusd resumable-upload sidecar
+- **Audio**: ffmpeg, fpcalc (chromaprint), pytesseract
+- **Containers**: multi-arch (`linux/amd64`, `linux/arm64`) images on
+  `ghcr.io`
+
+### Security
+
+- Argon2 password hashing
+- HMAC-signed short-TTL share URLs (`signed_urls.py`)
+- Pure-ASGI CSRF + SecurityHeaders middleware (no `BaseHTTPMiddleware`
+  task-group races)
+- Strict CSP, HSTS, X-Frame-Options DENY, Permissions-Policy locked down
+- SSRF allowlist on URL-rip ingest
+- Rate-limited login + URL-rip via Redis
+- `security_opt: no-new-privileges` + `cap_drop: ALL` on every container
+- `yt-dlp` exact-pinned with an `infra/scripts/update-yt-dlp.sh` updater
+
+### Release engineering (§5F)
+
+- Conventional commits + [release-please](https://github.com/googleapis/release-please)
+  managing future tags and `CHANGELOG.md`
+- Container images published to GHCR on every `v*` tag
+- **SBOM** (CycloneDX, via Syft) attached to each release
+- **Cosign keyless signatures** on each published image (verify with
+  `cosign verify --certificate-identity-regexp ...`)
+- `infra/docker/compose.example.yml` — copy-paste self-host stack that
+  pulls from GHCR (no local build needed)
+- Expanded `.env.example` documenting every configurable variable
+
+### Known follow-ups (post-v0.1.0)
+
+- Real-device PWA install screenshots (headless tests cover manifest +
+  icons + SW registration; `beforeinstallprompt` requires a real device)
+- Crowdin translations land back as they're completed by contributors
+- Phase 6 — ingest power tools (interactive search, monitored entities,
+  quality preferences, upgrade-available flow)
+- Phases 7–11 per `README.md` (Subsonic, casting, Sonos, smart playlists,
+  OIDC + forward-auth)
+
+### Co-authored
+
+The vast majority of this codebase was pair-programmed with Claude Code
+(Opus 4.x). Every change is reviewed, tested, and shipped by the human
+maintainer — but the commits are marked with `Co-Authored-By` and the
+contribution shape is honest.
+
+---
+
+[0.1.0]: https://github.com/Bardesss/setvault/releases/tag/v0.1.0

@@ -1,66 +1,182 @@
 # SetVault
 
-Self-hosted vault for DJ live sets. Upload FLAC/WAV/MP3 (or rip from
-YouTube/SoundCloud/Mixcloud via `yt-dlp`), get waveforms, EBU R128
-loudness normalization, time-coded tracklists, and a private streaming
-player. Built for a small private group of DJ-music enthusiasts.
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-1f6feb.svg)](https://github.com/Bardesss/setvault/pkgs/container/setvault-web)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/Bardesss/setvault/issues)
 
-Think Mixcloud × 1001tracklists × a Plex-style self-hosted media server —
-but for **DJ live sets specifically**, not for individual tracks.
+**Self-hosted vault for DJ live sets.** Upload FLAC/WAV/MP3 (or rip from
+YouTube / SoundCloud / Mixcloud / Internet Archive / Bandcamp via
+`yt-dlp`), get waveforms, EBU R128 loudness normalization, time-coded
+tracklists, provider-enriched metadata, comments with waveform markers,
+per-user RSS feeds, an embeddable player, and an installable PWA.
 
-> **AI-assisted disclosure.** SetVault is built with substantial help from
-> AI coding assistants (primarily Claude Code). Every change is reviewed,
-> tested, and shipped by the human maintainer — but the bulk of the code
-> is co-authored with an LLM and the commits are marked as such. If that
-> matters to your threat model or licensing posture, you now know up
-> front rather than discovering it later.
+> Think **Mixcloud × 1001tracklists × Plex-style self-hosted media
+> server** — but for DJ live sets specifically, not for individual
+> tracks.
 
-## Status
+---
 
-Iterating in numbered phases against the spec at
-`docs/superpowers/specs/2026-05-08-setvault-design.md`. Each phase is its
-own implementation plan under `docs/superpowers/plans/`.
+## ✨ What's in the box (v0.1.0)
 
-| Phase | Status | What landed |
-|---|---|---|
-| 1 — Design & visual identity | ✅ merged | Design tokens, top-5 HTML mockups, landing-page direction (`frontend/design/`) |
-| 2A — Foundations & Auth | ✅ merged | Monorepo (`apps/web`, `apps/worker`, `packages/*`), Postgres data model, local auth, invites + password reset |
-| 2B — Pipeline & Catalog | ✅ merged | ffmpeg → Opus transcode · EBU R128 normalize · waveform peaks · artist / venue / series / party CRUD · LiveSet CRUD + streaming · Postgres FTS · audit events |
-| 2C — Frontend, Player & Production | ✅ merged | SvelteKit UI (login, home, library, set detail with wavesurfer player, settings, admin) · tus.io resumable uploads · `svelte-i18n` + Crowdin sync · multi-arch bundled web image + production compose |
-| 3A — Tracklist editor (raw) | ✅ merged | Track DB · per-set tracklist CRUD + reorder + time-shift · M-key live add · paste-parse · 1001tracklists scrape (admin-gated) · Tesseract OCR |
-| 3B — Provider framework + enrichment | ✅ merged | Pluggable `setvault-providers` package · MusicBrainz / Discogs / AcoustID · response cache + per-field priority + locks · `/admin/providers` UI · per-row Resolve + Bulk resolve + AcoustID "ID this" |
-| 3C — Engagement | ✅ merged | Comments (with `@mentions` + waveform markers) · per-set + timestamped bookmarks · private notes · in-app + email notifications |
-| 4A — yt-dlp URL rip | ✅ merged | Paste-URL ingest tab on `/sets/new` · idempotent against platform IDs · 5/hour 50/day rate limit · SSRF allowlist (YT / SoundCloud / Mixcloud / Internet Archive / Bandcamp) |
-| 4B — RSS feeds + embeddable player | ✅ merged | Per-user RSS (favorites / recent / everything) with token-scoped `ApiToken` · HMAC-signed short-TTL enclosure URLs · `/embed/[slug]` public player with `embed_allowed` admin toggle · per-route CSP exception |
-| 4C — Mobile PWA polish | ✅ merged | Installable PWA (manifest + maskable icons) · service worker with cache-first/network-first strategies · `mediaSession` prev/next jumps tracklist entries · phone-width pass across all screens · offline audio cache with admin-configurable cap |
-| 5 — Pre-v0.1.0 completion | ⏳ planned | Watch-folder cluster (§A3/§A11/§A12) · half-implemented features (recycle bin purge, naming templates, storage health, chromaprint dedup, health page) · player polish (variable speed, A↔B loop, bulk editor) · pure-ASGI middleware rewrite · release engineering (release-please / SBOM / cosign / landing page). Sub-phased 5A → 5F. Tag `v0.1.0` after 5F. |
-| 6 — Ingest power tools | ⏳ planned | `packages/ingest_sources` plugin protocol · interactive search (YouTube / SoundCloud / Mixcloud / Internet Archive) · monitored entities with auto-ingest threshold · quality/source preferences + upgrade-available flow |
-| 7 — Compatibility | ⏳ planned | Subsonic API + scrobbling |
-| 8 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
-| 9 — Sonos | ⏳ planned | SMAPI sidecar |
-| 10 — Polish | ⏳ planned | Smart playlists, pgvector similarity, BPM/key detection, Snapcast |
-| 11 — OIDC + forward-auth + full admin polish | ⏳ planned | OIDC, forward-auth header trust, final admin polish |
+| Area | What you get |
+|---|---|
+| **Ingest** | Resumable multi-GB uploads (tus.io) · paste-URL rip from YT/SC/Mixcloud/Archive/Bandcamp · watch-folder auto-ingest · ffmpeg → Opus + R128 normalize · waveform peaks · chromaprint dedup |
+| **Catalog** | LiveSets · Artists · Venues · Series · Parties · Tags · MediaRoots with naming templates · Postgres FTS · recycle bin (14-day grace) · bulk editor |
+| **Tracklists** | Per-set editor · reorder + time-shift · M-key live add · paste-parse · 1001tracklists scrape · Tesseract OCR |
+| **Enrichment** | Pluggable providers · MusicBrainz · Discogs · AcoustID · per-row Resolve + Bulk resolve + AcoustID "ID this" |
+| **Player** | wavesurfer.js · variable speed 0.5×–2× (pitch-preserved) · A↔B loop · `mediaSession` prev/next jumps tracklist entries · per-user persisted state |
+| **Engagement** | Comments w/ @mentions + waveform markers · per-set + timestamped bookmarks · private notes · in-app + email notifications |
+| **Distribution** | Per-user RSS feeds (favorites / recent / everything) · HMAC-signed short-TTL enclosures · `/embed/[slug]` public player with admin toggle |
+| **PWA** | Installable manifest + maskable icons · offline set-detail · audio cache with admin-configurable cap + oldest-first eviction · phone-width across all screens |
+| **Admin** | Library webhooks (HMAC + retries) · scheduled tasks · storage-health monitor · streaming backup endpoint · audit log |
+| **i18n** | English source + Crowdin GitHub Integration · de / es / fr / nl ready (English fallback while community catches up) |
+| **Ops** | Multi-arch GHCR images · SBOM (CycloneDX) + cosign signatures on every release · Alembic migrations · `no-new-privileges` + `cap_drop: ALL` on every container |
 
-## Quick start (production)
+Full feature list and release notes: [CHANGELOG.md](CHANGELOG.md).
 
-Prereqs: Docker 24+, Compose v2.
+---
+
+## 🚀 Quick start (Docker compose, GHCR pull)
+
+Zero local build — pulls the published multi-arch images from GitHub
+Container Registry.
+
+**Prereqs:** Docker 24+, Compose v2, ~2 GB RAM for the stack, and disk
+space for your live-set library.
 
 ```bash
-cp .env.example .env
-# Edit .env: set SECRET_KEY, BASE_URL, POSTGRES_PASSWORD, etc.
+# 1. Grab the example compose + env files
+curl -L -o compose.yml \
+  https://raw.githubusercontent.com/Bardesss/setvault/main/infra/docker/compose.example.yml
+curl -L -o .env \
+  https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
 
-docker compose -f infra/docker/compose.yml up -d
+# 2. Edit .env — at minimum set SECRET_KEY, POSTGRES_PASSWORD, BASE_URL.
+#    Generate a strong SECRET_KEY:
+openssl rand -base64 48
+
+# 3. Pull and start
+docker compose pull
+docker compose up -d
+
+# 4. Watch logs until the web service is ready
+docker compose logs -f web
 ```
 
-Then open `http://localhost:8000` (or whatever `BASE_URL` you configured
-behind your reverse proxy). The first user is created via the dev-seed
-endpoint or by running an invite-redeem flow against the API.
+Open `http://localhost:8000` (or whatever `BASE_URL` points at behind
+your reverse proxy). The first admin is created by enabling
+`SETVAULT_DEV_SEED=1` for one boot, hitting `/api/dev/seed-e2e`, then
+unsetting it — or by running an invite-redeem flow against the API.
 
-The published images are multi-arch (amd64/arm64) and ship the SvelteKit
-frontend bundled inside the web image — there is no separate frontend
-container.
+### Image references
 
-## Local development
+| Image | Pull |
+|---|---|
+| Web (FastAPI + bundled SvelteKit) | `ghcr.io/bardesss/setvault-web:0.1.0` |
+| Worker (RQ + watcher) | `ghcr.io/bardesss/setvault-worker:0.1.0` |
+| `:latest` mirrors the most recent tag.| |
+
+Both are `linux/amd64` + `linux/arm64`.
+
+### Verify signatures (optional but encouraged)
+
+Every release image is signed with cosign (keyless, via GitHub OIDC).
+
+```bash
+cosign verify ghcr.io/bardesss/setvault-web:0.1.0 \
+  --certificate-identity-regexp "https://github.com/Bardesss/setvault/.github/workflows/docker.yml@.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+SBOMs (CycloneDX JSON) are attached to each GitHub Release.
+
+---
+
+## ⚙️ Configuration
+
+All configuration is via environment variables loaded from `.env`. The
+full reference lives in [`.env.example`](.env.example); the most
+important ones:
+
+| Variable | Required | Default | What it does |
+|---|---|---|---|
+| `SECRET_KEY` | ✅ | — | Signs session cookies + HMAC URLs. **Rotate ⇒ all sessions invalidated.** |
+| `BASE_URL` | ✅ | `http://localhost:8000` | Public URL the app is served from (used in emails, RSS feeds, embed URLs) |
+| `DATABASE_URL` | ✅ | `postgresql+asyncpg://setvault:setvault@postgres:5432/setvault` | Async SQLAlchemy URL |
+| `REDIS_URL` | ✅ | `redis://redis:6379/0` | RQ queue + rate-limit store |
+| `POSTGRES_PASSWORD` | ✅ | — | Set this and match it in `DATABASE_URL` |
+| `TUSD_HOOK_SECRET` | ✅ | — | Shared secret tusd uses when calling back into the web service |
+| `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / cache / config / watch volumes |
+| `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
+| `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | Drops `Secure` from auth cookies — only for local HTTP development |
+
+### Reverse-proxy tips
+
+- Set `BASE_URL` to your public HTTPS URL so signed enclosures and
+  invite links resolve.
+- Forward `X-Forwarded-Proto` and `X-Forwarded-For`.
+- The web service listens on port `8000`; tusd is internal-only and
+  reached via the web service at `/uploads/`.
+
+---
+
+## 🔄 Upgrading
+
+```bash
+# Pull the new tag
+docker compose pull
+
+# Migrations run automatically on web container start.
+docker compose up -d
+```
+
+Always read the [CHANGELOG](CHANGELOG.md) for any breaking-change notes
+before bumping a major or minor version.
+
+---
+
+## 💾 Backup & restore
+
+The admin backup endpoint streams a single tarball containing a fresh
+`pg_dump` + your media files.
+
+```bash
+# Authenticated admin session required
+curl -fsSL -o setvault-backup-$(date +%F).tar \
+  -b 'session=...' -H 'X-CSRF-Token: ...' \
+  https://your-instance/api/admin/backup
+```
+
+Restore is documented in the wiki (post-v0.1.0). Until then: untar,
+`psql < dump.sql`, restore media directories under each `MediaRoot.host_path`.
+
+---
+
+## 🌐 Translations
+
+SetVault is translation-ready via [Crowdin](https://crowdin.com). The
+project lives at **https://crowdin.com/project/setvault** — contributions
+are welcome.
+
+**To translate:**
+
+1. Sign in (or create a free account) at
+   [crowdin.com/project/setvault](https://crowdin.com/project/setvault).
+2. Pick a target language (or request a new one from a maintainer).
+3. Translate the strings in the in-browser editor.
+
+**How translations flow back:** Crowdin's GitHub Integration handles
+both directions — English source pushes up automatically when new keys
+land on `main`, and Crowdin opens a PR back with the translated locale
+JSON when contributors are done.
+
+**Tips:** `{placeholders}` must stay intact and in matching position;
+status badges and keyboard hints are short by design — keep them short.
+
+---
+
+## 🛠 Local development
 
 ```bash
 # Backend (FastAPI + uvicorn, hot reload):
@@ -74,44 +190,136 @@ npm install
 npm run dev -- --port 4173
 ```
 
-See `infra/docker/compose.dev.yml` for the Postgres + Redis + tusd stack
-used during development.
+The dev-stack compose file at `infra/docker/compose.dev.yml` runs
+Postgres + Redis + tusd locally so the backend has services to talk to.
 
-## Translations
+For the full self-hosted compose stack (web + worker + watcher + db +
+redis + tusd), see `infra/docker/compose.yml` (builds from source) or
+`infra/docker/compose.example.yml` (pulls from GHCR).
 
-SetVault is translation-ready via [Crowdin](https://crowdin.com). The
-project lives at **https://crowdin.com/project/setvault** — anyone is
-welcome to contribute.
+---
 
-### How to translate
+## 🏛 Architecture
 
-1. Sign in (or create a free account) at
-   [crowdin.com/project/setvault](https://crowdin.com/project/setvault).
-2. Pick a target language (or request a new one from a maintainer).
-3. Translate the strings in the in-browser editor. You can leave
-   suggestions even without proofreader access — they'll be reviewed.
+```
+                   ┌─────────────┐
+   browsers ─────▶ │   web :8000 │ ─┐
+                   └──────┬──────┘  │
+                          │         │
+            ┌─────────────┘         │
+            ▼                       │
+    ┌──────────────┐        ┌───────▼───────┐
+    │ tusd /uploads│        │  worker (RQ)  │
+    └──────────────┘        └───────┬───────┘
+            │                       │
+            │                       ▼
+            │               ┌───────────────┐
+            └──────────────▶│   watcher     │   (filesystem events)
+                            └───────────────┘
+                                    │
+                ┌───────────────────┼──────────────────┐
+                ▼                   ▼                  ▼
+        ┌──────────────┐    ┌──────────────┐   ┌──────────────┐
+        │ Postgres 16  │    │   Redis 7    │   │ ffmpeg+fpcalc│
+        └──────────────┘    └──────────────┘   └──────────────┘
+```
 
-### How translations flow back
+- **`apps/web`** — FastAPI + bundled SvelteKit
+- **`apps/worker`** — RQ worker for transcode / waveform / enrichment
+  jobs
+- **`apps/worker` (watcher)** — `watchdog`-driven filesystem watcher
+- **`packages/core`** — SQLAlchemy models, services, RQ job entrypoints
+- **`packages/providers`** — metadata provider plugin package
+  (MusicBrainz / Discogs / AcoustID)
+- **`frontend/`** — SvelteKit source (built into `apps/web/static/`
+  inside the web image)
+- **`infra/migrations/`** — Alembic revisions
+- **`infra/docker/`** — Dockerfiles + compose stacks
 
-The Crowdin GitHub Integration handles the round-trip:
-- New English source strings in `frontend/src/lib/i18n/locales/en.json`
-  are pushed to Crowdin automatically when they reach `main`.
-- When translations are ready, Crowdin opens a PR back to this repo
-  (typically on an `l10n_main` branch) with the locale JSON files.
-- The SvelteKit app picks them up automatically once merged — no manual
-  wiring per locale.
+---
 
-### Tips for translators
+## 🔒 Security
 
-- The UI is **dense** by design (track lists, status badges, keyboard
-  hints). Aim for compact translations where possible; layouts target
-  English-sized strings but tolerate ~30% expansion (DE/NL/FR fit).
-- `{placeholders}` in source strings (`Review {count} parsed entries:`)
-  must stay intact and in matching grammatical position.
-- Status badge labels (`raw`, `resolved`, `acoustid_confirmed`) and
-  keyboard hints (`space play/pause`) are short by design — keep them
-  short.
+- Argon2 password hashing
+- Pure-ASGI CSRF + SecurityHeaders middleware (no Starlette
+  `BaseHTTPMiddleware` event-loop races)
+- Strict CSP, HSTS preload, X-Frame-Options DENY, Permissions-Policy
+  locked down
+- HMAC-signed short-TTL share URLs
+- SSRF allowlist on URL-rip ingest (YT / SoundCloud / Mixcloud / Internet
+  Archive / Bandcamp only)
+- Rate-limited login + URL-rip via Redis
+- `yt-dlp` exact-pinned (`packages/core/pyproject.toml`) — bump via
+  `infra/scripts/update-yt-dlp.sh`
+- `security_opt: no-new-privileges` + `cap_drop: ALL` on every container
+- Audit log records every state-changing admin action
 
-## License
+Report security issues privately to the maintainer rather than via
+public GitHub issues.
 
-MIT — see [LICENSE](LICENSE).
+---
+
+## 📋 Status & roadmap
+
+Each phase is implemented as a single PR against `main` (squash-merged)
+with conventional commits driving the CHANGELOG.
+
+| Phase | Status | Themes |
+|---|---|---|
+| 1 — Design & visual identity | ✅ merged | Tokens, top-5 mockups, landing direction |
+| 2A — Foundations & Auth | ✅ merged | Monorepo, data model, local auth, invites |
+| 2B — Pipeline & Catalog | ✅ merged | ffmpeg pipeline, FTS, audit |
+| 2C — Frontend, Player & Production | ✅ merged | SvelteKit UI, tus uploads, Crowdin |
+| 3A — Tracklist editor | ✅ merged | Per-set tracklists, parse, OCR |
+| 3B — Provider framework + enrichment | ✅ merged | Pluggable providers, resolve UI |
+| 3C — Engagement | ✅ merged | Comments, bookmarks, notes, notifications |
+| 4A — URL rip | ✅ merged | Paste-URL ingest via `yt-dlp` |
+| 4B — RSS + embed | ✅ merged | Per-user feeds, embeddable player |
+| 4C — Mobile PWA polish | ✅ merged | Installable PWA, offline, phone widths |
+| 5A — Watch-folder cluster | ✅ merged | §A3 + §A11 + §A12 |
+| 5B — Backend backbone | ✅ merged | Recycle purge, naming templates, storage health, dedup |
+| 5C — Admin UI surface | ✅ merged | Webhooks, scheduled tasks, health dashboard |
+| 5D — Player polish + bulk editor | ✅ merged | Variable speed, A↔B loop, bulk actions |
+| 5E — Tech debt | ✅ merged | Pure-ASGI middleware, yt-dlp pin, cache eviction e2e |
+| **5F — Release engineering** | **🚀 this release** | **CHANGELOG, SBOM, cosign, GHCR, README rewrite, landing page** |
+| 6 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
+| 7 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
+| 8 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
+| 9 — Sonos | ⏳ planned | SMAPI sidecar |
+| 10 — Smart playlists + similarity | ⏳ planned | pgvector, BPM/key detection, Snapcast |
+| 11 — OIDC + forward-auth | ⏳ planned | SSO + final admin polish |
+
+---
+
+## 🤖 AI-assisted disclosure
+
+SetVault is built with substantial help from AI coding assistants
+(primarily Claude Code). Every change is reviewed, tested, and shipped
+by the human maintainer — but the bulk of the code is co-authored with
+an LLM and commits are marked with `Co-Authored-By: Claude ...`. If
+that matters to your threat model or licensing posture, you now know up
+front rather than discovering it later.
+
+---
+
+## 📄 License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE).
+
+You are free to use, modify, and self-host SetVault. If you distribute
+modified versions, the modifications must remain GPL-3.0. SetVault is
+specifically not licensed for SaaS resale without the source being made
+available to your users under the same terms.
+
+---
+
+## 🙏 Credits
+
+- **wavesurfer.js** — the heart of the player
+- **yt-dlp** — the URL-rip backbone
+- **tusd** — resumable uploads done right
+- **MusicBrainz / Discogs / AcoustID** — open music metadata
+- **Crowdin** — translation tooling for the community
+
+And to every test fixture, every CI red, and every `git rebase
+--interactive` that got us here.
