@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SetVault — self-hosted vault for DJ live sets</title>
+  <meta name="description"
+        content="Self-hosted vault for DJ live sets. Lossless storage, time-coded tracklists, provider-enriched metadata, embeddable player, installable PWA. GPL-3.0, GHCR images." />
+  <meta property="og:title" content="SetVault" />
+  <meta property="og:description"
+        content="Self-hosted vault for DJ live sets. Mixcloud × 1001tracklists × Plex — for live sets specifically." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2300d8b1'/%3E%3Cpath d='M16 40 V24 M24 44 V20 M32 48 V16 M40 44 V20 M48 40 V24' stroke='%23001512' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg-base: #001512;
+      --bg-surface: #0a2622;
+      --text: #e7f7f3;
+      --text-faint: #88b5ac;
+      --accent: #00d8b1;
+      --border: #1c3b36;
+      --r-md: 12px;
+      --r-sm: 6px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    main { max-width: 920px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+    .hero {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .logo {
+      width: 56px; height: 56px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: grid; place-items: center;
+      color: var(--bg-base);
+    }
+    .logo svg { width: 36px; height: 36px; }
+    h1 { font-size: 2.5rem; margin: 0; letter-spacing: -0.02em; }
+    .tagline { color: var(--text-faint); font-size: 1.1rem; margin: 0.25rem 0 2.5rem; }
+    h2 { font-size: 1.35rem; margin: 2.5rem 0 0.75rem; letter-spacing: -0.01em; }
+    p { margin: 0.5rem 0; }
+    .cta {
+      display: inline-flex; gap: 0.6rem; align-items: center;
+      background: var(--accent); color: var(--bg-base);
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--r-md);
+      font-weight: 600;
+      margin-right: 0.75rem; margin-top: 0.5rem;
+    }
+    .cta.secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    pre {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      border-radius: var(--r-md);
+      overflow-x: auto;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0 0;
+    }
+    .feat {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 1rem;
+    }
+    .feat h3 { margin: 0 0 0.25rem; font-size: 1rem; color: var(--accent); }
+    .feat p { margin: 0; color: var(--text-faint); font-size: 0.92rem; }
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 4rem; padding-top: 1.5rem;
+      color: var(--text-faint); font-size: 0.9rem;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+    .badges span {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.2rem 0.7rem;
+      font-size: 0.8rem; color: var(--text-faint);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+          <path d="M16 40 V24 M24 44 V20 M32 48 V16 M40 44 V20 M48 40 V24" />
+        </svg>
+      </div>
+      <div>
+        <h1>SetVault</h1>
+        <p class="tagline">Self-hosted vault for DJ live sets.</p>
+      </div>
+    </div>
+
+    <p>
+      Lossless live-set storage. Time-coded tracklists.
+      Provider-enriched metadata. Comments with waveform markers.
+      Per-user RSS feeds. An embeddable player. An installable PWA.
+      All running on <strong>your</strong> server, behind <strong>your</strong>
+      reverse proxy, under <strong>your</strong> GPL-3.0 license.
+    </p>
+
+    <p>
+      <em>Mixcloud × 1001tracklists × Plex — but for DJ live sets
+      specifically, not for individual tracks.</em>
+    </p>
+
+    <div>
+      <a class="cta" href="https://github.com/Bardesss/setvault">Source on GitHub →</a>
+      <a class="cta secondary" href="https://github.com/Bardesss/setvault/blob/main/CHANGELOG.md">Release notes</a>
+    </div>
+
+    <div class="badges">
+      <span>v0.1.0</span>
+      <span>GPL-3.0</span>
+      <span>multi-arch GHCR images</span>
+      <span>SBOM + cosign signed</span>
+    </div>
+
+    <h2>What's in v0.1.0</h2>
+    <div class="grid">
+      <div class="feat"><h3>Ingest</h3><p>tus resumable uploads · paste-URL rip via yt-dlp · watch-folder auto-ingest · Opus + R128 normalize · waveform peaks</p></div>
+      <div class="feat"><h3>Tracklists</h3><p>Time-coded editor · M-key live add · paste-parse · 1001tracklists scrape · OCR import</p></div>
+      <div class="feat"><h3>Metadata</h3><p>Pluggable providers · MusicBrainz · Discogs · AcoustID · Bulk resolve · "ID this"</p></div>
+      <div class="feat"><h3>Player</h3><p>wavesurfer.js · 0.5×–2× variable speed · A↔B loop · mediaSession tracklist jumps</p></div>
+      <div class="feat"><h3>Engagement</h3><p>Comments w/ waveform markers · bookmarks · private notes · email + in-app notifications</p></div>
+      <div class="feat"><h3>Distribution</h3><p>Per-user RSS · HMAC-signed enclosures · embeddable /embed/[slug] player</p></div>
+      <div class="feat"><h3>PWA</h3><p>Installable · offline set detail · admin-capped audio cache · phone widths everywhere</p></div>
+      <div class="feat"><h3>Operations</h3><p>Multi-arch GHCR · SBOM (CycloneDX) · cosign keyless signatures · Alembic migrations · audit log</p></div>
+    </div>
+
+    <h2>Self-host in three commands</h2>
+    <pre><code>curl -L -o compose.yml https://raw.githubusercontent.com/Bardesss/setvault/main/infra/docker/compose.example.yml
+curl -L -o .env       https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
+# edit .env: SECRET_KEY, POSTGRES_PASSWORD, BASE_URL
+docker compose pull &amp;&amp; docker compose up -d</code></pre>
+
+    <p>
+      Multi-arch (<code>linux/amd64</code> + <code>linux/arm64</code>)
+      images live at
+      <a href="https://github.com/Bardesss/setvault/pkgs/container/setvault-web"><code>ghcr.io/bardesss/setvault-web</code></a>
+      and
+      <a href="https://github.com/Bardesss/setvault/pkgs/container/setvault-worker"><code>ghcr.io/bardesss/setvault-worker</code></a>.
+      Every release is signed with cosign and ships a CycloneDX SBOM.
+    </p>
+
+    <h2>Honest about AI</h2>
+    <p>
+      SetVault is built with substantial help from Claude Code. Every
+      change is reviewed, tested, and shipped by the human maintainer
+      — but the bulk of the code is co-authored with an LLM, and the
+      commits are marked accordingly.
+    </p>
+
+    <footer>
+      <p>
+        © 2026 SetVault contributors.
+        Source under <a href="https://github.com/Bardesss/setvault/blob/main/LICENSE">GPL-3.0-or-later</a>.
+        Translations via <a href="https://crowdin.com/project/setvault">Crowdin</a>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
