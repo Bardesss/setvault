@@ -4,6 +4,7 @@
   import { listComments } from "$lib/api/comments";
   import type { SetDetail } from "$lib/api/sets";
   import { getSetState, putSetState } from "$lib/api/sets";
+  import { listTracklist, type TracklistEntry } from "$lib/api/tracklist";
   import { player, registerSeek } from "$lib/stores/player";
 
   export let set: SetDetail;
@@ -16,6 +17,7 @@
   let saveTimer: ReturnType<typeof setInterval> | null = null;
   let ready = false;
   let commentMarkers: Array<{ id: string; t: number; author: string; excerpt: string }> = [];
+  let tracklistEntries: TracklistEntry[] = [];
 
   async function loadCommentMarkers(): Promise<void> {
     try {
@@ -31,6 +33,37 @@
     } catch {
       /* best-effort; no markers if API fails */
     }
+  }
+
+  async function loadTracklistEntries(): Promise<void> {
+    try {
+      tracklistEntries = (await listTracklist(set.slug))
+        .slice()
+        .sort((a, b) => a.start_seconds - b.start_seconds);
+    } catch {
+      /* best-effort; mediaSession prev/next will fall back to default seeks */
+    }
+  }
+
+  function previousEntryStart(): number {
+    // Largest entry.start_seconds strictly less than current position (with
+    // a 2s "rewind to start of this entry" zone — same idiom every podcast app
+    // uses for the back button).
+    if (tracklistEntries.length === 0) return 0;
+    const REWIND_ZONE_SECONDS = 2;
+    for (let i = tracklistEntries.length - 1; i >= 0; i--) {
+      if (tracklistEntries[i].start_seconds < position - REWIND_ZONE_SECONDS) {
+        return tracklistEntries[i].start_seconds;
+      }
+    }
+    return 0;
+  }
+
+  function nextEntryStart(): number | null {
+    for (const e of tracklistEntries) {
+      if (e.start_seconds > position + 0.5) return e.start_seconds;
+    }
+    return null;
   }
 
   function formatTime(seconds: number): string {
@@ -60,11 +93,24 @@
       navigator.mediaSession.metadata = new MediaMetadata({
         title: set.title,
         artist: set.artists.map((a) => a.name).join(", ") || "Unknown",
+        artwork: [
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icons/icon-256.png", sizes: "256x256", type: "image/png" },
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        ],
       });
       navigator.mediaSession.setActionHandler?.("play", () => ws?.play());
       navigator.mediaSession.setActionHandler?.("pause", () => ws?.pause());
       navigator.mediaSession.setActionHandler?.("seekbackward", () => seek(-5));
       navigator.mediaSession.setActionHandler?.("seekforward", () => seek(5));
+      navigator.mediaSession.setActionHandler?.("previoustrack", () => {
+        const t = previousEntryStart();
+        ws?.setTime(Math.max(0, t));
+      });
+      navigator.mediaSession.setActionHandler?.("nexttrack", () => {
+        const t = nextEntryStart();
+        if (t !== null) ws?.setTime(t);
+      });
     } catch {
       /* not supported in all browsers */
     }
@@ -205,6 +251,7 @@
       void saveState();
     }, 5000);
     void loadCommentMarkers();
+    void loadTracklistEntries();
   });
 
   onDestroy(() => {
@@ -315,4 +362,8 @@
     padding: 0;
   }
   .marker:hover { transform: translateX(-50%) scale(1.4); }
+  @media (max-width: 600px) {
+    .markers { height: 14px; }
+    .marker { width: 14px; height: 14px; }  /* bigger touch target */
+  }
 </style>

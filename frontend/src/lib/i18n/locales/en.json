@@ -177,5 +177,13 @@
   "embed": {
     "allow_public": "Allow public embedding",
     "open_in_setvault": "Open in SetVault →"
+  },
+  "pwa": {
+    "cache": {
+      "heading": "Offline audio",
+      "description": "Recently played sets are kept on this device for offline playback. Adjust the cap or clear the cache below.",
+      "quota": "device limit",
+      "clear": "Clear cache"
+    }
   }
 }

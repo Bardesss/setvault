@@ -44,4 +44,8 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--sp-3);
   }
+  @media (max-width: 600px) {
+    section { padding: var(--sp-3); }
+    .grid { grid-template-columns: 1fr; }
+  }
 </style>

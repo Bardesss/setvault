@@ -104,4 +104,14 @@
   footer button { background: none; border: none; color: var(--text-muted); cursor: pointer; }
   .placeholder { color: var(--text-faint); font-style: italic; }
   ul.replies { margin-top: var(--sp-2); padding-left: var(--sp-4); border-left: 2px solid var(--border-default); }
+  @media (max-width: 600px) {
+    .comments { padding: var(--sp-2); }
+    li { padding: var(--sp-2); }
+    ul.replies { padding-left: var(--sp-2); }
+    footer { flex-wrap: wrap; }
+    footer button { padding: var(--sp-1) var(--sp-2); min-height: 36px; }
+    /* iOS Safari auto-zooms on any input < 16px font-size; prevent that on
+       textareas the composer uses. */
+    :global(.comments textarea) { font-size: 16px; }
+  }
 </style>

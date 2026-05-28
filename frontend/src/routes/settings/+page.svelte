@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import OfflineAudioCache from "$lib/components/OfflineAudioCache.svelte";
   import {
     createRssToken,
     listMyRssTokens,
@@ -234,6 +235,8 @@
     {/if}
   </section>
 
+  <OfflineAudioCache />
+
   <section class="card prefs">
     <h2>{$_("settings.notifications")}</h2>
     {#if !prefsLoaded}
@@ -333,5 +336,15 @@
   .feeds .just-minted code {
     font-family: var(--font-mono); font-size: var(--ts-xs);
     overflow-wrap: anywhere;
+  }
+  @media (max-width: 600px) {
+    .settings { padding: var(--sp-3); max-width: none; }
+    .card { padding: var(--sp-3); }
+    input { font-size: 16px; }  /* prevents iOS auto-zoom on focus */
+    .profile dl, .prefs dl { grid-template-columns: 1fr; gap: var(--sp-1); }
+    .feeds .just-minted li {
+      grid-template-columns: 1fr;
+      gap: var(--sp-1);
+    }
   }
 </style>

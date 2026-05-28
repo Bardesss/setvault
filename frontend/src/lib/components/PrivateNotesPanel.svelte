@@ -35,7 +35,7 @@
   }
 </script>
 
-<section class="notes">
+<section class="notes" data-open={!collapsed}>
   <header>
     <button on:click={() => (collapsed = !collapsed)} aria-expanded={!collapsed}>
       {collapsed ? "▶" : "▼"} {$_("notes.heading")}
@@ -118,5 +118,26 @@
   .empty {
     color: var(--text-faint);
     font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    /* Header stays inline so the user has somewhere to tap. When opened,
+       the body slides up as a fixed bottom-sheet above the NavRail. */
+    .notes[data-open="true"] .body {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+      max-height: 70vh;
+      overflow-y: auto;
+      padding: var(--sp-3);
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-default);
+      border-radius: var(--r-md) var(--r-md) 0 0;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 80;
+      margin-top: 0;
+    }
+    textarea { font-size: 16px; }  /* prevent iOS auto-zoom on focus */
   }
 </style>
