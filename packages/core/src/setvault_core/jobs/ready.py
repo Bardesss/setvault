@@ -1,13 +1,52 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import uuid
 
+from sqlalchemy import select
+
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.catalog import LiveSet
+from setvault_core.models.library_webhook import LibraryWebhook
 from setvault_core.progress import ProgressEvent, publish
 from setvault_core.services.activity import record
+
+logger = logging.getLogger(__name__)
+
+
+async def _fan_out_webhooks(live: LiveSet, event: str) -> None:
+    """Enqueue a dispatch job for every enabled webhook whose ``events``
+    array includes ``event``. Errors are logged but never re-raise — the
+    set-publish flow must not block on webhook config issues."""
+    try:
+        from redis import Redis
+        from rq import Queue
+
+        async with session_factory()() as s:  # type: AsyncSession
+            rows = (await s.execute(
+                select(LibraryWebhook).where(LibraryWebhook.enabled.is_(True))
+            )).scalars().all()
+
+        if not rows:
+            return
+
+        redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+        queue = Queue("default", connection=redis)
+        for wh in rows:
+            if event not in (wh.events or []):
+                continue
+            queue.enqueue(
+                "setvault_core.jobs.webhook_dispatch.run_dispatch_webhook",
+                webhook_id=str(wh.id),
+                event=event,
+                set_slug=live.slug,
+                set_id=str(live.id),
+                title=live.title,
+            )
+    except Exception:
+        logger.exception("webhook fan-out failed for %s", event)
 
 
 async def mark_ready(live_set_id: str) -> None:
@@ -27,11 +66,16 @@ async def mark_ready(live_set_id: str) -> None:
             user_id=live.uploaded_by,
         )
         await s.commit()
+        published = live
 
     publish(ProgressEvent(
         kind="ready", live_set_id=live_set_id, job_id=live_set_id,
         progress_pct=100, message="published",
     ))
+
+    # Library refresh webhooks (§J15). Fans out to enabled webhook rows whose
+    # `events` array includes `set.published`.
+    await _fan_out_webhooks(published, "set.published")
 
 
 def mark_ready_sync(live_set_id: str) -> None:
