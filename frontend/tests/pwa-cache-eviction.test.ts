@@ -2,10 +2,12 @@ import { expect, test } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 /**
- * Audio cache cap eviction: lower the SW's cap to a small number, prime the
- * audio cache with three oversized fake entries through the page-side
- * `caches.open(...).put(...)` API, then trigger a real audio fetch so the
- * SW's `enforceAudioCap` runs. Assert the oldest fake entry is gone.
+ * Audio cache cap eviction: prime the audio cache with three oversized fake
+ * entries via the page-side `caches.open(...).put(...)` API, then lower the
+ * SW's cap via the `set-cap` postMessage. The SW's message handler enforces
+ * the new cap immediately (admin lowered it; the cache may already exceed),
+ * which is the same path the settings UI takes. Asserts the oldest entry
+ * is evicted.
  *
  * Locks the §J18 contract (admin-configurable cap, oldest-first eviction).
  */
@@ -37,13 +39,6 @@ test("audio cache evicts oldest entry when over cap", async ({
   });
   expect(audioCacheName, "audio cache should be created by the SW").not.toBeNull();
 
-  // Lower cap to 1500 bytes; each fake entry is 1000 bytes → at least the
-  // oldest must be evicted once a real fetch lands.
-  await page.evaluate(async () => {
-    const reg = await navigator.serviceWorker.getRegistration();
-    reg!.active!.postMessage({ type: "set-cap", bytes: 1500 });
-  });
-
   // Prime the cache with three fake stream entries in known insertion order.
   await page.evaluate(async (name) => {
     const cache = await caches.open(name);
@@ -69,11 +64,22 @@ test("audio cache evicts oldest entry when over cap", async ({
     "/api/sets/fake-c/stream",
   ]));
 
-  // Trigger a real audio fetch via the SW path so `audioCacheFirst`
-  // appends to the cache and runs `enforceAudioCap`.
-  await page.evaluate(async (slug) => {
-    await fetch(`/api/sets/${slug}/stream`, { credentials: "include" });
-  }, seed.set.slug);
+  // Lower the cap to 1500 bytes via a MessageChannel so we can await the
+  // SW's enforcement completing.
+  await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    await new Promise<void>((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = (event) => {
+        if (event.data?.type === "cap-enforced") resolve();
+      };
+      reg!.active!.postMessage(
+        { type: "set-cap", bytes: 1500 },
+        [channel.port2],
+      );
+      setTimeout(resolve, 8_000);  // fallback if no reply for some reason
+    });
+  });
 
   const after = await page.evaluate(async (name) => {
     const cache = await caches.open(name);
