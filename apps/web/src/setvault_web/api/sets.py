@@ -241,6 +241,46 @@ async def edit_set(
     return await show_set(slug, session, None)  # type: ignore[arg-type]
 
 
+class EmbedToggleIn(BaseModel):
+    allowed: bool
+
+
+class EmbedToggleOut(BaseModel):
+    slug: str
+    embed_allowed: bool
+
+
+@router.patch("/{slug}/embed", response_model=EmbedToggleOut)
+async def toggle_embed(
+    slug: str,
+    body: EmbedToggleIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(require_admin)],
+):
+    """Admin-only embed toggle. Writes a set.embed_toggled audit event."""
+    from setvault_core.services.audit import log as audit_log
+
+    live = (
+        await session.execute(
+            select(LiveSet).where(
+                LiveSet.slug == slug, LiveSet.deleted_at.is_(None)
+            )
+        )
+    ).scalar_one_or_none()
+    if live is None:
+        raise HTTPException(status_code=404, detail="not found")
+    before = {"embed_allowed": live.embed_allowed}
+    live.embed_allowed = body.allowed
+    await audit_log(
+        session, actor_user_id=admin.id, actor_kind="user",
+        action="set.embed_toggled",
+        target_type="live_set", target_id=str(live.id),
+        before=before, after={"embed_allowed": live.embed_allowed},
+    )
+    await session.commit()
+    return EmbedToggleOut(slug=slug, embed_allowed=live.embed_allowed)
+
+
 @router.delete("/{slug}", status_code=204)
 async def delete_set(
     slug: str,
