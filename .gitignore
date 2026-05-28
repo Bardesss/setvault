@@ -71,3 +71,9 @@ test-results/
 
 # SvelteKit build output
 apps/web/static/_app/
+
+# Phase 6A: site/ shared assets are materialized at deploy time by
+# scripts/build-site-assets.mjs. The single source of truth lives under
+# frontend/src/lib/styles/ and frontend/static/fonts/.
+site/assets/
+site/fonts/
