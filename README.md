@@ -29,8 +29,10 @@ own implementation plan under `docs/superpowers/plans/`.
 | 2C — Frontend, Player & Production | ✅ merged | SvelteKit UI (login, home, library, set detail with wavesurfer player, settings, admin) · tus.io resumable uploads · `svelte-i18n` + Crowdin sync · multi-arch bundled web image + production compose |
 | 3A — Tracklist editor (raw) | ✅ merged | Track DB · per-set tracklist CRUD + reorder + time-shift · M-key live add · paste-parse · 1001tracklists scrape (admin-gated) · Tesseract OCR |
 | 3B — Provider framework + enrichment | ✅ merged | Pluggable `setvault-providers` package · MusicBrainz / Discogs / AcoustID · response cache + per-field priority + locks · `/admin/providers` UI · per-row Resolve + Bulk resolve + AcoustID "ID this" |
-| 3C — Engagement | ⏳ planned | Comments, bookmarks, `@mention` notifications (in-app + email) |
-| 4 — Ingest & distribution | ⏳ planned | yt-dlp URL rip · RSS feeds · embeddable player · mobile PWA polish |
+| 3C — Engagement | ✅ merged | Comments (with `@mentions` + waveform markers) · per-set + timestamped bookmarks · private notes · in-app + email notifications |
+| 4A — yt-dlp URL rip | ✅ merged | Paste-URL ingest tab on `/sets/new` · idempotent against platform IDs · 5/hour 50/day rate limit · SSRF allowlist (YT / SoundCloud / Mixcloud / Internet Archive / Bandcamp) |
+| 4B — RSS feeds + embeddable player | ✅ merged | Per-user RSS (favorites / recent / everything) with token-scoped `ApiToken` · HMAC-signed short-TTL enclosure URLs · `/embed/[slug]` public player with `embed_allowed` admin toggle · per-route CSP exception |
+| 4C — Mobile PWA polish | ✅ merged | Installable PWA (manifest + maskable icons) · service worker with cache-first/network-first strategies · `mediaSession` prev/next jumps tracklist entries · phone-width pass across all screens · offline audio cache with admin-configurable cap |
 | 5 — Compatibility | ⏳ planned | Subsonic API + scrobbling |
 | 6 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
 | 7 — Sonos | ⏳ planned | SMAPI sidecar |

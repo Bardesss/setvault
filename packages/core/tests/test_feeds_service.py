@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from defusedxml import ElementTree as ET
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.tracklist import TracklistEntry
-from setvault_core.services.feeds import _format_ts, build_feed
+from setvault_core.services.feeds import PSC_NS, _format_psc_time, _format_ts, build_feed
 
 
 def _make_live(title: str, slug: str, *, when: date | None = None) -> LiveSet:
@@ -75,3 +75,53 @@ def test_format_ts():
     assert _format_ts(0) == "00:00"
     assert _format_ts(65) == "01:05"
     assert _format_ts(3725) == "01:02:05"
+
+
+def test_format_psc_time():
+    """Podlove Simple Chapters require HH:MM:SS.mmm — millisecond precision."""
+    assert _format_psc_time(0) == "00:00:00.000"
+    assert _format_psc_time(65) == "00:01:05.000"
+    assert _format_psc_time(3725) == "01:02:05.000"
+
+
+def test_build_feed_emits_psc_chapters():
+    """One <psc:chapter> per TracklistEntry, attached to the matching <item>."""
+    live_id = uuid.uuid4()
+    live = _make_live("With Chapters", "with-chapters", when=date(2026, 2, 1))
+    live.id = live_id
+    entries = [
+        _make_entry(live_id, pos=0, sec=0, label="Intro"),
+        _make_entry(live_id, pos=1, sec=185, label="Track One — Artist"),
+        _make_entry(live_id, pos=2, sec=3725, label=""),  # falls back to "Track 2"
+    ]
+    xml = build_feed(
+        title="t", self_link="https://x/x.xml", description="d",
+        items=[(live, entries)], base_url="https://x", signing_key="k",
+    )
+    root = ET.fromstring(xml)
+    ns = {"psc": PSC_NS}
+    chapters_blocks = root.findall(".//psc:chapters", ns)
+    assert len(chapters_blocks) == 1
+    chapter_list = chapters_blocks[0].findall("psc:chapter", ns)
+    assert len(chapter_list) == 3
+
+    assert chapter_list[0].attrib["start"] == "00:00:00.000"
+    assert chapter_list[0].attrib["title"] == "Intro"
+    assert chapter_list[1].attrib["start"] == "00:03:05.000"
+    assert chapter_list[1].attrib["title"] == "Track One — Artist"
+    assert chapter_list[2].attrib["start"] == "01:02:05.000"
+    # Empty raw_label falls back to "Track <position>"
+    assert chapter_list[2].attrib["title"] == "Track 2"
+
+
+def test_build_feed_skips_chapters_for_set_without_tracklist():
+    """A set with no TracklistEntries must NOT emit an empty <psc:chapters> block."""
+    live = _make_live("No Tracklist", "no-tracklist")
+    live.id = uuid.uuid4()
+    xml = build_feed(
+        title="t", self_link="https://x/x.xml", description="d",
+        items=[(live, [])], base_url="https://x", signing_key="k",
+    )
+    root = ET.fromstring(xml)
+    ns = {"psc": PSC_NS}
+    assert root.findall(".//psc:chapters", ns) == []
