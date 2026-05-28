@@ -43,3 +43,32 @@ async def test_activity_returns_array(authed_admin_client):
 async def test_me_endpoints_require_auth(client):
     response = await client.get("/api/me/continue-listening")
     assert response.status_code == 401
+
+
+async def test_home_summary_requires_auth(client):
+    response = await client.get("/api/me/home-summary")
+    assert response.status_code == 401
+
+
+async def test_home_summary_returns_zero_for_empty_vault(authed_admin_client):
+    response = await authed_admin_client.get("/api/me/home-summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["sets_count"] == 0
+    assert body["tracks_resolved_count"] == 0
+    assert body["tracks_needing_ids_count"] == 0
+    assert body["audio_bytes"] == 0
+    assert body["deltas_window_days"] == 7
+    assert body["sets_delta"] == 0
+    assert body["tracks_resolved_delta"] == 0
+    assert body["tracks_needing_ids_delta"] == 0
+
+
+async def test_home_summary_counts_one_seeded_set(
+    authed_admin_client, seeded_live_set
+):
+    response = await authed_admin_client.get("/api/me/home-summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["sets_count"] == 1
+    assert body["audio_bytes"] >= 0
