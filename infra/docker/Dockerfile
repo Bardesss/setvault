@@ -3,7 +3,7 @@
 # SetVault — single all-in-one image (v0.1.1+).
 #
 # Runs three processes under s6-overlay (PID 1):
-#   - uvicorn      → FastAPI + bundled SvelteKit on :8000
+#   - uvicorn      → FastAPI + bundled SvelteKit on :1970
 #   - rq worker    → transcode / waveform / enrichment / bulk jobs
 #   - watcher      → watchdog-driven WatchFolder ingest
 #
@@ -107,8 +107,8 @@ ENV REDIS_URL=redis://redis:6379/0 \
 WORKDIR /srv/apps/web
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health').read()"
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1970/api/health').read()"
 
-EXPOSE 8000
+EXPOSE 1970
 
 ENTRYPOINT ["/init"]

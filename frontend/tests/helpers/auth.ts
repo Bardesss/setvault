@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
-const API_BASE = process.env.SETVAULT_API_BASE ?? "http://localhost:8000";
+const API_BASE = process.env.SETVAULT_API_BASE ?? "http://localhost:1970";
 
 interface SeedResponse {
   admin: { email: string; password: string };

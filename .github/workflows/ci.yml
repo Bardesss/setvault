@@ -47,7 +47,7 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://setvault:setvault@localhost:5432/setvault
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: ci-secret-key-for-e2e-only-base64-padded-padded-padded
-      BASE_URL: http://localhost:8000
+      BASE_URL: http://localhost:1970
       TUSD_HOOK_SECRET: ci
       SETVAULT_DEV_SEED: "1"
       SETVAULT_ALLOW_INSECURE_COOKIE: "1"
@@ -60,10 +60,10 @@ jobs:
       - run: uv run alembic upgrade head
       - name: Start backend
         run: |
-          uv run uvicorn setvault_web.main:app --host 127.0.0.1 --port 8000 \
+          uv run uvicorn setvault_web.main:app --host 127.0.0.1 --port 1970 \
             >uvicorn.log 2>&1 &
           for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:8000/api/health >/dev/null; then
+            if curl -sf http://127.0.0.1:1970/api/health >/dev/null; then
               echo "backend ready"; exit 0
             fi
             sleep 1
