@@ -202,6 +202,7 @@ async def show_set(
         audio_stream_url=f"/api/sets/{slug}/stream",
         waveform_url=f"/api/sets/{slug}/waveform" if row.waveform_path else None,
         normalized_lufs=row.normalized_lufs,
+        embed_allowed=row.embed_allowed,
     )
 
 
