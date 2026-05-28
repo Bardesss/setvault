@@ -1,96 +1,135 @@
 <script lang="ts">
-  import type { CurrentUser } from "$lib/api/auth";
-  import { logout } from "$lib/api/auth";
+  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
-  import { _ } from "svelte-i18n";
-  import NotificationBell from "./NotificationBell.svelte";
+  import { logout } from "$lib/api/auth";
+  import type { CurrentUser } from "$lib/api/auth";
+
   export let user: CurrentUser;
 
-  async function doLogout() {
+  $: pathname = $page.url.pathname;
+
+  function active(href: string): boolean {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  async function handleLogout() {
     await logout();
-    await goto("/login");
+    goto("/login");
   }
 </script>
 
-<aside class="nav-rail">
-  <!-- Brand name is intentionally not translated. -->
-  <a class="brand" href="/">SetVault</a>
-  <nav>
-    <a href="/" aria-label={$_("nav.home")}>
-      <span class="icon" aria-hidden="true">🏠</span>
-      <span class="label">{$_("nav.home")}</span>
+<nav class="rail" aria-label="Primary">
+  <div class="rail-section">
+    <a class="rail-link" class:active={active("/")} href="/">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <path d="M2 7l6-5 6 5v7H2z" />
+        <path d="M6 14V9h4v5" />
+      </svg>
+      Home
     </a>
-    <a href="/sets" aria-label={$_("nav.library")}>
-      <span class="icon" aria-hidden="true">📚</span>
-      <span class="label">{$_("nav.library")}</span>
+    <a class="rail-link" class:active={active("/sets")} href="/sets">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <rect x="2" y="3" width="12" height="10" rx="1" />
+        <path d="M2 6h12" />
+      </svg>
+      Library
     </a>
-    <a href="/sets/new" aria-label={$_("nav.upload")}>
-      <span class="icon" aria-hidden="true">⬆️</span>
-      <span class="label">{$_("nav.upload")}</span>
+    <a class="rail-link" class:active={active("/search")} href="/search">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" />
+        <line x1="11" y1="11" x2="14" y2="14" />
+      </svg>
+      Search
     </a>
-    <a href="/search" aria-label={$_("nav.search")}>
-      <span class="icon" aria-hidden="true">🔍</span>
-      <span class="label">{$_("nav.search")}</span>
+  </div>
+
+  <div class="rail-section">
+    <div class="rail-section-title">Yours</div>
+    <a class="rail-link" class:active={active("/me/bookmarks")} href="/me/bookmarks">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <path d="M4 2h8v12l-4-3-4 3V2z" />
+      </svg>
+      Bookmarks
     </a>
-    <a href="/settings" aria-label={$_("nav.settings")}>
-      <span class="icon" aria-hidden="true">⚙️</span>
-      <span class="label">{$_("nav.settings")}</span>
+    <a class="rail-link" class:active={active("/settings")} href="/settings">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <circle cx="8" cy="8" r="2" />
+        <path d="M8 1v3M8 12v3M1 8h3M12 8h3" />
+      </svg>
+      Settings
     </a>
-    {#if user.role === "admin"}
-      <a href="/admin/users" aria-label={$_("nav.admin")}>
-        <span class="icon" aria-hidden="true">🛡️</span>
-        <span class="label">{$_("nav.admin")}</span>
+  </div>
+
+  {#if user.role === "admin"}
+    <div class="rail-section">
+      <div class="rail-section-title">System</div>
+      <a class="rail-link" class:active={pathname.startsWith("/admin")} href="/admin/users">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+          <circle cx="8" cy="8" r="2" />
+          <path d="M8 1v3M8 12v3M1 8h3M12 8h3" />
+        </svg>
+        Admin
       </a>
-    {/if}
-  </nav>
-  <NotificationBell />
-  <button class="signout" on:click={doLogout}>{$_("nav.sign_out")}</button>
-</aside>
+    </div>
+  {/if}
+
+  <div class="rail-footer">
+    <div class="rail-user">{user.display_name || user.email}</div>
+    <button class="rail-logout" type="button" on:click={handleLogout}>Sign out</button>
+  </div>
+</nav>
 
 <style>
-  .nav-rail {
-    display: flex; flex-direction: column; gap: var(--sp-3);
-    padding: var(--sp-4); border-right: 1px solid var(--border-default);
-    background: var(--bg-surface);
+  .rail-footer {
+    margin-top: auto;
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--border-subtle);
+    display: grid;
+    gap: var(--sp-2);
   }
-  .brand { font-weight: 800; letter-spacing: 0.02em; }
-  nav { display: flex; flex-direction: column; gap: var(--sp-2); }
-  nav a { display: flex; align-items: center; gap: var(--sp-2); color: inherit;
-          text-decoration: none; padding: var(--sp-1) var(--sp-2);
-          border-radius: var(--r-sm); }
-  nav a:hover { background: var(--accent-softer, transparent); }
-  .icon { display: none; }                /* desktop: text-only */
-  .signout { margin-top: auto; background: none; border: 1px solid var(--border-default);
-             padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); color: inherit;
-             cursor: pointer; }
+  .rail-user {
+    font-family: var(--font-mono);
+    font-size: var(--ts-xs);
+    color: var(--text-muted);
+    padding: 0 var(--sp-3);
+  }
+  .rail-logout {
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    border-radius: var(--r-sm);
+    padding: 6px var(--sp-3);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: var(--ts-sm);
+  }
+  .rail-logout:hover { border-color: var(--accent); color: var(--accent); }
 
-  @media (max-width: 600px) {
-    .nav-rail {
+  @media (max-width: 760px) {
+    .rail {
       position: fixed;
-      bottom: 0; left: 0; right: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 64px;
       flex-direction: row;
-      justify-content: space-around;
-      align-items: center;
+      padding: 0;
       border-right: none;
-      border-top: 1px solid var(--border-default);
-      padding: var(--sp-2);
-      z-index: 90;
-      gap: 0;
-      /* Pin under any browser bottom-bar / iOS safe-area */
-      padding-bottom: max(var(--sp-2), env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border-subtle);
+      z-index: 40;
     }
-    .brand, .signout { display: none; }   /* surface elsewhere */
-    nav { flex-direction: row; gap: 0; flex: 1; justify-content: space-around; }
-    nav a {
+    .rail :global(.rail-section) { flex-direction: row; flex: 1; }
+    .rail :global(.rail-section-title),
+    .rail-footer { display: none; }
+    .rail :global(.rail-link) {
+      flex: 1;
       flex-direction: column;
       gap: 2px;
-      padding: var(--sp-1);
-      min-width: 44px;
-      min-height: 44px;
-      font-size: var(--ts-xs);
+      padding: 6px;
+      font-size: var(--ts-xxs);
       text-align: center;
     }
-    .icon { display: block; font-size: 22px; line-height: 1; }
-    .label { font-size: 10px; }
   }
 </style>
