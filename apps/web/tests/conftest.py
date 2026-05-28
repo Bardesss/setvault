@@ -22,6 +22,7 @@ from setvault_core.models.tracklist import (
     TracklistEntry,
     TracklistImportJob,
 )
+from setvault_core.models.url_rip import RipJob
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete, select
 
@@ -206,6 +207,24 @@ async def _cleanup_invite_users():
                 | EmailToken.email.like("%@x.test")
             )
         )
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_rip_jobs():
+    """Delete RipJob rows so URL-rip tests can rerun. RipJob.live_set_id has
+    ondelete=CASCADE so rows tied to LiveSets get cleaned when LiveSets are
+    deleted, but unattached (queued-only) rows need explicit removal."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(RipJob))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(RipJob))
         await s.commit()
 
 

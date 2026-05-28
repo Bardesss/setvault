@@ -26,6 +26,7 @@ from setvault_web.api import search as search_api
 from setvault_web.api import sets as sets_api
 from setvault_web.api import tracklist as tracklist_api
 from setvault_web.api import uploads as uploads_api
+from setvault_web.api import url_rip as url_rip_api
 from setvault_web.api import users as users_api
 from setvault_web.api import ws as ws_api
 from setvault_web.config import get_settings
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(bookmarks_api.router)
     app.include_router(notes_api.router)
     app.include_router(notifications_api.router)
+    app.include_router(url_rip_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 
