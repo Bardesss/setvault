@@ -19,19 +19,32 @@ from rq import Queue, Worker
 from rq_scheduler import Scheduler
 from setvault_core.db import init_engine
 
-HEALTH_CHECK_FN = "setvault_core.jobs.media_root_health.run_health_checks_sync"
-HEALTH_CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+_HOURLY = 60 * 60
+_DAILY = 24 * 60 * 60
+
+# (func_path, interval_seconds). Re-registered exactly once at worker boot.
+_SCHEDULE: tuple[tuple[str, int], ...] = (
+    ("setvault_core.jobs.media_root_health.run_health_checks_sync", 5 * 60),
+    ("setvault_core.jobs.recycle_bin_purge.run_purge_recycle_bin", _HOURLY),
+    ("setvault_core.jobs.github_version_poll.run_poll_github_releases", _DAILY),
+    ("setvault_core.jobs.audit_retention.run_prune_audit_events", _DAILY),
+)
 
 
 def _bootstrap_scheduler(redis: Redis) -> None:
-    """Register the periodic MediaRoot health-check job exactly once at boot."""
+    """Register every periodic job exactly once at boot. Existing scheduled
+    entries are left in place — rq-scheduler doesn't expose an idempotent
+    upsert, so the safest pattern is "only insert if not already present"
+    keyed on the func path."""
     scheduler = Scheduler(connection=redis)
     already = {j.func_name for j in scheduler.get_jobs()}
-    if HEALTH_CHECK_FN not in already:
+    for func_path, interval in _SCHEDULE:
+        if func_path in already:
+            continue
         scheduler.schedule(
             scheduled_time=datetime.now(UTC),
-            func=HEALTH_CHECK_FN,
-            interval=HEALTH_CHECK_INTERVAL_SECONDS,
+            func=func_path,
+            interval=interval,
             repeat=None,
         )
 

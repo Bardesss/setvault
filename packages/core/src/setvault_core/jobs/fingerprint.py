@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import subprocess
 import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
@@ -13,6 +15,9 @@ from sqlalchemy import select
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.catalog import LiveSet, MediaRoot, SetFingerprint
 from setvault_core.progress import ProgressEvent, publish
+from setvault_core.services.audit import log as audit_log
+
+logger = logging.getLogger(__name__)
 
 
 async def fingerprint_audio(live_set_id: str) -> None:
@@ -45,12 +50,43 @@ async def fingerprint_audio(live_set_id: str) -> None:
         existing = (await s.execute(
             select(SetFingerprint).where(SetFingerprint.fingerprint_hash == digest),
         )).scalar_one_or_none()
-        if (
-            existing
+        duplicate_detected = (
+            existing is not None
             and existing.live_set_id != live.id
             and abs(existing.duration_seconds - duration) < 2
-        ):
-            live.duplicate_of = existing.live_set_id
+        )
+        if duplicate_detected:
+            existing_live = await s.get(LiveSet, existing.live_set_id)
+            if existing_live is not None:
+                live.duplicate_of = existing_live.id
+                live.status = "draft"
+                if existing_live.deleted_at is not None:
+                    # Spec §A6: "if the existing set is soft-deleted in the
+                    # recycle bin, undelete the existing set and discard the
+                    # new one." We undelete + soft-delete the new arrival with
+                    # a 1-hour purge window so the recycle-bin purge job
+                    # (5B.5) cleans it up without admin intervention.
+                    existing_live.deleted_at = None
+                    existing_live.purge_after_at = None
+                    now = datetime.now(UTC)
+                    live.deleted_at = now
+                    live.purge_after_at = now + timedelta(hours=1)
+                    audit_action = "ingest.duplicate_of_recycled"
+                else:
+                    audit_action = "ingest.duplicate_detected"
+                await audit_log(
+                    s,
+                    actor_user_id=existing_live.uploaded_by,
+                    actor_kind="system",
+                    action=audit_action,
+                    target_type="LiveSet",
+                    target_id=str(live.id),
+                    after={
+                        "duplicate_of": str(existing_live.id),
+                        "duration_seconds": duration,
+                    },
+                )
+
         s.add(SetFingerprint(
             live_set_id=live.id, fingerprint_hash=digest, duration_seconds=duration,
         ))

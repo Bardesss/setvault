@@ -76,6 +76,47 @@ async def create_root(
     return _to_out(row)
 
 
+@router.post("/{root_id}/reapply-template", status_code=202)
+async def reapply_naming(
+    root_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(current_user)],
+    _: Annotated[object, Depends(require_admin)],
+):
+    """Enqueue a worker job that walks every LiveSet on this root and renames
+    it under the root's current ``naming_template``.
+
+    Returns 202 immediately; the actual work + per-set audit happens in the
+    worker. Admin can watch progress on the scheduled-tasks tab (5C)."""
+    import os as _os
+
+    from redis import Redis
+    from rq import Queue
+
+    row = await session.get(MediaRoot, root_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="not found")
+    if not row.naming_template:
+        raise HTTPException(
+            status_code=400, detail="root has no naming_template configured",
+        )
+
+    redis = Redis.from_url(_os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+    Queue("default", connection=redis).enqueue(
+        "setvault_core.jobs.reapply_naming.run_reapply_naming_template",
+        str(row.id),
+    )
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action="media_root.naming_reapply_requested",
+        target_type="MediaRoot",
+        target_id=str(row.id),
+    )
+    await session.commit()
+    return {"status": "enqueued", "root_id": str(row.id)}
+
+
 @router.delete("/{root_id}", status_code=204)
 async def delete_root(
     root_id: uuid.UUID,

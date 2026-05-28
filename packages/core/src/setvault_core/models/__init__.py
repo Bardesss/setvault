@@ -21,6 +21,7 @@ from setvault_core.models.engagement_3c import (
 )
 from setvault_core.models.identity import EmailToken, NotificationPreference, User
 from setvault_core.models.system import AuditEvent, Job, NotificationConnector
+from setvault_core.models.system_config import SystemConfig
 from setvault_core.models.url_rip import RipJob
 from setvault_core.models.watch_folder import UnmatchedFile, WatchFolder
 
@@ -48,6 +49,7 @@ __all__ = [
                                           "RipJob",
                                           "Series",
                                           "SetFingerprint",
+                                          "SystemConfig",
                                           "Tag",
                                           "TimestampMixin",
                                           "UnmatchedFile",
