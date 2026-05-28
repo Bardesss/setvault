@@ -8,6 +8,7 @@ from starlette.responses import FileResponse
 from setvault_web import __version__
 from setvault_web.api import admin as admin_api
 from setvault_web.api import auth as auth_api
+from setvault_web.api import backup as backup_api
 from setvault_web.api import bookmarks as bookmarks_api
 from setvault_web.api import catalog as catalog_api
 from setvault_web.api import comments as comments_api
@@ -24,6 +25,8 @@ from setvault_web.api import notes as notes_api
 from setvault_web.api import notifications as notifications_api
 from setvault_web.api import password_reset as password_reset_api
 from setvault_web.api import providers as providers_api
+from setvault_web.api import recycle as recycle_api
+from setvault_web.api import scheduled_tasks as scheduled_tasks_api
 from setvault_web.api import search as search_api
 from setvault_web.api import sets as sets_api
 from setvault_web.api import tracklist as tracklist_api
@@ -31,6 +34,7 @@ from setvault_web.api import uploads as uploads_api
 from setvault_web.api import url_rip as url_rip_api
 from setvault_web.api import users as users_api
 from setvault_web.api import watch_folders as watch_folders_api
+from setvault_web.api import webhooks as webhooks_api
 from setvault_web.api import ws as ws_api
 from setvault_web.config import get_settings
 from setvault_web.middleware.csrf import CsrfMiddleware
@@ -74,6 +78,10 @@ def create_app() -> FastAPI:
     app.include_router(feeds_api.router)
     app.include_router(embed_api.router)
     app.include_router(watch_folders_api.router)
+    app.include_router(recycle_api.router)
+    app.include_router(scheduled_tasks_api.router)
+    app.include_router(webhooks_api.router)
+    app.include_router(backup_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 

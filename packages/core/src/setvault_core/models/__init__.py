@@ -20,6 +20,7 @@ from setvault_core.models.engagement_3c import (
                                           PrivateNote,
 )
 from setvault_core.models.identity import EmailToken, NotificationPreference, User
+from setvault_core.models.library_webhook import LibraryWebhook
 from setvault_core.models.system import AuditEvent, Job, NotificationConnector
 from setvault_core.models.system_config import SystemConfig
 from setvault_core.models.url_rip import RipJob
@@ -37,6 +38,7 @@ __all__ = [
                                           "Favorite",
                                           "InAppNotification",
                                           "Job",
+                                          "LibraryWebhook",
                                           "ListeningHistory",
                                           "LiveSet",
                                           "LiveSetArtist",

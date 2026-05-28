@@ -19,6 +19,17 @@
 </div>
 
 <div class="card">
+  <h3>Backup</h3>
+  <p class="hint">
+    Downloads a <code>.tar</code> archive containing a Postgres dump and
+    every file under each configured media root. Streaming starts as soon as
+    <code>pg_dump</code> begins producing output. Scheduled backups + restore
+    are tracked for v0.1.1.
+  </p>
+  <a class="primary" href="/api/admin/backup" download>Download backup</a>
+</div>
+
+<div class="card">
   <h3>Environment</h3>
   <p class="hint">Secrets ending in <code>_KEY</code>, <code>_SECRET</code>, <code>_TOKEN</code>, <code>_PASSWORD</code>, <code>_HOOK_SECRET</code> are redacted.</p>
   <table class="admin-table">
@@ -71,4 +82,13 @@
   .admin-table tbody tr:last-child td { border-bottom: 0; }
   code { font-family: inherit; font-size: 0.85em; color: var(--text-faint); }
   .val { word-break: break-all; }
+  a.primary {
+    justify-self: start;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--accent);
+    color: var(--text-on-accent, var(--bg-base));
+    border-radius: var(--r-md);
+    text-decoration: none;
+    font-weight: 700;
+  }
 </style>
