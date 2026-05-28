@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { _ } from "svelte-i18n";
   import { ApiError } from "$lib/api/client";
   import { submitUrl, listMyRipJobs, type RipJob } from "$lib/api/url_rip";
@@ -10,16 +10,32 @@
   let error: string | null = null;
   let jobs: RipJob[] = [];
   let disclaimerDismissed = false;
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  onMount(async () => {
-    disclaimerDismissed =
-      typeof localStorage !== "undefined" &&
-      localStorage.getItem("setvault.urlRipDisclaimerDismissed") === "1";
+  async function refresh() {
     try {
       jobs = await listMyRipJobs();
     } catch {
       /* best-effort */
     }
+  }
+
+  $: hasActive = jobs.some(
+    (j) => j.status !== "ready" && j.status !== "failed",
+  );
+
+  onMount(async () => {
+    disclaimerDismissed =
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("setvault.urlRipDisclaimerDismissed") === "1";
+    await refresh();
+    pollTimer = setInterval(() => {
+      if (hasActive) void refresh();
+    }, 4000);
+  });
+
+  onDestroy(() => {
+    if (pollTimer) clearInterval(pollTimer);
   });
 
   function dismissDisclaimer() {
