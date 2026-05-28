@@ -110,4 +110,11 @@
     line-height: var(--lh-relaxed);
   }
   .mono { font-family: var(--font-mono); }
+  @media (max-width: 600px) {
+    .detail {
+      padding: var(--sp-3) var(--sp-3) calc(64px + var(--sp-4) + env(safe-area-inset-bottom, 0px));
+      gap: var(--sp-4);
+    }
+    h1 { font-size: var(--ts-xl); }
+  }
 </style>
