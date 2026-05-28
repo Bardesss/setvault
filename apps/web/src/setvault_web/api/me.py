@@ -173,3 +173,87 @@ async def upsert_my_pref(
         channel=existing.channel,
         connector_id=str(existing.connector_id) if existing.connector_id else None,
     )
+
+
+# --- RSS tokens ---------------------------------------------------------------
+from setvault_core.models.api_token import ApiToken
+from setvault_core.schemas.feeds import (
+    RssTokenCreateIn,
+    RssTokenOut,
+    RssTokenWithPlaintextOut,
+    RssTokensListOut,
+)
+from setvault_core.services.api_tokens import mint_api_token, revoke_api_token
+
+
+def _rss_urls(plaintext: str) -> tuple[str, str, str]:
+    """Return (favorites, recent, everything) feed URLs for a plaintext token."""
+    return (
+        f"/api/feed/favorites/{plaintext}.xml",
+        f"/api/feed/recent/{plaintext}.xml",
+        f"/api/feed/everything/{plaintext}.xml",
+    )
+
+
+def _token_out_without_urls(row: ApiToken) -> RssTokenOut:
+    """Build an RssTokenOut for an existing row (plaintext is gone). URLs are
+    blanked since we never persist the plaintext; the user must save the URLs
+    from the create response.
+    """
+    return RssTokenOut(
+        id=str(row.id), name=row.name,
+        favorites_url="", recent_url="", everything_url="",
+        created_at=row.created_at.isoformat(),
+        last_used_at=row.last_used_at.isoformat() if row.last_used_at else None,
+    )
+
+
+@router.get("/rss-tokens", response_model=RssTokensListOut)
+async def list_my_rss_tokens(
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    rows = (await session.execute(
+        select(ApiToken).where(
+            ApiToken.user_id == user.id,
+            ApiToken.revoked_at.is_(None),
+            ApiToken.scopes.any("rss"),
+        ).order_by(ApiToken.created_at.desc())
+    )).scalars().all()
+    return RssTokensListOut(items=[_token_out_without_urls(r) for r in rows])
+
+
+@router.post("/rss-tokens", response_model=RssTokenWithPlaintextOut, status_code=201)
+async def create_my_rss_token(
+    body: RssTokenCreateIn,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    row, plaintext = await mint_api_token(
+        session, user_id=user.id, name=body.name, scopes=["rss"],
+    )
+    await session.commit()
+    fav, recent, everything = _rss_urls(plaintext)
+    return RssTokenWithPlaintextOut(
+        id=str(row.id), name=row.name,
+        favorites_url=fav, recent_url=recent, everything_url=everything,
+        created_at=row.created_at.isoformat(),
+        last_used_at=None,
+        token=plaintext,
+    )
+
+
+@router.delete("/rss-tokens/{token_id}", status_code=204)
+async def revoke_my_rss_token(
+    token_id: str,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    try:
+        tid = uuid.UUID(token_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404) from exc
+    ok = await revoke_api_token(session, user_id=user.id, token_id=tid)
+    if not ok:
+        raise HTTPException(status_code=404)
+    await session.commit()

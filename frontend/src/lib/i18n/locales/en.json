@@ -161,5 +161,21 @@
       "ready": "Ready",
       "failed": "Failed"
     }
+  },
+  "feeds": {
+    "heading": "RSS feeds",
+    "description": "Subscribe in any podcast app.",
+    "favorites": "Favorites",
+    "recent": "Recent",
+    "everything": "Everything",
+    "create": "Create RSS token",
+    "name_label": "Token name (for your reference)",
+    "copy": "Copy",
+    "revoke": "Revoke",
+    "shown_once": "These URLs are shown once. Copy and save them now."
+  },
+  "embed": {
+    "allow_public": "Allow public embedding",
+    "open_in_setvault": "Open in SetVault →"
   }
 }
