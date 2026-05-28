@@ -4,7 +4,6 @@ import time
 
 from setvault_core.services.signed_urls import sign_stream_url, verify_stream_sig
 
-
 KEY = "test-secret-XXXXXXXXXXXXXXXX"
 
 

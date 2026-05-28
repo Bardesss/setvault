@@ -56,8 +56,8 @@ async def test_feed_token_without_rss_scope_returns_404(client, seeded_admin):
 async def test_feed_updates_last_used_at(authed_admin_client, seeded_admin):
     """First feed fetch sets last_used_at and writes a first-use audit event."""
     from setvault_core.db import session_factory
-    from setvault_core.services.api_tokens import mint_api_token
     from setvault_core.models.api_token import ApiToken
+    from setvault_core.services.api_tokens import mint_api_token
     from sqlalchemy import select
 
     async with session_factory()() as s:

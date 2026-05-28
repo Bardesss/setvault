@@ -13,8 +13,6 @@ from setvault_core.models.catalog import LiveSet, LiveSetTag, MediaRoot, Tag
 from setvault_core.models.engagement import UserSetState
 from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import PartyOut, SeriesOut, VenueOut
-from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
-from setvault_core.services.signed_urls import verify_stream_sig
 from setvault_core.schemas.sets import (
     SetArtistOut,
     SetDetailOut,
@@ -22,7 +20,9 @@ from setvault_core.schemas.sets import (
     SetPatchIn,
     SetSummaryOut,
 )
+from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
 from setvault_core.services.sets import replace_artists, replace_tags
+from setvault_core.services.signed_urls import verify_stream_sig
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

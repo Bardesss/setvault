@@ -14,9 +14,6 @@ import logging
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.engagement import Favorite
@@ -25,6 +22,8 @@ from setvault_core.models.tracklist import TracklistEntry
 from setvault_core.services.api_tokens import resolve_api_token, touch_last_used
 from setvault_core.services.audit import log as audit_log
 from setvault_core.services.feeds import build_feed
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session

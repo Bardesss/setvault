@@ -8,11 +8,10 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.tracklist import TracklistEntry
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import db_session
 

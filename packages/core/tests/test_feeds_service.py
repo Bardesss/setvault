@@ -4,10 +4,9 @@ import uuid
 from datetime import UTC, date, datetime
 
 from defusedxml import ElementTree as ET
-
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.tracklist import TracklistEntry
-from setvault_core.services.feeds import build_feed, _format_ts
+from setvault_core.services.feeds import _format_ts, build_feed
 
 
 def _make_live(title: str, slug: str, *, when: date | None = None) -> LiveSet:

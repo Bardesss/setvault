@@ -5,9 +5,17 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.engagement import ActivityEvent, UserSetState
 from setvault_core.models.identity import NotificationPreference, User
+from setvault_core.schemas.feeds import (
+    RssTokenCreateIn,
+    RssTokenOut,
+    RssTokensListOut,
+    RssTokenWithPlaintextOut,
+)
+from setvault_core.services.api_tokens import mint_api_token, revoke_api_token
 from setvault_core.services.passwords import hash_password, verify_password
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -176,14 +184,6 @@ async def upsert_my_pref(
 
 
 # --- RSS tokens ---------------------------------------------------------------
-from setvault_core.models.api_token import ApiToken
-from setvault_core.schemas.feeds import (
-    RssTokenCreateIn,
-    RssTokenOut,
-    RssTokenWithPlaintextOut,
-    RssTokensListOut,
-)
-from setvault_core.services.api_tokens import mint_api_token, revoke_api_token
 
 
 def _rss_urls(plaintext: str) -> tuple[str, str, str]:
