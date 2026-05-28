@@ -36,6 +36,28 @@ logger = logging.getLogger(__name__)
 DATABASE_URL_ENV = "DATABASE_URL"
 
 
+def _sanitize_error(exc: BaseException) -> str:
+    """Map an exception to a user-safe error_text string.
+
+    Raw exception text can leak internal paths, Redis/Postgres connection
+    strings, yt-dlp's debug-style messages, etc. Surface a coarse category
+    instead; the full traceback is preserved in server logs.
+    """
+    # UnsupportedUrlError carries no PII — its message is constant and useful.
+    try:
+        from setvault_core.services.url_rip import UnsupportedUrlError
+        if isinstance(exc, UnsupportedUrlError):
+            return "URL is not on the supported-platforms allowlist"
+    except Exception:
+        pass
+    name = exc.__class__.__name__.lower()
+    if "download" in name or "ydl" in name or "extractor" in name:
+        return "download failed"
+    if "timeout" in name:
+        return "request timed out"
+    return "error during rip"
+
+
 async def _set_status(
     session: AsyncSession, job: RipJob, status: str,
     *, progress_pct: int | None = None, message: str | None = None,
@@ -55,8 +77,17 @@ async def _set_status(
 
 
 async def _download(job: RipJob, tmp_dir: Path) -> Path:
-    """Run yt-dlp to fetch bestaudio. Returns the path to the downloaded file."""
+    """Run yt-dlp to fetch bestaudio. Returns the path to the downloaded file.
+
+    Re-runs the SSRF allowlist gate before shelling out to yt-dlp; the row's
+    source_url could in principle have been edited between submit_rip()
+    and worker pickup.
+    """
     import yt_dlp
+
+    from setvault_core.services.url_rip import require_supported_url
+
+    require_supported_url(job.source_url)
 
     output_template = str(tmp_dir / f"{job.id}.%(ext)s")
     ydl_opts = {
@@ -183,9 +214,11 @@ async def _run_rip_job(session: AsyncSession, job_id: uuid.UUID) -> None:
         await _set_status(session, job, "ready", progress_pct=100,
                           message="published")
     except Exception as exc:
+        # Generic message in the user-visible error_text; the raw exception
+        # (paths, hostnames, yt-dlp internals) only lands in server logs.
         logger.exception("rip job %s failed", job_id)
         try:
-            job.error_text = str(exc)
+            job.error_text = _sanitize_error(exc)
             await _set_status(session, job, "failed", message="error during rip")
         except Exception:
             logger.exception("rip job %s: failed to record failure status", job_id)

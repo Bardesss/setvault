@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from typing import Annotated
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session
 from setvault_web.rate_limit import hit as _ratelimit_hit
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["url_rip"])
 
@@ -93,11 +96,14 @@ async def submit_url_rip(
             "setvault_core.jobs.url_rip_job.run_rip_job",
             rip_job_id=str(job.id),
         )
-    except Exception as exc:
+    except Exception:
         # If Redis is down we still keep the RipJob row so the user sees the
-        # failure and can retry. Mark it failed inline.
+        # failure and can retry. Mark it failed inline with a generic message;
+        # the raw exception (Redis URL, internal hostnames, stack frames) only
+        # goes to server logs, never back to the client.
+        logger.exception("url-rip enqueue failed for job %s", job.id)
         job.status = "failed"
-        job.error_text = f"failed to enqueue worker: {exc}"
+        job.error_text = "failed to enqueue worker"
         await session.flush()
 
     await audit_log(

@@ -72,4 +72,6 @@ async def test_run_rip_job_failure_captures_error(session, monkeypatch):
     await _run_rip_job(session, job_id)
     await session.refresh(job)
     assert job.status == "failed"
-    assert "yt-dlp boom" in (job.error_text or "")
+    # error_text is sanitized — raw "yt-dlp boom" must not leak to the client.
+    assert "yt-dlp boom" not in (job.error_text or "")
+    assert job.error_text  # but some user-safe text is set

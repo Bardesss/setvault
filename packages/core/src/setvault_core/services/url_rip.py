@@ -21,6 +21,15 @@ class DuplicateRipError(Exception):
         super().__init__(f"rip already in progress: {existing.id}")
 
 
+class UnsupportedUrlError(ValueError):
+    """Raised when the URL's host isn't on the platform allowlist.
+
+    Acts as an SSRF gate: yt-dlp's extract_info() will fetch arbitrary hosts,
+    including internal services and cloud metadata endpoints, unless callers
+    constrain the input to known platforms first.
+    """
+
+
 @dataclass
 class ProbeResult:
     platform: str
@@ -38,6 +47,42 @@ _SOUNDCLOUD_HOSTS = {"soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"}
 _MIXCLOUD_HOSTS = {"mixcloud.com", "www.mixcloud.com"}
 _INTERNET_ARCHIVE_HOSTS = {"archive.org", "www.archive.org"}
 _BANDCAMP_RE = re.compile(r"\.bandcamp\.com$")
+
+
+def _host(url: str) -> str:
+    """Lowercased hostname with a trailing dot stripped, for allowlist checks."""
+    return urlparse(url).hostname.rstrip(".").lower() if urlparse(url).hostname else ""
+
+
+def is_supported_url(url: str) -> bool:
+    """True iff the URL's scheme + host is on the platform allowlist.
+
+    Used as an SSRF gate before any yt-dlp / network call. The allowlist matches
+    the platforms whose IDs we know how to parse in extract_platform_and_id().
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    host = _host(url)
+    if not host:
+        return False
+    if host in _YOUTUBE_HOSTS:
+        return True
+    if host in _SOUNDCLOUD_HOSTS:
+        return True
+    if host in _MIXCLOUD_HOSTS:
+        return True
+    if host in _INTERNET_ARCHIVE_HOSTS:
+        return True
+    if _BANDCAMP_RE.search(host):
+        return True
+    return False
+
+
+def require_supported_url(url: str) -> None:
+    """Raise UnsupportedUrlError if the URL fails the allowlist."""
+    if not is_supported_url(url):
+        raise UnsupportedUrlError("URL must point to a supported platform")
 
 
 def extract_platform_and_id(url: str) -> tuple[str, str | None]:
@@ -70,7 +115,13 @@ def extract_platform_and_id(url: str) -> tuple[str, str | None]:
 
 
 def probe_url(url: str) -> ProbeResult:
-    """Run yt-dlp probe (no download) and normalise the result."""
+    """Run yt-dlp probe (no download) and normalise the result.
+
+    SSRF gate: the URL must pass require_supported_url() first. yt-dlp will
+    happily fetch arbitrary hosts (including internal services and cloud
+    metadata endpoints) otherwise.
+    """
+    require_supported_url(url)
     ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True, "extract_flat": False}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -129,6 +180,9 @@ async def submit_rip(
     url = url.strip()
     if not url:
         raise ValueError("url is empty")
+
+    # SSRF gate before any network call (idempotency probe + yt-dlp probe).
+    require_supported_url(url)
 
     pre_platform, pre_ext_id = extract_platform_and_id(url)
     if pre_ext_id:
