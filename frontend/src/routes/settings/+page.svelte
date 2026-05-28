@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import OfflineAudioCache from "$lib/components/OfflineAudioCache.svelte";
   import {
     createRssToken,
     listMyRssTokens,
@@ -233,6 +234,8 @@
       </ul>
     {/if}
   </section>
+
+  <OfflineAudioCache />
 
   <section class="card prefs">
     <h2>{$_("settings.notifications")}</h2>
