@@ -26,7 +26,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.2", "pytest-asyncio>=0.23"]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "pytest-rerunfailures>=14",
+]
 
 [build-system]
 requires = ["hatchling"]
