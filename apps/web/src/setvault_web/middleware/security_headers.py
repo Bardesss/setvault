@@ -1,6 +1,14 @@
+"""Pure-ASGI security-headers middleware.
+
+Rewritten in Phase 5E away from ``starlette.middleware.base.BaseHTTPMiddleware``
+for the same reason as the CSRF middleware: BaseHTTPMiddleware's inner anyio
+task group leaks across pytest event loops and breaks the test harness even
+though production paths work. The pure ASGI form has no inner task group.
+"""
 from __future__ import annotations
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 # Default CSP for the app: blocks framing entirely.
 _DEFAULT_CSP = (
@@ -36,6 +44,21 @@ _EMBED_CSP = (
 # so the parent page can still frame the wider /embed/ page.
 CSP = _DEFAULT_CSP  # exported for tests/legacy importers
 
+_DEFAULTS = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"permissions-policy", b"camera=(), microphone=(), geolocation=(), usb=()"),
+    (
+        b"strict-transport-security",
+        b"max-age=63072000; includeSubDomains; preload",
+    ),
+)
+
+
+Scope = dict[str, Any]
+Receive = Callable[[], Awaitable[dict[str, Any]]]
+Send = Callable[[dict[str, Any]], Awaitable[None]]
+
 
 def _is_embed_route(path: str) -> bool:
     """Routes that need third-party iframe embedding to work.
@@ -50,24 +73,34 @@ def _is_embed_route(path: str) -> bool:
     return False
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        embed = _is_embed_route(request.url.path)
-        response.headers.setdefault(
-            "Content-Security-Policy", _EMBED_CSP if embed else _DEFAULT_CSP,
-        )
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        # Embed routes must NOT carry X-Frame-Options (the legacy header would
-        # block even the CSP-permitted frame).
-        if not embed:
-            response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault(
-            "Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=()"
-        )
-        response.headers.setdefault(
-            "Strict-Transport-Security",
-            "max-age=63072000; includeSubDomains; preload",
-        )
-        return response
+def _setdefault(headers: list[tuple[bytes, bytes]], name: bytes, value: bytes) -> None:
+    for existing_name, _ in headers:
+        if existing_name == name:
+            return
+    headers.append((name, value))
+
+
+class SecurityHeadersMiddleware:
+    def __init__(self, app: Callable[..., Awaitable[None]]) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        embed = _is_embed_route(scope.get("path", "/"))
+        csp = _EMBED_CSP if embed else _DEFAULT_CSP
+
+        async def send_wrapper(event: dict[str, Any]) -> None:
+            if event["type"] == "http.response.start":
+                headers = list(event.get("headers", []))
+                _setdefault(headers, b"content-security-policy", csp.encode("latin-1"))
+                if not embed:
+                    _setdefault(headers, b"x-frame-options", b"DENY")
+                for name, value in _DEFAULTS:
+                    _setdefault(headers, name, value)
+                event = {**event, "headers": headers}
+            await send(event)
+
+        await self.app(scope, receive, send_wrapper)

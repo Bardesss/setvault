@@ -97,6 +97,14 @@ sw.addEventListener("message", (event) => {
   const data = event.data as { type?: string; bytes?: number } | null;
   if (data?.type === "set-cap" && typeof data.bytes === "number") {
     _audioCapBytes = data.bytes;
+    // Enforce immediately so the admin's new cap kicks in without waiting
+    // for the next audio fetch. Posts back when done so callers can await
+    // via `MessageChannel`.
+    const port = event.ports?.[0];
+    const work = enforceAudioCap().then(() => {
+      if (port) port.postMessage({ type: "cap-enforced" });
+    });
+    event.waitUntil?.(work);
   }
 });
 
