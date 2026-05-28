@@ -73,3 +73,28 @@ services:
         condition: service_healthy
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+
+  # Filesystem watcher — subscribes to admin-configured WatchFolder paths,
+  # enqueues a watch_folder_ingest job per audio file detected. Shares the
+  # worker image (same code + deps). Mount each WatchFolder's host_path into
+  # the container at the same path the admin configured, so watchdog can see
+  # the events. Disable this service if you don't use watch folders.
+  watcher:
+    build:
+      context: ../..
+      dockerfile: infra/docker/worker.Dockerfile
+    command: ["python", "-m", "setvault_core.services.watcher"]
+    env_file: ../../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Each watch-folder host path must be bind-mounted here. The default
+      # leaves no folders watched; override SETVAULT_WATCH_FOLDERS_PATH (or
+      # add additional `- /host/path:/host/path` lines) once you've configured
+      # watch folders in the admin UI.
+      - ${SETVAULT_WATCH_FOLDERS_PATH:-./.data/watch}:/srv/watch
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
