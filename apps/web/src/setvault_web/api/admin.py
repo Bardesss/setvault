@@ -3,13 +3,12 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet, MediaRoot
-from setvault_core.models.enrichment import ProviderResponse
+from setvault_core.models.enrichment import ProviderConfig
 from setvault_core.models.identity import User
 from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.services.system_config import get_config
@@ -126,8 +125,8 @@ async def health(
             "name": c.name,
             "kind": c.kind,
             "enabled": c.enabled,
-            "last_test_at": c.last_test_at.isoformat() if c.last_test_at else None,
-            "last_test_status": c.last_test_status,
+            "last_used_at": c.last_used_at.isoformat() if c.last_used_at else None,
+            "last_status": c.last_status,
         })
 
     # API token counts. "Expired" + "expiring within 7 days" — we don't store
@@ -138,25 +137,19 @@ async def health(
         select(func.count(ApiToken.id)).where(ApiToken.revoked_at.is_not(None))
     )).scalar_one()
 
-    # Provider hit-rate over the last 24h — cheap snapshot for the dashboard.
-    since = datetime.now(UTC) - timedelta(hours=24)
-    provider_24h: dict[str, dict] = {}
-    rows = (await session.execute(
-        select(ProviderResponse.provider, ProviderResponse.status, func.count())
-        .where(ProviderResponse.created_at > since)
-        .group_by(ProviderResponse.provider, ProviderResponse.status)
-    )).all()
-    for provider, status, count in rows:
-        bucket = provider_24h.setdefault(
-            provider, {"provider": provider, "ok": 0, "error": 0},
-        )
-        if status == "ok":
-            bucket["ok"] += int(count)
-        else:
-            bucket["error"] += int(count)
-    for bucket in provider_24h.values():
-        total = bucket["ok"] + bucket["error"]
-        bucket["error_rate_24h"] = (bucket["error"] / total) if total else 0.0
+    # Configured providers — kind, enabled, priority. Error-rate tracking is
+    # deferred to v0.1.1 (we don't currently log provider outcomes anywhere
+    # queryable; the response-cache table is for cache, not telemetry).
+    providers: list[dict] = []
+    for p in (await session.execute(
+        select(ProviderConfig).order_by(ProviderConfig.priority)
+    )).scalars():
+        providers.append({
+            "kind": p.provider_kind,
+            "name": p.name,
+            "enabled": p.enabled,
+            "priority": p.priority,
+        })
 
     config = await get_config(session)
     is_outdated = (
@@ -178,7 +171,7 @@ async def health(
         "audit_retention_days": config.audit_retention_days,
         "storage_roots": storage_roots,
         "connectors": connectors,
-        "providers": list(provider_24h.values()),
+        "providers": providers,
         "tokens": {
             "total": int(token_total),
             "revoked": int(token_revoked),
