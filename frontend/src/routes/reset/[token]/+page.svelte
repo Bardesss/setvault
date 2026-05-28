@@ -18,19 +18,25 @@
   }
 </script>
 
-<form class="card" on:submit|preventDefault={submit}>
-  <h1>Reset password</h1>
-  <label><span>New password</span><input type="password" bind:value={password} required minlength="12" /></label>
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <button type="submit">Reset password</button>
-</form>
+<svelte:head><title>Reset password — SetVault</title></svelte:head>
 
-<style>
-  .card { max-width: 380px; margin: 10vh auto; display: grid; gap: var(--sp-3); }
-  label { display: grid; gap: var(--sp-1); }
-  input { padding: var(--sp-2); background: var(--bg-surface);
-          border: 1px solid var(--border-default); border-radius: var(--r-md); color: inherit; }
-  .error { color: var(--accent-warning); }
-  button { padding: var(--sp-3); background: var(--accent); color: var(--bg-base);
-           border: 0; border-radius: var(--r-md); font-weight: 700; }
-</style>
+<section class="auth-shell">
+  <form class="auth-card" on:submit|preventDefault={submit}>
+    <div class="auth-brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
+    </div>
+
+    <h1>Reset password</h1>
+    <p class="auth-caption">// set a new password</p>
+
+    <label>
+      <span>New password</span>
+      <input type="password" bind:value={password} required minlength="12" />
+    </label>
+
+    {#if error}<p class="auth-error" role="alert">{error}</p>{/if}
+
+    <button class="btn btn-primary" type="submit">Reset password</button>
+  </form>
+</section>
