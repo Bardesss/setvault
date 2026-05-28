@@ -362,4 +362,8 @@
     padding: 0;
   }
   .marker:hover { transform: translateX(-50%) scale(1.4); }
+  @media (max-width: 600px) {
+    .markers { height: 14px; }
+    .marker { width: 14px; height: 14px; }  /* bigger touch target */
+  }
 </style>
