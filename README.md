@@ -1,7 +1,7 @@
 # SetVault
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.1-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.2-brightgreen.svg)](CHANGELOG.md)
 [![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-1f6feb.svg)](https://github.com/Bardesss/setvault/pkgs/container/setvault)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/Bardesss/setvault/issues)
 
@@ -81,7 +81,7 @@ an invite-redeem flow against the API.
 
 | Image | Pull | Arches |
 |---|---|---|
-| SetVault (web + worker + watcher under s6-overlay) | `ghcr.io/bardesss/setvault:0.1.1` | `linux/amd64` + `linux/arm64` |
+| SetVault (web + worker + watcher under s6-overlay) | `ghcr.io/bardesss/setvault:0.1.2` | `linux/amd64` + `linux/arm64` |
 | `:latest` mirrors the most recent tag. | | |
 
 ### Verify signatures (optional but encouraged)
@@ -89,7 +89,7 @@ an invite-redeem flow against the API.
 Every release image is signed with cosign (keyless, via GitHub OIDC).
 
 ```bash
-cosign verify ghcr.io/bardesss/setvault:0.1.1 \
+cosign verify ghcr.io/bardesss/setvault:0.1.2 \
   --certificate-identity-regexp "https://github.com/Bardesss/setvault/.github/workflows/docker.yml@.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -251,12 +251,18 @@ The visual identity — **Underground Terminal**: phosphor mint on deep
 blue-black, Bricolage Grotesque + JetBrains Mono, dense modular layouts,
 keyboard-native interactions — lives in `frontend/design/`. That folder
 holds the design tokens, font files, component patterns, and reference
-mockups for every main screen plus the marketing landing. Tokens,
-fonts, and base CSS are the single source of truth shared by the
-SvelteKit app and the deployed landing page.
+mockups for every main screen plus the marketing landing.
+
+Tokens, fonts, base, and shared component CSS are the single source of
+truth, living at `frontend/src/lib/styles/*.css` and
+`frontend/static/fonts/*.woff2`. Both the SvelteKit app (via
+`+layout.svelte` imports) and the deployed landing page (via the
+`scripts/build-site-assets.mjs` copy step run in CI) consume the same
+files — no duplication, no drift.
 
 Open `frontend/design/index.html` for a live local preview, or
-`npx serve frontend/design` to browse from a local server.
+`npx serve frontend/design` to browse from a local server. To preview
+the deployed landing locally, run `npm run site:serve` from `frontend/`.
 
 ---
 
