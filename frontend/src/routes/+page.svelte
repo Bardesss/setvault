@@ -58,4 +58,24 @@
     font-size: var(--ts-sm);
     color: var(--text-faint);
   }
+  @media (max-width: 600px) {
+    section { padding: var(--sp-3); }
+    .hero { padding: var(--sp-6) var(--sp-3); }
+    /* Continue-listening becomes a horizontal scroll strip */
+    section:first-of-type .grid {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      gap: var(--sp-2);
+      padding-bottom: var(--sp-2);
+      -webkit-overflow-scrolling: touch;
+    }
+    section:first-of-type .grid > * {
+      flex: 0 0 80%;
+      scroll-snap-align: start;
+    }
+    /* Recently-added stays in a grid but collapses to one column */
+    .grid { grid-template-columns: 1fr; }
+  }
 </style>

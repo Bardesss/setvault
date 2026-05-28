@@ -334,4 +334,14 @@
     font-family: var(--font-mono); font-size: var(--ts-xs);
     overflow-wrap: anywhere;
   }
+  @media (max-width: 600px) {
+    .settings { padding: var(--sp-3); max-width: none; }
+    .card { padding: var(--sp-3); }
+    input { font-size: 16px; }  /* prevents iOS auto-zoom on focus */
+    .profile dl, .prefs dl { grid-template-columns: 1fr; gap: var(--sp-1); }
+    .feeds .just-minted li {
+      grid-template-columns: 1fr;
+      gap: var(--sp-1);
+    }
+  }
 </style>

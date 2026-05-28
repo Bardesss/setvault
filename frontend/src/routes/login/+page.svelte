@@ -45,4 +45,9 @@
   .error { color: var(--accent-warning); }
   button { padding: var(--sp-3); background: var(--accent); color: var(--bg-base);
            border: 0; border-radius: var(--r-md); font-weight: 700; cursor: pointer; }
+  @media (max-width: 600px) {
+    .login-card { margin: var(--sp-6) var(--sp-3); max-width: none; }
+    input { font-size: 16px; padding: var(--sp-3); }  /* prevents iOS auto-zoom on focus */
+    button { padding: var(--sp-4); }
+  }
 </style>
