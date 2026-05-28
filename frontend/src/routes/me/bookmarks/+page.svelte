@@ -63,6 +63,8 @@
 />
 
 <section class="bookmarks-body">
+  <h1 class="bookmarks-heading">{$_("bookmarks.my_title")}</h1>
+
   {#if !loaded}
     <p class="hint">Loading…</p>
   {:else if items.length === 0}
@@ -99,6 +101,12 @@
     gap: var(--sp-4);
     max-width: 900px;
     margin: 0 auto;
+  }
+  .bookmarks-heading {
+    font-size: var(--ts-2xl);
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    margin: 0;
   }
   .hint {
     padding: var(--sp-8);

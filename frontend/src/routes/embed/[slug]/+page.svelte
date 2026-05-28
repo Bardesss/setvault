@@ -21,7 +21,7 @@
       <span class="brand-dot"></span>
       <span class="brand-name">SETVAULT</span>
     </a>
-    <span class="embed-title">{set.title}</span>
+    <h1 class="embed-title">{set.title}</h1>
   </header>
 
   <div class="embed-body">
@@ -52,6 +52,8 @@
     flex: 1;
     text-align: center;
     font-size: var(--ts-md);
+    margin: 0;
+    letter-spacing: var(--ls-tight);
   }
   audio { width: 100%; margin-bottom: var(--sp-3); }
   .tracklist {
