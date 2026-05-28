@@ -30,7 +30,20 @@
     "new_password": "New password",
     "saving": "Saving…",
     "password_updated": "password updated",
-    "failed": "failed"
+    "failed": "failed",
+    "notifications": "Notification preferences",
+    "loading": "Loading…",
+    "notification_kinds": {
+      "account_security": "Account security",
+      "mention": "Mentions",
+      "comment_reply": "Replies to your comments"
+    },
+    "channel": {
+      "in_app": "In-app",
+      "email": "Email",
+      "both": "Both",
+      "off": "Off"
+    }
   },
   "nav": {
     "home": "Home",
@@ -94,6 +107,83 @@
       "test": "Test",
       "add_or_update": "Add / update provider",
       "save": "Save"
+    }
+  },
+  "comments": {
+    "heading": "Comments",
+    "composer_placeholder": "Write a comment — supports Markdown and @mentions",
+    "attach_timestamp": "Pin to current playback time",
+    "send": "Send",
+    "reply": "Reply",
+    "delete": "Delete",
+    "deleted_placeholder": "[deleted]"
+  },
+  "bookmarks": {
+    "save_set": "Bookmark",
+    "unsave_set": "Bookmarked",
+    "my_title": "My bookmarks",
+    "entire_set": "Whole set",
+    "remove": "Remove bookmark",
+    "empty": "No bookmarks yet."
+  },
+  "notes": {
+    "heading": "Private notes",
+    "placeholder": "Notes — only you can see these. Markdown supported.",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "done": "Done",
+    "empty": "Nothing yet — click Edit to start."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all read",
+    "empty": "Nothing here.",
+    "mentioned_you": "mentioned you",
+    "replied_to_you": "replied to your comment"
+  },
+  "url_rip": {
+    "tab_label": "URL",
+    "tab_upload": "Upload",
+    "url_label": "Source URL",
+    "submit": "Add",
+    "submitting": "Submitting…",
+    "recent_rips": "Recent rips",
+    "open_set": "Open set →",
+    "dismiss": "Got it",
+    "disclaimer": "yt-dlp downloads audio from third-party sites. Make sure you have the right to keep what you ingest — for personal use, public-domain works, or content you have a license for. SetVault doesn't enforce platform ToS.",
+    "status": {
+      "queued": "Queued",
+      "probing": "Probing",
+      "downloading": "Downloading",
+      "transcoding": "Transcoding",
+      "normalizing": "Normalizing",
+      "waveform": "Rendering waveform",
+      "ready": "Ready",
+      "failed": "Failed"
+    }
+  },
+  "feeds": {
+    "heading": "RSS feeds",
+    "description": "Subscribe in any podcast app.",
+    "favorites": "Favorites",
+    "recent": "Recent",
+    "everything": "Everything",
+    "create": "Create RSS token",
+    "name_label": "Token name (for your reference)",
+    "copy": "Copy",
+    "revoke": "Revoke",
+    "shown_once": "These URLs are shown once. Copy and save them now."
+  },
+  "embed": {
+    "allow_public": "Allow public embedding",
+    "open_in_setvault": "Open in SetVault →"
+  },
+  "pwa": {
+    "cache": {
+      "heading": "Offline audio",
+      "description": "Recently played sets are kept on this device for offline playback. Adjust the cap or clear the cache below.",
+      "quota": "device limit",
+      "clear": "Clear cache"
     }
   }
 }
