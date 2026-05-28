@@ -24,6 +24,7 @@ from setvault_core.models.tracklist import (
     TracklistImportJob,
 )
 from setvault_core.models.url_rip import RipJob
+from setvault_core.models.watch_folder import UnmatchedFile, WatchFolder
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete, select
 
@@ -244,6 +245,30 @@ async def _cleanup_rip_jobs():
     yield
     async with session_factory()() as s:
         await s.execute(delete(RipJob))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_watch_folders():
+    """Delete WatchFolder + UnmatchedFile rows so reruns stay idempotent.
+
+    UnmatchedFile.watch_folder_id has ondelete=CASCADE so removing watch
+    folders takes the matching unmatched rows too — clearing UnmatchedFile
+    first is just belt-and-suspenders for any test that detaches them.
+    WatchFolder.target_media_root_id is RESTRICT, so this must run BEFORE
+    the media-roots cleanup."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(UnmatchedFile))
+        await s.execute(delete(WatchFolder))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(UnmatchedFile))
+        await s.execute(delete(WatchFolder))
         await s.commit()
 
 

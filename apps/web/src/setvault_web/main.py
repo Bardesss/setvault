@@ -30,6 +30,7 @@ from setvault_web.api import tracklist as tracklist_api
 from setvault_web.api import uploads as uploads_api
 from setvault_web.api import url_rip as url_rip_api
 from setvault_web.api import users as users_api
+from setvault_web.api import watch_folders as watch_folders_api
 from setvault_web.api import ws as ws_api
 from setvault_web.config import get_settings
 from setvault_web.middleware.csrf import CsrfMiddleware
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(url_rip_api.router)
     app.include_router(feeds_api.router)
     app.include_router(embed_api.router)
+    app.include_router(watch_folders_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 
