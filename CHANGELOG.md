@@ -4,6 +4,25 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Default HTTP port is now `1970`** (the year of David Mancuso's first
+  Loft parties — the year the DJ live set as we know it was born) —
+  previously `8000`. Applies to `SETVAULT_HTTP_PORT`, the bundled compose
+  file's port mapping, the container's `EXPOSE`, the dev-stack uvicorn
+  flag, and the bundled landing's quickstart copy.
+
+  **Breaking change for existing deployments that didn't set
+  `SETVAULT_HTTP_PORT` explicitly.** After pulling this version:
+  - **If your reverse proxy hits `host:8000`** and you want zero
+    operational change, add `SETVAULT_HTTP_PORT=8000` to your `.env`
+    before `docker compose up -d`.
+  - **If you want the new default**, update the reverse-proxy upstream
+    to `host:1970` (or whatever you set `SETVAULT_HTTP_PORT` to) before
+    bringing the stack back up.
+
 ## [0.1.1] — 2026-05-29
 
 **Noob-friendly self-host.** v0.1.0 shipped two container images

@@ -2,7 +2,7 @@ services:
   web:
     build:
       target: deps
-    command: ["uv", "run", "uvicorn", "setvault_web.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uv", "run", "uvicorn", "setvault_web.main:app", "--host", "0.0.0.0", "--port", "1970", "--reload"]
     volumes:
       - ../../apps/web:/srv/apps/web
       - ../../packages/core:/srv/packages/core

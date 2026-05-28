@@ -66,7 +66,7 @@ docker compose up -d
 docker compose logs -f setvault
 ```
 
-Open `http://localhost:8000` (or whatever `BASE_URL` points at behind
+Open `http://localhost:1970` (or whatever `BASE_URL` points at behind
 your reverse proxy). On first boot, the container:
 - auto-generates an internal `TUSD_HOOK_SECRET` (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`)
 - synthesizes `DATABASE_URL` from your `POSTGRES_PASSWORD`
@@ -114,7 +114,7 @@ synthesized at first boot.
 | `TUSD_HOOK_SECRET` | optional | auto-generated on first boot | Shared secret tusd uses when calling back into setvault |
 | `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / media / cache / config / watch |
 | `SETVAULT_VERSION` | optional | `latest` | Pin to a specific image tag |
-| `SETVAULT_HTTP_PORT` | optional | `8000` | Host port the setvault service binds |
+| `SETVAULT_HTTP_PORT` | optional | `1970` | Host port the setvault service binds (1970 — year of the first DJ live set) |
 | `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
 | `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |
 
@@ -123,7 +123,7 @@ synthesized at first boot.
 - Set `BASE_URL` to your public HTTPS URL so signed enclosures and
   invite links resolve.
 - Forward `X-Forwarded-Proto` and `X-Forwarded-For`.
-- The web service listens on port `8000`; tusd is internal-only and
+- The web service listens on port `1970`; tusd is internal-only and
   reached via the web service at `/uploads/`.
 
 ---
@@ -189,7 +189,7 @@ status badges and keyboard hints are short by design — keep them short.
 # Backend (FastAPI + uvicorn, hot reload):
 uv sync --all-extras --all-groups
 uv run alembic upgrade head
-uv run uvicorn setvault_web.main:app --reload --port 8000
+uv run uvicorn setvault_web.main:app --reload --port 1970
 
 # Frontend (SvelteKit dev server, hot reload on :4173):
 cd frontend
@@ -210,7 +210,7 @@ redis + tusd), see `infra/docker/compose.yml` (builds from source) or
 
 ```
                    ┌─────────────┐
-   browsers ─────▶ │   web :8000 │ ─┐
+   browsers ─────▶ │   web :1970 │ ─┐
                    └──────┬──────┘  │
                           │         │
             ┌─────────────┘         │

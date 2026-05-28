@@ -22,7 +22,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "${SETVAULT_HTTP_PORT:-8000}:8000"
+      - "${SETVAULT_HTTP_PORT:-1970}:1970"
     volumes:
       # All persistent state for the setvault container lives under these
       # four host paths. Defaults drop everything under ./.data/setvault.
@@ -67,7 +67,7 @@ services:
     command: >
       -behind-proxy
       -base-path /uploads/
-      -hooks-http http://setvault:8000/api/uploads/tusd-hooks
+      -hooks-http http://setvault:1970/api/uploads/tusd-hooks
       -hooks-http-forward-headers Authorization,Cookie
       -upload-dir /uploads
     volumes:

@@ -4,6 +4,6 @@ cd /srv/apps/web
 exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
   uvicorn setvault_web.main:app \
     --host 0.0.0.0 \
-    --port 8000 \
+    --port 1970 \
     --proxy-headers \
     --forwarded-allow-ips '*'
