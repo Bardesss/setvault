@@ -36,20 +36,20 @@ services:
     command: >
       -behind-proxy
       -base-path /uploads/
-      -hooks-http http://web:8000/api/uploads/tusd-hooks
+      -hooks-http http://setvault:8000/api/uploads/tusd-hooks
       -hooks-http-forward-headers Authorization,Cookie
       -upload-dir /uploads
     volumes:
       - ${SETVAULT_CACHE_PATH:-./.data/cache}/tus:/uploads
     depends_on:
-      web:
+      setvault:
         condition: service_started
     security_opt: [no-new-privileges:true]
 
-  web:
+  setvault:
     build:
       context: ../..
-      dockerfile: infra/docker/web.Dockerfile
+      dockerfile: infra/docker/Dockerfile
     env_file: ../../.env
     depends_on:
       postgres:
@@ -58,43 +58,9 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
-  worker:
-    build:
-      context: ../..
-      dockerfile: infra/docker/worker.Dockerfile
-    env_file: ../../.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
-  # Filesystem watcher — subscribes to admin-configured WatchFolder paths,
-  # enqueues a watch_folder_ingest job per audio file detected. Shares the
-  # worker image (same code + deps). Mount each WatchFolder's host_path into
-  # the container at the same path the admin configured, so watchdog can see
-  # the events. Disable this service if you don't use watch folders.
-  watcher:
-    build:
-      context: ../..
-      dockerfile: infra/docker/worker.Dockerfile
-    command: ["python", "-m", "setvault_core.services.watcher"]
-    env_file: ../../.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
-      # Each watch-folder host path must be bind-mounted here. The default
-      # leaves no folders watched; override SETVAULT_WATCH_FOLDERS_PATH (or
-      # add additional `- /host/path:/host/path` lines) once you've configured
-      # watch folders in the admin UI.
+      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
+      - ${SETVAULT_CACHE_PATH:-./.data/cache}:/srv/cache
+      - ${SETVAULT_CONFIG_PATH:-./.data/config}:/srv/config
       - ${SETVAULT_WATCH_FOLDERS_PATH:-./.data/watch}:/srv/watch
     security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]

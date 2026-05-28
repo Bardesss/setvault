@@ -1,8 +1,8 @@
 # SetVault
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-brightgreen.svg)](CHANGELOG.md)
-[![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-1f6feb.svg)](https://github.com/Bardesss/setvault/pkgs/container/setvault-web)
+[![Version](https://img.shields.io/badge/version-0.1.1-brightgreen.svg)](CHANGELOG.md)
+[![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-1f6feb.svg)](https://github.com/Bardesss/setvault/pkgs/container/setvault)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/Bardesss/setvault/issues)
 
 **Self-hosted vault for DJ live sets.** Upload FLAC/WAV/MP3 (or rip from
@@ -39,7 +39,8 @@ Full feature list and release notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## 🚀 Quick start (Docker compose, GHCR pull)
 
-Zero local build — pulls the published multi-arch images from GitHub
+One image. Three required env vars. Four containers in the stack.
+Zero local build — pulls the published multi-arch image from GitHub
 Container Registry.
 
 **Prereqs:** Docker 24+, Compose v2, ~2 GB RAM for the stack, and disk
@@ -52,7 +53,8 @@ curl -L -o compose.yml \
 curl -L -o .env \
   https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
 
-# 2. Edit .env — at minimum set SECRET_KEY, POSTGRES_PASSWORD, BASE_URL.
+# 2. Edit .env — exactly three required vars:
+#    SECRET_KEY, POSTGRES_PASSWORD, BASE_URL.
 #    Generate a strong SECRET_KEY:
 openssl rand -base64 48
 
@@ -60,31 +62,34 @@ openssl rand -base64 48
 docker compose pull
 docker compose up -d
 
-# 4. Watch logs until the web service is ready
-docker compose logs -f web
+# 4. Watch logs until the setvault container is ready
+docker compose logs -f setvault
 ```
 
 Open `http://localhost:8000` (or whatever `BASE_URL` points at behind
-your reverse proxy). The first admin is created by enabling
-`SETVAULT_DEV_SEED=1` for one boot, hitting `/api/dev/seed-e2e`, then
-unsetting it — or by running an invite-redeem flow against the API.
+your reverse proxy). On first boot, the container:
+- auto-generates an internal `TUSD_HOOK_SECRET` (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`)
+- synthesizes `DATABASE_URL` from your `POSTGRES_PASSWORD`
+- runs `alembic upgrade head`
+- starts uvicorn + RQ worker + watchdog under s6-overlay
 
-### Image references
+The first admin is created by enabling `SETVAULT_DEV_SEED=1` for one
+boot, hitting `/api/dev/seed-e2e`, then unsetting it — or by running
+an invite-redeem flow against the API.
 
-| Image | Pull |
-|---|---|
-| Web (FastAPI + bundled SvelteKit) | `ghcr.io/bardesss/setvault-web:0.1.0` |
-| Worker (RQ + watcher) | `ghcr.io/bardesss/setvault-worker:0.1.0` |
-| `:latest` mirrors the most recent tag.| |
+### Image reference
 
-Both are `linux/amd64` + `linux/arm64`.
+| Image | Pull | Arches |
+|---|---|---|
+| SetVault (web + worker + watcher under s6-overlay) | `ghcr.io/bardesss/setvault:0.1.1` | `linux/amd64` + `linux/arm64` |
+| `:latest` mirrors the most recent tag. | | |
 
 ### Verify signatures (optional but encouraged)
 
 Every release image is signed with cosign (keyless, via GitHub OIDC).
 
 ```bash
-cosign verify ghcr.io/bardesss/setvault-web:0.1.0 \
+cosign verify ghcr.io/bardesss/setvault:0.1.1 \
   --certificate-identity-regexp "https://github.com/Bardesss/setvault/.github/workflows/docker.yml@.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -95,21 +100,23 @@ SBOMs (CycloneDX JSON) are attached to each GitHub Release.
 
 ## ⚙️ Configuration
 
-All configuration is via environment variables loaded from `.env`. The
-full reference lives in [`.env.example`](.env.example); the most
-important ones:
+All configuration is via environment variables loaded from `.env`. Only
+three are required — everything else is defaulted inside the image or
+synthesized at first boot.
 
 | Variable | Required | Default | What it does |
 |---|---|---|---|
 | `SECRET_KEY` | ✅ | — | Signs session cookies + HMAC URLs. **Rotate ⇒ all sessions invalidated.** |
-| `BASE_URL` | ✅ | `http://localhost:8000` | Public URL the app is served from (used in emails, RSS feeds, embed URLs) |
-| `DATABASE_URL` | ✅ | `postgresql+asyncpg://setvault:setvault@postgres:5432/setvault` | Async SQLAlchemy URL |
-| `REDIS_URL` | ✅ | `redis://redis:6379/0` | RQ queue + rate-limit store |
-| `POSTGRES_PASSWORD` | ✅ | — | Set this and match it in `DATABASE_URL` |
-| `TUSD_HOOK_SECRET` | ✅ | — | Shared secret tusd uses when calling back into the web service |
-| `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / cache / config / watch volumes |
+| `POSTGRES_PASSWORD` | ✅ | — | Postgres password. Used by both the postgres container and the auto-synthesized `DATABASE_URL`. |
+| `BASE_URL` | ✅ | — | Public URL the app is served from (used in emails, RSS feeds, embed URLs) |
+| `DATABASE_URL` | optional | synthesized from POSTGRES_* | Set directly if pointing at an external postgres |
+| `REDIS_URL` | optional | `redis://redis:6379/0` | RQ queue + rate-limit store |
+| `TUSD_HOOK_SECRET` | optional | auto-generated on first boot | Shared secret tusd uses when calling back into setvault |
+| `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / media / cache / config / watch |
+| `SETVAULT_VERSION` | optional | `latest` | Pin to a specific image tag |
+| `SETVAULT_HTTP_PORT` | optional | `8000` | Host port the setvault service binds |
 | `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
-| `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | Drops `Secure` from auth cookies — only for local HTTP development |
+| `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |
 
 ### Reverse-proxy tips
 
@@ -281,7 +288,8 @@ with conventional commits driving the CHANGELOG.
 | 5C — Admin UI surface | ✅ merged | Webhooks, scheduled tasks, health dashboard |
 | 5D — Player polish + bulk editor | ✅ merged | Variable speed, A↔B loop, bulk actions |
 | 5E — Tech debt | ✅ merged | Pure-ASGI middleware, yt-dlp pin, cache eviction e2e |
-| **5F — Release engineering** | **🚀 this release** | **CHANGELOG, SBOM, cosign, GHCR, README rewrite, landing page** |
+| 5F — Release engineering | ✅ merged | CHANGELOG, SBOM, cosign, GHCR, README rewrite, landing page (`v0.1.0`) |
+| **5G — Noob-friendly single image** | **🚀 this release** | **Single `setvault` image (uvicorn + worker + watcher under s6-overlay), 3-required-env config, 4-service compose, `TARGETARCH` multi-arch fix (`v0.1.1`)** |
 | 6 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
 | 7 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
 | 8 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |

@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+# RQ worker — transcode / waveform / enrichment / bulk jobs
+cd /srv
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  python -m setvault_worker.entrypoint

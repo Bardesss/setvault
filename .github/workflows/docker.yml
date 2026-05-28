@@ -10,17 +10,10 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     permissions:
-      contents: write       # upload SBOM as release asset
+      contents: write
       packages: write
-      id-token: write       # cosign keyless OIDC
+      id-token: write
       attestations: write
-    strategy:
-      matrix:
-        include:
-          - image: setvault-web
-            dockerfile: infra/docker/web.Dockerfile
-          - image: setvault-worker
-            dockerfile: infra/docker/worker.Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -50,8 +43,6 @@ jobs:
       - name: Resolve version tag
         id: tag
         run: |
-          # On `push: tags: v*`, github.ref_name is the tag itself (e.g. `v0.1.0`).
-          # Strip the leading `v` for the image tag so users pull `:0.1.0`, not `:v0.1.0`.
           raw="${{ github.ref_name }}"
           version="${raw#v}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
@@ -61,38 +52,38 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: infra/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
           tags: |
-            ghcr.io/${{ steps.lc.outputs.owner }}/${{ matrix.image }}:${{ steps.tag.outputs.version }}
-            ghcr.io/${{ steps.lc.outputs.owner }}/${{ matrix.image }}:latest
+            ghcr.io/${{ steps.lc.outputs.owner }}/setvault:${{ steps.tag.outputs.version }}
+            ghcr.io/${{ steps.lc.outputs.owner }}/setvault:latest
 
       - name: Cosign sign image digest (keyless)
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
           cosign sign --yes \
-            ghcr.io/${{ steps.lc.outputs.owner }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+            ghcr.io/${{ steps.lc.outputs.owner }}/setvault@${{ steps.build.outputs.digest }}
 
       - name: Generate SBOM (CycloneDX)
         run: |
-          syft "ghcr.io/${{ steps.lc.outputs.owner }}/${{ matrix.image }}:${{ steps.tag.outputs.version }}" \
-            -o cyclonedx-json > "${{ matrix.image }}-${{ steps.tag.outputs.version }}.cdx.json"
+          syft "ghcr.io/${{ steps.lc.outputs.owner }}/setvault:${{ steps.tag.outputs.version }}" \
+            -o cyclonedx-json > "setvault-${{ steps.tag.outputs.version }}.cdx.json"
 
       - name: Attest SBOM with cosign
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
           cosign attest --yes \
-            --predicate "${{ matrix.image }}-${{ steps.tag.outputs.version }}.cdx.json" \
+            --predicate "setvault-${{ steps.tag.outputs.version }}.cdx.json" \
             --type cyclonedx \
-            ghcr.io/${{ steps.lc.outputs.owner }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+            ghcr.io/${{ steps.lc.outputs.owner }}/setvault@${{ steps.build.outputs.digest }}
 
       - name: Attach SBOM to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.image }}-${{ steps.tag.outputs.version }}.cdx.json
+          files: setvault-${{ steps.tag.outputs.version }}.cdx.json

@@ -1,0 +1,58 @@
+#!/usr/bin/with-contenv bash
+#
+# Auto-generate any secrets that weren't provided so first-boot "just
+# works" for noob installs. Secrets are written to /srv/config/.secrets
+# so they persist across container restarts (the file lives on the
+# named volume bound to ${SETVAULT_CONFIG_PATH}).
+#
+# If the user provided their own values in .env they take precedence.
+
+set -e
+
+CONFIG_DIR="${SETVAULT_CONFIG_PATH:-/srv/config}"
+SECRETS_FILE="${CONFIG_DIR}/.secrets"
+mkdir -p "${CONFIG_DIR}"
+
+# Load any previously persisted secrets first.
+if [ -f "${SECRETS_FILE}" ]; then
+  # shellcheck disable=SC1090
+  source "${SECRETS_FILE}"
+fi
+
+# TUSD_HOOK_SECRET — internal HMAC between web service and tusd sidecar.
+# Users almost never need to set this; auto-generate if missing.
+if [ -z "${TUSD_HOOK_SECRET}" ]; then
+  TUSD_HOOK_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
+  echo "TUSD_HOOK_SECRET=${TUSD_HOOK_SECRET}" >> "${SECRETS_FILE}"
+  echo "[setvault] generated TUSD_HOOK_SECRET (persisted to ${SECRETS_FILE})" >&2
+fi
+
+# Synthesize DATABASE_URL from POSTGRES_* if the user didn't pass one.
+# Power users with an external postgres pass DATABASE_URL directly.
+if [ -z "${DATABASE_URL}" ]; then
+  if [ -z "${POSTGRES_PASSWORD}" ]; then
+    echo "[setvault] neither DATABASE_URL nor POSTGRES_PASSWORD set — falling back to dev default" >&2
+    POSTGRES_PASSWORD="setvault"
+  fi
+  DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER:-setvault}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-setvault}"
+fi
+
+# Export so s6 longruns inherit via with-contenv.
+export TUSD_HOOK_SECRET DATABASE_URL
+mkdir -p /run/s6/container_environment
+printf '%s' "${TUSD_HOOK_SECRET}" > /run/s6/container_environment/TUSD_HOOK_SECRET
+printf '%s' "${DATABASE_URL}" > /run/s6/container_environment/DATABASE_URL
+
+# Default data directories — create on first boot so PUID/PGID bind-mounts
+# don't fail with "directory not found".
+for d in \
+  "${SETVAULT_MEDIA_PATH:-/srv/media}" \
+  "${SETVAULT_CACHE_PATH:-/srv/cache}" \
+  "${SETVAULT_CONFIG_PATH:-/srv/config}" \
+  "${SETVAULT_WATCH_FOLDERS_PATH:-/srv/watch}"; do
+  mkdir -p "${d}"
+  chown -R "${PUID:-1000}:${PGID:-1000}" "${d}" 2>/dev/null || true
+done
+
+# srv tree must be writable by app uid for the venv + caches.
+chown -R "${PUID:-1000}:${PGID:-1000}" /srv/.venv 2>/dev/null || true
