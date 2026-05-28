@@ -17,7 +17,8 @@
   $: user = data.user;
   $: showShell = !!user && !$page.url.pathname.startsWith("/login")
                   && !$page.url.pathname.startsWith("/invite/")
-                  && !$page.url.pathname.startsWith("/reset/");
+                  && !$page.url.pathname.startsWith("/reset/")
+                  && !$page.url.pathname.startsWith("/embed/");
 </script>
 
 <div class="app-shell" class:no-shell={!showShell}>
