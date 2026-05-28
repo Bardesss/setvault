@@ -15,10 +15,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 WORKDIR /srv
-COPY pyproject.toml ./
+# All workspace members must be discoverable for `uv sync` to succeed,
+# even if we only install one of them. The full source for the ones we
+# actually install (core + providers + worker) is copied below; for
+# apps/web we copy only the pyproject so the workspace member is
+# discoverable without dragging in the SvelteKit bundle.
+COPY pyproject.toml uv.lock ./
 COPY packages/core packages/core
+COPY packages/providers packages/providers
+COPY apps/web/pyproject.toml apps/web/pyproject.toml
 COPY apps/worker apps/worker
-RUN uv sync --no-dev
+RUN uv sync --no-dev --package setvault-worker
 ENV PATH="/srv/.venv/bin:${PATH}"
 USER 1000:1000
 ENTRYPOINT ["tini", "--"]

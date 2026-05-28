@@ -36,19 +36,22 @@ RUN pip install --no-cache-dir uv
 
 FROM base AS deps
 WORKDIR /srv
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 COPY packages/core/pyproject.toml packages/core/pyproject.toml
+COPY packages/providers/pyproject.toml packages/providers/pyproject.toml
 COPY apps/web/pyproject.toml apps/web/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
 RUN uv sync --frozen --no-install-project || uv sync --no-install-project
 
 FROM deps AS runtime
+# apps/worker/pyproject.toml is inherited from the deps stage above so
+# the workspace member stays discoverable without dragging in worker src.
 COPY packages/core packages/core
+COPY packages/providers packages/providers
 COPY apps/web apps/web
-COPY apps/worker apps/worker
 # Replace the placeholder static dir with the SvelteKit build output.
 COPY --from=frontend /build/apps/web/src/setvault_web/static apps/web/src/setvault_web/static
-RUN uv sync --no-dev
+RUN uv sync --no-dev --package setvault-web
 ENV PATH="/srv/.venv/bin:${PATH}"
 WORKDIR /srv/apps/web
 USER 1000:1000
