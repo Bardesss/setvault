@@ -30,6 +30,7 @@ dev = [
   "pytest>=8.2",
   "pytest-asyncio>=0.23",
   "pytest-rerunfailures>=14",
+  "defusedxml>=0.7",
 ]
 
 [build-system]
