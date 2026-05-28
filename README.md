@@ -33,11 +33,13 @@ own implementation plan under `docs/superpowers/plans/`.
 | 4A — yt-dlp URL rip | ✅ merged | Paste-URL ingest tab on `/sets/new` · idempotent against platform IDs · 5/hour 50/day rate limit · SSRF allowlist (YT / SoundCloud / Mixcloud / Internet Archive / Bandcamp) |
 | 4B — RSS feeds + embeddable player | ✅ merged | Per-user RSS (favorites / recent / everything) with token-scoped `ApiToken` · HMAC-signed short-TTL enclosure URLs · `/embed/[slug]` public player with `embed_allowed` admin toggle · per-route CSP exception |
 | 4C — Mobile PWA polish | ✅ merged | Installable PWA (manifest + maskable icons) · service worker with cache-first/network-first strategies · `mediaSession` prev/next jumps tracklist entries · phone-width pass across all screens · offline audio cache with admin-configurable cap |
-| 5 — Compatibility | ⏳ planned | Subsonic API + scrobbling |
-| 6 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
-| 7 — Sonos | ⏳ planned | SMAPI sidecar |
-| 8 — Polish | ⏳ planned | Smart playlists, pgvector similarity, BPM/key detection, Snapcast |
-| 9 — OIDC + landing page release | ⏳ planned | OIDC, admin polish, GitHub Pages landing page |
+| 5 — Pre-v0.1.0 completion | ⏳ planned | Watch-folder cluster (§A3/§A11/§A12) · half-implemented features (recycle bin purge, naming templates, storage health, chromaprint dedup, health page) · player polish (variable speed, A↔B loop, bulk editor) · pure-ASGI middleware rewrite · release engineering (release-please / SBOM / cosign / landing page). Sub-phased 5A → 5F. Tag `v0.1.0` after 5F. |
+| 6 — Ingest power tools | ⏳ planned | `packages/ingest_sources` plugin protocol · interactive search (YouTube / SoundCloud / Mixcloud / Internet Archive) · monitored entities with auto-ingest threshold · quality/source preferences + upgrade-available flow |
+| 7 — Compatibility | ⏳ planned | Subsonic API + scrobbling |
+| 8 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
+| 9 — Sonos | ⏳ planned | SMAPI sidecar |
+| 10 — Polish | ⏳ planned | Smart playlists, pgvector similarity, BPM/key detection, Snapcast |
+| 11 — OIDC + forward-auth + full admin polish | ⏳ planned | OIDC, forward-auth header trust, final admin polish |
 
 ## Quick start (production)
 
