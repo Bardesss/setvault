@@ -13,53 +13,51 @@
   }
 </script>
 
-<svelte:head>
-  <title>{set.title} - SetVault</title>
-</svelte:head>
+<svelte:head><title>{set.title} — SetVault</title></svelte:head>
 
-<div class="embed">
-  <header>
-    <h1>{set.title}</h1>
-    <a href={`/sets/${set.slug}`} target="_blank" rel="noopener">
-      {$_("embed.open_in_setvault")}
+<div class="embed-chrome">
+  <header class="embed-header">
+    <a class="brand" href="/" target="_top" aria-label="SetVault home">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
     </a>
+    <span class="embed-title">{set.title}</span>
   </header>
 
-  <audio controls preload="metadata" src={set.audio_url}></audio>
+  <div class="embed-body">
+    <audio controls preload="metadata" src={set.audio_url}></audio>
 
-  {#if set.tracklist.length > 0}
-    <ol class="tracklist">
-      {#each set.tracklist as t (t.position)}
-        <li>
-          <span class="ts">{fmt(t.start_seconds)}</span>
-          {t.label ?? `Track ${t.position}`}
-        </li>
-      {/each}
-    </ol>
-  {/if}
+    {#if set.tracklist.length > 0}
+      <ol class="tracklist">
+        {#each set.tracklist as t (t.position)}
+          <li>
+            <span class="ts">{fmt(t.start_seconds)}</span>
+            {t.label ?? `Track ${t.position}`}
+          </li>
+        {/each}
+      </ol>
+    {/if}
+  </div>
+
+  <footer class="embed-footer">
+    <span>Embedded from SetVault</span>
+    <a href={`/sets/${set.slug}`} target="_top">{$_("embed.open_in_setvault")} →</a>
+  </footer>
 </div>
 
 <style>
-  .embed {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: var(--sp-4);
-    color: var(--text-default);
+  .embed-title {
+    font-weight: 700;
+    color: var(--text-strong);
+    flex: 1;
+    text-align: center;
+    font-size: var(--ts-md);
   }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-3);
-  }
-  h1 { margin: 0; font-size: var(--ts-lg); }
-  header a { color: var(--accent); font-size: var(--ts-sm); }
-  audio { width: 100%; }
+  audio { width: 100%; margin-bottom: var(--sp-3); }
   .tracklist {
     list-style: none;
     padding: 0;
-    margin: var(--sp-3) 0;
+    margin: 0;
     display: grid;
     gap: 4px;
     font-size: var(--ts-sm);
@@ -69,4 +67,6 @@
     color: var(--text-faint);
     margin-right: var(--sp-2);
   }
+  .embed-footer a { color: var(--accent); text-decoration: none; }
+  .embed-footer a:hover { text-decoration: underline; }
 </style>
