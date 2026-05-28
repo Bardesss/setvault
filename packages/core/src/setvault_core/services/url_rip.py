@@ -1,0 +1,169 @@
+from __future__ import annotations
+
+import re
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlparse
+
+import yt_dlp
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from setvault_core.models.url_rip import RipJob
+
+
+class DuplicateRipError(Exception):
+    """Raised when a RipJob already exists for the same (platform, external_id)."""
+
+    def __init__(self, existing: RipJob):
+        self.existing = existing
+        super().__init__(f"rip already in progress: {existing.id}")
+
+
+@dataclass
+class ProbeResult:
+    platform: str
+    external_id: str | None
+    title: str
+    duration_seconds: int | None
+    uploader: str | None
+    thumbnail_url: str | None
+    webpage_url: str
+    raw: dict
+
+
+_YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"}
+_SOUNDCLOUD_HOSTS = {"soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"}
+_MIXCLOUD_HOSTS = {"mixcloud.com", "www.mixcloud.com"}
+_INTERNET_ARCHIVE_HOSTS = {"archive.org", "www.archive.org"}
+_BANDCAMP_RE = re.compile(r"\.bandcamp\.com$")
+
+
+def extract_platform_and_id(url: str) -> tuple[str, str | None]:
+    """Best-effort platform detection from URL alone. Returns (platform, external_id-or-None).
+
+    For platforms without a stable URL-embedded ID (SoundCloud, Mixcloud, Bandcamp),
+    returns None and the caller falls back to probe-time idempotency.
+    """
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    if host in _YOUTUBE_HOSTS:
+        if host == "youtu.be":
+            ext_id = parsed.path.lstrip("/").split("/")[0] or None
+        else:
+            qs = parse_qs(parsed.query)
+            ext_id = qs.get("v", [None])[0]
+        return "youtube", ext_id
+    if host in _SOUNDCLOUD_HOSTS:
+        return "soundcloud", None
+    if host in _MIXCLOUD_HOSTS:
+        return "mixcloud", None
+    if host in _INTERNET_ARCHIVE_HOSTS:
+        parts = parsed.path.strip("/").split("/")
+        if len(parts) >= 2 and parts[0] == "details":
+            return "internet_archive", parts[1]
+        return "internet_archive", None
+    if _BANDCAMP_RE.search(host):
+        return "bandcamp", None
+    return "other", None
+
+
+def probe_url(url: str) -> ProbeResult:
+    """Run yt-dlp probe (no download) and normalise the result."""
+    ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True, "extract_flat": False}
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    if info is None:
+        raise ValueError("yt-dlp returned no info")
+    extractor = (info.get("extractor_key") or "").lower()
+    platform_from_extractor = {
+        "youtube": "youtube", "youtubetab": "youtube",
+        "soundcloud": "soundcloud",
+        "mixcloud": "mixcloud",
+        "internetarchive": "internet_archive", "archiveorg": "internet_archive",
+        "bandcamp": "bandcamp",
+    }.get(extractor)
+    if platform_from_extractor is None:
+        platform_from_extractor, _ = extract_platform_and_id(info.get("webpage_url", url))
+    return ProbeResult(
+        platform=platform_from_extractor or "other",
+        external_id=info.get("id"),
+        title=info.get("title") or "(untitled)",
+        duration_seconds=int(info["duration"]) if info.get("duration") else None,
+        uploader=info.get("uploader"),
+        thumbnail_url=info.get("thumbnail"),
+        webpage_url=info.get("webpage_url", url),
+        raw=info,
+    )
+
+
+async def find_existing_rip(
+    session: AsyncSession, *, platform: str, external_id: str | None,
+) -> RipJob | None:
+    """Idempotency check: return an in-flight or recently-completed RipJob for the
+    same (platform, external_id) if one exists."""
+    if external_id is None:
+        return None
+    return (await session.execute(
+        select(RipJob).where(
+            RipJob.source_platform == platform,
+            RipJob.source_external_id == external_id,
+        ).order_by(RipJob.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+
+
+async def submit_rip(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    url: str,
+) -> RipJob:
+    """Create a RipJob row and return it. Raise DuplicateRipError if an active
+    or recently-completed rip exists for the same (platform, external_id).
+
+    The probe runs inline so the returned row carries metadata for the Jobs
+    drawer. The actual download/transcode is enqueued separately by the caller
+    (see jobs/url_rip_job.py).
+    """
+    url = url.strip()
+    if not url:
+        raise ValueError("url is empty")
+
+    pre_platform, pre_ext_id = extract_platform_and_id(url)
+    if pre_ext_id:
+        existing = await find_existing_rip(session, platform=pre_platform, external_id=pre_ext_id)
+        if existing and existing.status != "failed":
+            raise DuplicateRipError(existing)
+
+    probed = probe_url(url)
+
+    if probed.external_id:
+        existing = await find_existing_rip(
+            session, platform=probed.platform, external_id=probed.external_id,
+        )
+        if existing and existing.status != "failed":
+            raise DuplicateRipError(existing)
+
+    job = RipJob(
+        live_set_id=None,
+        submitted_by=user_id,
+        source_url=url,
+        source_external_id=probed.external_id,
+        source_platform=probed.platform,
+        status="queued",
+        progress_pct=0,
+        probed_metadata={
+            "title": probed.title,
+            "uploader": probed.uploader,
+            "duration": probed.duration_seconds,
+            "thumbnail": probed.thumbnail_url,
+            "webpage_url": probed.webpage_url,
+        },
+        ytdlp_version=yt_dlp.version.__version__,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.add(job)
+    await session.flush()
+    return job
