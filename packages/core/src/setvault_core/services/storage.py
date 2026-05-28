@@ -32,3 +32,59 @@ def resolve_set_path(host_root: str, relative: str) -> Path:
     except ValueError as exc:
         raise ValueError(f"path {relative!r} escapes media root") from exc
     return candidate
+
+
+PlacementMode = Literal["hardlinked", "copied"]
+
+
+def place_audio_file(src: Path, dst: Path) -> PlacementMode:
+    """Place ``src`` at ``dst`` using a hardlink when on the same filesystem,
+    otherwise a copy followed by an atomic rename. The destination's parent
+    directory is created if missing.
+
+    Returns the mode used so the caller can record it on the audit event
+    (``pipeline.placement_mode``). Cross-filesystem moves use a ``.tmp``
+    sibling + ``os.rename`` so the final dst either fully exists or doesn't
+    exist — never a half-written file.
+
+    Raises FileNotFoundError if ``src`` doesn't exist; OSError on permission /
+    quota failures (passes through). ``src`` is never deleted by this call —
+    on hardlink we keep both names; on copy the caller decides whether to
+    unlink the original.
+    """
+    src = Path(src)
+    dst = Path(dst)
+    if not src.exists():
+        raise FileNotFoundError(f"source {src} does not exist")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    same_fs = False
+    try:
+        same_fs = src.stat().st_dev == dst.parent.stat().st_dev
+    except OSError:
+        # dst.parent may have just been created; stat() should succeed but
+        # if it doesn't, fall through to the copy path.
+        same_fs = False
+
+    if same_fs:
+        # Hardlink — instant, zero extra disk. If a stale dst exists, remove it
+        # first (os.link won't overwrite).
+        if dst.exists():
+            dst.unlink()
+        os.link(src, dst)
+        return "hardlinked"
+
+    # Cross-filesystem: copy to a sibling .tmp file then atomic-rename.
+    tmp = dst.with_suffix(dst.suffix + ".tmp")
+    try:
+        shutil.copy2(src, tmp)
+        os.replace(tmp, dst)  # atomic on the same fs (tmp is on dst's fs)
+    except OSError:
+        # Clean up the partial tmp if we left one behind.
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        raise
+    return "copied"
