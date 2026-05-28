@@ -48,7 +48,7 @@ def _sanitize_error(exc: BaseException) -> str:
         from setvault_core.services.url_rip import UnsupportedUrlError
         if isinstance(exc, UnsupportedUrlError):
             return "URL is not on the supported-platforms allowlist"
-    except Exception:
+    except Exception:  # noqa: S110 — best-effort import; fall through if unavailable
         pass
     name = exc.__class__.__name__.lower()
     if "download" in name or "ydl" in name or "extractor" in name:
@@ -104,8 +104,10 @@ async def _download(job: RipJob, tmp_dir: Path) -> Path:
 
     info = await asyncio.to_thread(_run)
     filepath = info.get("filepath") or info.get("_filename")
-    if not filepath or not Path(filepath).exists():
-        candidates = list(tmp_dir.glob(f"{job.id}.*"))
+    # ASYNC240: trivial stat + listdir on a freshly-created tmp dir we own —
+    # blocking time is bounded and matches the precedent in apps/web uploads.py.
+    if not filepath or not Path(filepath).exists():  # noqa: ASYNC240
+        candidates = list(tmp_dir.glob(f"{job.id}.*"))  # noqa: ASYNC240
         if not candidates:
             raise RuntimeError("yt-dlp succeeded but no output file found")
         filepath = str(candidates[0])

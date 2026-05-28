@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from setvault_core.services.url_rip import (
     UnsupportedUrlError,
     extract_platform_and_id,

@@ -4,7 +4,6 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-
 from setvault_core.jobs.url_rip_job import _run_rip_job, _set_status
 from setvault_core.models.identity import User
 from setvault_core.models.url_rip import RipJob

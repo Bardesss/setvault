@@ -42,7 +42,10 @@ class ProbeResult:
     raw: dict
 
 
-_YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"}
+_YOUTUBE_HOSTS = {
+    "youtube.com", "www.youtube.com", "m.youtube.com",
+    "music.youtube.com", "youtu.be",
+}
 _SOUNDCLOUD_HOSTS = {"soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"}
 _MIXCLOUD_HOSTS = {"mixcloud.com", "www.mixcloud.com"}
 _INTERNET_ARCHIVE_HOSTS = {"archive.org", "www.archive.org"}
