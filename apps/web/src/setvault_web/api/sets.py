@@ -6,13 +6,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from setvault_core.models.catalog import LiveSet, LiveSetTag, MediaRoot, Tag
 from setvault_core.models.engagement import UserSetState
 from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import PartyOut, SeriesOut, VenueOut
+from setvault_core.services.api_tokens import resolve_api_token, touch_last_used
+from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
 from setvault_core.schemas.sets import (
     SetArtistOut,
     SetDetailOut,
@@ -24,9 +26,50 @@ from setvault_core.services.sets import replace_artists, replace_tags
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.config import Settings, get_settings
 from setvault_web.deps import current_user, db_session, require_admin
 
 router = APIRouter(prefix="/api/sets", tags=["sets"])
+
+
+async def _stream_authorize(
+    session: AsyncSession,
+    live: LiveSet,
+    *,
+    token: str | None,
+    session_cookie: str | None,
+    signer: SessionSigner,
+) -> None:
+    """Authorize access to a set's stream/waveform.
+
+    Order:
+      1. If LiveSet.embed_allowed is True, anonymous access is permitted.
+      2. If a ?token= is provided and resolves to an rss-scope ApiToken,
+         allow and bump last_used_at.
+      3. If a valid session cookie is present, allow.
+      4. Otherwise, 401.
+
+    Returns nothing on success; raises HTTPException(401) on failure.
+    """
+    if live.embed_allowed:
+        return
+    if token:
+        api_token = await resolve_api_token(
+            session, token_plaintext=token, required_scope="rss",
+        )
+        if api_token is not None:
+            await touch_last_used(session, api_token)
+            await session.commit()
+            return
+    if session_cookie:
+        data = signer.read(session_cookie)
+        if data is not None:
+            try:
+                uuid.UUID(data.user_id)
+                return
+            except ValueError:
+                pass
+    raise HTTPException(status_code=401, detail="not authenticated")
 
 
 async def _tag_names_for(session: AsyncSession, live_id: uuid.UUID) -> list[str]:
@@ -223,7 +266,9 @@ async def delete_set(
 async def stream_set(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: str | None = None,
+    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
         await session.execute(
@@ -234,6 +279,11 @@ async def stream_set(
     ).scalar_one_or_none()
     if row is None or row.streaming_path is None:
         raise HTTPException(status_code=404, detail="not ready")
+    await _stream_authorize(
+        session, row, token=token,
+        session_cookie=session_cookie,
+        signer=SessionSigner(settings.secret_key),
+    )
     root = await session.get(MediaRoot, row.media_root_id)
     path = Path(root.host_path) / row.streaming_path
     # Detect media type from extension so test fixtures (e.g. silent.wav) work too;
@@ -246,7 +296,9 @@ async def stream_set(
 async def waveform(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: str | None = None,
+    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
         await session.execute(
@@ -257,6 +309,11 @@ async def waveform(
     ).scalar_one_or_none()
     if row is None or row.waveform_path is None:
         raise HTTPException(status_code=404, detail="not ready")
+    await _stream_authorize(
+        session, row, token=token,
+        session_cookie=session_cookie,
+        signer=SessionSigner(settings.secret_key),
+    )
     root = await session.get(MediaRoot, row.media_root_id)
     return FileResponse(
         Path(root.host_path) / row.waveform_path,
