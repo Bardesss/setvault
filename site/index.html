@@ -1,184 +1,652 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SetVault — self-hosted vault for DJ live sets</title>
-  <meta name="description"
-        content="Self-hosted vault for DJ live sets. Lossless storage, time-coded tracklists, provider-enriched metadata, embeddable player, installable PWA. GPL-3.0, GHCR images." />
-  <meta property="og:title" content="SetVault" />
-  <meta property="og:description"
-        content="Self-hosted vault for DJ live sets. Mixcloud × 1001tracklists × Plex — for live sets specifically." />
-  <meta property="og:type" content="website" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2300d8b1'/%3E%3Cpath d='M16 40 V24 M24 44 V20 M32 48 V16 M40 44 V20 M48 40 V24' stroke='%23001512' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
-  <style>
-    :root {
-      --bg-base: #001512;
-      --bg-surface: #0a2622;
-      --text: #e7f7f3;
-      --text-faint: #88b5ac;
-      --accent: #00d8b1;
-      --border: #1c3b36;
-      --r-md: 12px;
-      --r-sm: 6px;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body {
-      background: var(--bg-base);
-      color: var(--text);
-      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      min-height: 100vh;
-    }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    main { max-width: 920px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
-    .hero {
-      display: flex; align-items: center; gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .logo {
-      width: 56px; height: 56px;
-      background: var(--accent);
-      border-radius: 12px;
-      display: grid; place-items: center;
-      color: var(--bg-base);
-    }
-    .logo svg { width: 36px; height: 36px; }
-    h1 { font-size: 2.5rem; margin: 0; letter-spacing: -0.02em; }
-    .tagline { color: var(--text-faint); font-size: 1.1rem; margin: 0.25rem 0 2.5rem; }
-    h2 { font-size: 1.35rem; margin: 2.5rem 0 0.75rem; letter-spacing: -0.01em; }
-    p { margin: 0.5rem 0; }
-    .cta {
-      display: inline-flex; gap: 0.6rem; align-items: center;
-      background: var(--accent); color: var(--bg-base);
-      padding: 0.75rem 1.25rem;
-      border-radius: var(--r-md);
-      font-weight: 600;
-      margin-right: 0.75rem; margin-top: 0.5rem;
-    }
-    .cta.secondary {
-      background: transparent; color: var(--text);
-      border: 1px solid var(--border);
-    }
-    pre {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      padding: 1rem 1.25rem;
-      border-radius: var(--r-md);
-      overflow-x: auto;
-      font-size: 0.9rem;
-      line-height: 1.45;
-    }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.75rem;
-      margin: 1rem 0 0;
-    }
-    .feat {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: 1rem;
-    }
-    .feat h3 { margin: 0 0 0.25rem; font-size: 1rem; color: var(--accent); }
-    .feat p { margin: 0; color: var(--text-faint); font-size: 0.92rem; }
-    footer {
-      border-top: 1px solid var(--border);
-      margin-top: 4rem; padding-top: 1.5rem;
-      color: var(--text-faint); font-size: 0.9rem;
-    }
-    .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
-    .badges span {
-      background: var(--bg-surface); border: 1px solid var(--border);
-      border-radius: 999px; padding: 0.2rem 0.7rem;
-      font-size: 0.8rem; color: var(--text-faint);
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SetVault — self-hosted vault for DJ live sets</title>
+<meta name="description" content="Self-hosted vault for DJ live sets. Lossless storage, time-coded tracklists, provider-enriched metadata, embeddable player, installable PWA. GPL-3.0, GHCR images.">
+<meta property="og:title" content="SetVault">
+<meta property="og:description" content="Self-hosted vault for DJ live sets. Mixcloud × 1001tracklists × Plex — for live sets specifically.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2300ffb2'/%3E%3Cpath d='M16 40 V24 M24 44 V20 M32 48 V16 M40 44 V20 M48 40 V24' stroke='%23001512' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/components.css">
+<style>
+  /* Landing-only layout. Tokens come from tokens.css; component classes
+     come from components.css; only landing-specific layouts live here. */
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-default);
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .land { position: relative; z-index: 2; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 var(--sp-6); }
+
+  /* nav */
+  .nav { padding: var(--sp-5) 0; display: flex; align-items: center; gap: var(--sp-6); }
+  .nav .brand { height: auto; border: none; padding: 0; margin: 0; font-size: var(--ts-base); }
+  .nav .links { display: flex; gap: var(--sp-5); align-items: center; font-size: var(--ts-md); color: var(--text-muted); }
+  .nav .links a { color: var(--text-muted); text-decoration: none; }
+  .nav .links a:hover { color: var(--text-default); }
+  .nav .right { margin-left: auto; display: flex; gap: var(--sp-3); align-items: center; }
+  .nav .release-pill {
+    font-family: var(--font-mono); font-size: var(--ts-xs); color: var(--accent);
+    background: var(--accent-soft); border: 1px solid rgba(0,255,178,0.3);
+    padding: 4px 10px; border-radius: var(--r-pill); text-transform: lowercase;
+  }
+
+  /* hero */
+  .hero { padding: var(--sp-12) 0 var(--sp-10); display: grid; gap: var(--sp-4); }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 1.05;
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    margin: 0;
+    max-width: 900px;
+  }
+  .hero .lede {
+    font-size: var(--ts-xl);
+    color: var(--text-muted);
+    max-width: 700px;
+    margin: 0;
+    line-height: var(--lh-relaxed);
+  }
+  .hero .ctas { display: flex; gap: var(--sp-3); margin-top: var(--sp-3); flex-wrap: wrap; }
+
+  /* sections */
+  .section-kicker {
+    font-family: var(--font-mono); font-size: var(--ts-xs);
+    text-transform: uppercase; letter-spacing: var(--ls-uppercase);
+    color: var(--accent); margin-bottom: var(--sp-3);
+  }
+  section h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    letter-spacing: var(--ls-tight);
+    color: var(--text-strong);
+    margin: 0 0 var(--sp-4);
+    max-width: 720px;
+  }
+  section h2 b { color: var(--accent); font-weight: 700; }
+  section .lede {
+    color: var(--text-muted);
+    font-size: var(--ts-lg);
+    max-width: 720px;
+    line-height: var(--lh-relaxed);
+    margin: 0 0 var(--sp-6);
+  }
+  .rule {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--sp-10) 0;
+  }
+
+  /* features */
+  .features { padding: var(--sp-8) 0; }
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-8);
+    align-items: center;
+    padding: var(--sp-6) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .feature:last-child { border-bottom: none; }
+  .feature .label {
+    font-family: var(--font-mono); font-size: var(--ts-xs);
+    text-transform: uppercase; letter-spacing: var(--ls-uppercase);
+    color: var(--accent);
+    margin-bottom: var(--sp-2);
+    display: flex; align-items: center; gap: var(--sp-2);
+  }
+  .feature h3 {
+    font-size: var(--ts-2xl);
+    color: var(--text-strong);
+    letter-spacing: var(--ls-tight);
+    margin: 0 0 var(--sp-3);
+  }
+  .feature p {
+    color: var(--text-muted);
+    line-height: var(--lh-relaxed);
+    margin: 0;
+  }
+  .feature-visual {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    padding: var(--sp-5);
+    min-height: 140px;
+    display: grid;
+    align-content: center;
+  }
+  @media (max-width: 880px) {
+    .feature { grid-template-columns: 1fr; }
+  }
+
+  /* integrations */
+  .integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-top: var(--sp-6);
+  }
+  .integration-cell {
+    background: var(--bg-surface);
+    padding: var(--sp-4);
+  }
+  .integration-cell .nm { color: var(--text-strong); font-weight: 700; }
+  .integration-cell .kn {
+    font-family: var(--font-mono); font-size: var(--ts-xxs);
+    text-transform: uppercase; color: var(--text-faint);
+    margin-top: 4px;
+  }
+
+  /* requirements */
+  .reqs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+    margin-top: var(--sp-6);
+  }
+  .req-tier {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    padding: var(--sp-5);
+    position: relative;
+  }
+  .req-tier.recommended { border-color: var(--accent); }
+  .req-tier h3 { margin: 0 0 var(--sp-3); color: var(--text-strong); }
+  .req-tier .pill {
+    position: absolute; top: -10px; left: var(--sp-4);
+    background: var(--accent); color: var(--text-on-accent);
+    font-family: var(--font-mono); font-size: var(--ts-xxs);
+    text-transform: uppercase; padding: 2px 8px; border-radius: var(--r-pill);
+  }
+  .req-tier dl { margin: 0; display: grid; grid-template-columns: 80px 1fr; gap: var(--sp-2); }
+  .req-tier dt {
+    font-family: var(--font-mono); font-size: var(--ts-xxs);
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .req-tier dd { margin: 0; color: var(--text-default); font-size: var(--ts-sm); line-height: 1.5; }
+  @media (max-width: 880px) {
+    .reqs-grid { grid-template-columns: 1fr; }
+  }
+
+  /* quickstart */
+  .quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-6);
+    align-items: start;
+  }
+  .quick-grid ol { padding-left: var(--sp-5); color: var(--text-default); line-height: var(--lh-relaxed); }
+  .quick-grid code { color: var(--accent); font-family: var(--font-mono); }
+  .terminal {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .terminal-header {
+    padding: 8px var(--sp-3);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    display: flex; gap: 6px; align-items: center;
+    font-family: var(--font-mono); font-size: var(--ts-xs);
+    color: var(--text-faint);
+  }
+  .terminal-header .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border-default);
+  }
+  .terminal-header .title { margin-left: var(--sp-3); }
+  .terminal pre {
+    margin: 0; padding: var(--sp-4);
+    font-family: var(--font-mono); font-size: var(--ts-sm);
+    color: var(--text-default);
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .terminal .prompt { color: var(--accent); }
+  .terminal .cmt { color: var(--text-faint); }
+  .terminal .key { color: var(--accent-secondary, #ffd866); }
+  .terminal .ok { color: var(--accent); }
+  .terminal .url { color: var(--accent); text-decoration: underline; }
+  @media (max-width: 880px) {
+    .quick-grid { grid-template-columns: 1fr; }
+  }
+
+  /* honest about AI */
+  .honest {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    padding: var(--sp-6);
+    margin-top: var(--sp-6);
+  }
+  .honest h2 { margin-top: 0; }
+  .honest p { color: var(--text-muted); line-height: var(--lh-relaxed); margin: 0 0 var(--sp-2); }
+
+  /* CTA */
+  .cta-section {
+    text-align: center;
+    padding: var(--sp-12) 0;
+  }
+  .cta-section h2 { margin-left: auto; margin-right: auto; }
+  .cta-section .lede { margin-left: auto; margin-right: auto; }
+  .cta-section .ctas { display: flex; gap: var(--sp-3); justify-content: center; flex-wrap: wrap; margin-top: var(--sp-5); }
+
+  /* footer */
+  .footer { padding: var(--sp-8) 0 var(--sp-10); border-top: 1px solid var(--border-subtle); margin-top: var(--sp-8); }
+  .footer-row { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; color: var(--text-muted); font-size: var(--ts-sm); }
+  .footer-row a { color: var(--text-muted); text-decoration: none; }
+  .footer-row a:hover { color: var(--accent); }
+  .footer-right { margin-left: auto; }
+  .footer-credit {
+    margin-top: var(--sp-4);
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--ts-xxs);
+  }
+</style>
 </head>
 <body>
-  <main>
-    <div class="hero">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
-          <path d="M16 40 V24 M24 44 V20 M32 48 V16 M40 44 V20 M48 40 V24" />
-        </svg>
-      </div>
-      <div>
-        <h1>SetVault</h1>
-        <p class="tagline">Self-hosted vault for DJ live sets.</p>
-      </div>
-    </div>
+<div class="land">
 
-    <p>
-      Lossless live-set storage. Time-coded tracklists.
-      Provider-enriched metadata. Comments with waveform markers.
-      Per-user RSS feeds. An embeddable player. An installable PWA.
-      All running on <strong>your</strong> server, behind <strong>your</strong>
-      reverse proxy, under <strong>your</strong> GPL-3.0 license.
-    </p>
+<!-- NAV -->
+<div class="container">
+<nav class="nav">
+  <a class="brand" href="/"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+  <div class="links">
+    <a href="https://github.com/Bardesss/setvault#readme">Docs</a>
+    <a href="https://github.com/Bardesss/setvault">GitHub</a>
+    <a href="https://github.com/Bardesss/setvault/blob/main/CHANGELOG.md">Changelog</a>
+  </div>
+  <div class="right">
+    <span class="release-pill">v0.1.2</span>
+    <a class="btn btn-primary" href="#quickstart">Self-host</a>
+  </div>
+</nav>
+</div>
 
-    <p>
-      <em>Mixcloud × 1001tracklists × Plex — but for DJ live sets
-      specifically, not for individual tracks.</em>
-    </p>
+<!-- HERO -->
+<section class="container hero">
+  <div class="section-kicker">// self-hosted live-set vault</div>
+  <h1>A vault for your DJ <b>live sets</b>, the way Plex is a vault for your movies.</h1>
+  <p class="lede">
+    Mixcloud × 1001tracklists × Plex — but for live sets specifically. Lossless storage,
+    time-coded tracklists, provider-enriched metadata, an embeddable player, an installable PWA.
+    Runs on your own hardware, under your own license.
+  </p>
+  <div class="ctas">
+    <a class="btn btn-primary" href="#quickstart">Self-host in 60 seconds</a>
+    <a class="btn" href="https://github.com/Bardesss/setvault#readme">Read the docs →</a>
+  </div>
+</section>
 
+<div class="container"><div class="rule"></div></div>
+
+<!-- FEATURES — SHIPPING -->
+<section class="features container">
+  <div class="section-kicker">// shipping today · v0.1.2</div>
+  <h2>What works <b>right now</b> on your server.</h2>
+
+  <div class="feature">
     <div>
-      <a class="cta" href="https://github.com/Bardesss/setvault">Source on GitHub →</a>
-      <a class="cta secondary" href="https://github.com/Bardesss/setvault/blob/main/CHANGELOG.md">Release notes</a>
+      <div class="label">Ingest</div>
+      <h3>Upload anything, rip from anywhere.</h3>
+      <p>Drag-drop FLAC / WAV / MP3 via resumable tus uploads. Paste a URL and yt-dlp pulls from YouTube, SoundCloud, Mixcloud, Internet Archive, Bandcamp. Drop files into a watch folder and they ingest themselves. Auto-transcoded to Opus, normalized to EBU R128, fingerprinted, dedup-checked.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);color:var(--text-default);line-height:1.8">
+        <div>✓ tus resumable uploads</div>
+        <div>✓ yt-dlp paste-URL rip</div>
+        <div>✓ watch-folder auto-ingest</div>
+        <div>✓ ffmpeg → Opus + EBU R128</div>
+        <div>✓ chromaprint dedup</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Tracklist</div>
+      <h3>Time-coded tracklists, three input modes.</h3>
+      <p>Build per-set tracklists with a time-coded editor. Hit M during playback to add the current track at the current timestamp. Paste a flat tracklist and the parser handles it. Or import from a 1001tracklists URL or an OCR'd image.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);line-height:1.8">
+        <div><span style="color:var(--accent)">[00:00]</span> ID — Opening</div>
+        <div><span style="color:var(--accent)">[12:32]</span> Surgeon — Bad Hands</div>
+        <div><span style="color:var(--accent)">[24:48]</span> DJ T-1000 — Inhuman</div>
+        <div style="color:var(--text-faint);margin-top:var(--sp-2)">▸ press M to add at current time</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Metadata</div>
+      <h3>Pluggable providers, your keys.</h3>
+      <p>MusicBrainz (free, always on), Discogs (BYO key), AcoustID (BYO key). Per-row Resolve, Bulk resolve, and AcoustID "ID this" for unknown tracks. Your raw data only leaves the box when you enable a provider.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-family:var(--font-mono);font-size:var(--ts-xxs)">
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center;color:var(--accent)">MUSICBRAINZ</div>
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center">DISCOGS</div>
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center;color:var(--accent)">ACOUSTID</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Player</div>
+      <h3>Variable speed. A↔B loop. Lockscreen-ready.</h3>
+      <p>wavesurfer.js with variable speed 0.5×–2× (pitch-preserved), A↔B loop, resume-where-you-left-off per user. MediaSession integration drives the OS lockscreen with artwork + prev/next that jumps tracklist entries.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);line-height:1.8">
+        <div>spd <span style="color:var(--accent)">1.25×</span></div>
+        <div>loop <span style="color:var(--accent)">A → B</span></div>
+        <div style="height:4px;background:var(--bg-base);border-radius:var(--r-pill);overflow:hidden;margin-top:var(--sp-2)">
+          <div style="height:100%;width:62%;background:var(--accent);box-shadow:var(--accent-glow)"></div>
+        </div>
+        <div style="color:var(--text-faint);margin-top:4px">53:10 / 1:24:30</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Engagement</div>
+      <h3>Comments with waveform markers.</h3>
+      <p>Drop comments at any timestamp; they appear as markers across the waveform. @mention crew members and they get an in-app + email notification. Per-set bookmarks. Private notes per user.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="position:relative;height:80px;background:var(--bg-elevated);border-radius:var(--r-sm);overflow:hidden">
+        <div style="position:absolute;inset:0 0 30% 0;background:linear-gradient(180deg,transparent,rgba(0,255,178,0.08))"></div>
+        <div style="position:absolute;left:20%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:var(--accent-glow)"></div>
+        <div style="position:absolute;left:60%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:var(--accent-glow)"></div>
+        <div style="position:absolute;left:80%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:var(--accent-glow)"></div>
+        <div style="position:absolute;bottom:6px;left:6px;right:6px;font-family:var(--font-mono);font-size:var(--ts-xxs);color:var(--text-faint)">3 comments · @mentions land in your inbox</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Distribution</div>
+      <h3>Per-user RSS. Embeddable player.</h3>
+      <p>Generate per-user RSS feeds (favorites / recent / everything) with HMAC-signed short-TTL enclosures — paste into any podcast app. Drop the <code style="color:var(--accent)">/embed/[slug]</code> URL into any blog post for a public player, toggled per set.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);color:var(--text-default);line-height:1.8">
+        <div>GET /api/feed/favorites/{token}.xml</div>
+        <div>GET /api/feed/recent/{token}.xml</div>
+        <div>GET /api/feed/everything/{token}.xml</div>
+        <div style="color:var(--text-faint);margin-top:var(--sp-2)">▸ HMAC-signed · short-TTL</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">PWA</div>
+      <h3>Installable. Offline. Cap-aware.</h3>
+      <p>Installable as a PWA on desktop and mobile. Offline set-detail. Audio cache with an admin-configurable size cap and oldest-first eviction. MediaSession on Android Chrome and iOS Safari shows lockscreen artwork + transport.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-family:var(--font-mono);font-size:var(--ts-xxs)">
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center">INSTALL TO HOME</div>
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center">OFFLINE SET DETAIL</div>
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center;color:var(--accent)">MEDIA SESSION</div>
+        <div style="padding:6px 8px;background:var(--bg-elevated);text-align:center">CAP-AWARE CACHE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Deploy</div>
+      <h3>One image. Three env vars. Port 1970.</h3>
+      <p>v0.1.2 ships as a single all-in-one container running web + worker + watcher under s6-overlay, on port 1970 (year of the first DJ live set). Three required env vars: SECRET_KEY, POSTGRES_PASSWORD, BASE_URL. Multi-arch images on GHCR, SBOM (CycloneDX), cosign keyless signatures.</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);line-height:1.8">
+        <div>setvault — single container</div>
+        <div>+ postgres</div>
+        <div>+ redis</div>
+        <div>+ tusd (uploads sidecar)</div>
+        <div style="color:var(--text-faint);margin-top:var(--sp-2)">▸ that's it · port 1970</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container"><div class="rule"></div></div>
+
+<!-- FEATURES — ROADMAP -->
+<section class="features container">
+  <div class="section-kicker">// on the roadmap</div>
+  <h2>Coming as we get there.</h2>
+  <p class="lede">Each tagged item gets its own phase; the architecture is in the master spec, the work is open in <a href="https://github.com/Bardesss/setvault/issues" style="color:var(--accent)">GitHub issues</a> when active.</p>
+
+  <div class="feature">
+    <div>
+      <div class="label">Compatibility <span class="roadmap-tag">ROADMAP</span></div>
+      <h3>Subsonic API for the mobile apps you already love.</h3>
+      <p>A Subsonic-compatible read API so Substreamer, DSub, Symfonium, play:Sub, Tempo, and Ultrasonic all just work. Live sets become Subsonic "albums," tracklist entries become "songs." (Phase 8.)</p>
+    </div>
+    <div class="feature-visual">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;font-family:var(--font-mono);font-size:var(--ts-xxs)">
+        <span class="roadmap-tag">Substreamer</span>
+        <span class="roadmap-tag">DSub</span>
+        <span class="roadmap-tag">Symfonium</span>
+        <span class="roadmap-tag">play:Sub</span>
+        <span class="roadmap-tag">Tempo</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Casting + multi-room <span class="roadmap-tag">ROADMAP</span></div>
+      <h3>Sonos. Chromecast. DLNA. Snapcast.</h3>
+      <p>A first-class Sonos SMAPI service so SetVault appears like Spotify in the Sonos app. Chromecast cast SDK. DLNA browse for Kodi/VLC/smart TVs. Snapcast for synced multi-room audio. (Phases 9–10.)</p>
+    </div>
+    <div class="feature-visual">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-family:var(--font-mono);font-size:var(--ts-xxs)">
+        <span class="roadmap-tag">Sonos SMAPI</span>
+        <span class="roadmap-tag">Chromecast</span>
+        <span class="roadmap-tag">DLNA browse</span>
+        <span class="roadmap-tag">Snapcast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div>
+      <div class="label">Ingest power tools <span class="roadmap-tag">ROADMAP</span></div>
+      <h3>Search across sources. Monitor what you care about.</h3>
+      <p>Library top-bar search across YouTube / SoundCloud / Mixcloud / Internet Archive with dedup badges. Mark artists / parties / venues as monitored; a worker scans periodically and either auto-ingests or lands candidates in a Discoveries inbox for review. (Phase 7.)</p>
+    </div>
+    <div class="feature-visual">
+      <div style="font-family:var(--font-mono);font-size:var(--ts-sm);line-height:1.8;color:var(--text-default)">
+        <div>monitor: artist <span style="color:var(--accent)">Solomun</span></div>
+        <div>monitor: party <span style="color:var(--accent)">Awakenings</span></div>
+        <div>monitor: venue <span style="color:var(--accent)">Berghain</span></div>
+        <div style="color:var(--text-faint);margin-top:var(--sp-2)">▸ scanned every hour</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container"><div class="rule"></div></div>
+
+<!-- INTEGRATIONS -->
+<section class="container" style="padding: var(--sp-8) 0;">
+  <div class="section-kicker">// integrations · today</div>
+  <h2>Plays nicely with what you <b>already run</b>.</h2>
+  <p class="lede">These are the integrations live in v0.1.2. The roadmap section above is what's coming.</p>
+
+  <div class="integrations-grid">
+    <div class="integration-cell"><div class="nm">Caddy</div><div class="kn">reverse proxy · bundled</div></div>
+    <div class="integration-cell"><div class="nm">Traefik / nginx</div><div class="kn">reverse proxy · works</div></div>
+    <div class="integration-cell"><div class="nm">MusicBrainz</div><div class="kn">metadata · free</div></div>
+    <div class="integration-cell"><div class="nm">Discogs</div><div class="kn">metadata · BYO key</div></div>
+    <div class="integration-cell"><div class="nm">AcoustID</div><div class="kn">audio fingerprint</div></div>
+    <div class="integration-cell"><div class="nm">yt-dlp</div><div class="kn">URL rip · bundled</div></div>
+    <div class="integration-cell"><div class="nm">Crowdin</div><div class="kn">translations</div></div>
+    <div class="integration-cell"><div class="nm">GHCR</div><div class="kn">multi-arch images</div></div>
+    <div class="integration-cell"><div class="nm">cosign</div><div class="kn">keyless signatures</div></div>
+  </div>
+</section>
+
+<div class="container"><div class="rule"></div></div>
+
+<!-- REQUIREMENTS -->
+<section class="container" style="padding: var(--sp-8) 0;">
+  <div class="section-kicker">// system requirements</div>
+  <h2>Sized for a homelab.</h2>
+  <p class="lede">Three reference tiers. The middle tier handles a small crew and a thousand sets without breaking a sweat.</p>
+
+  <div class="reqs-grid">
+    <div class="req-tier">
+      <h3>Minimum</h3>
+      <dl>
+        <dt>CPU</dt><dd>2 cores · Pi 4/5 OK · ARM64 fine</dd>
+        <dt>RAM</dt><dd>2 GB</dd>
+        <dt>Disk</dt><dd>2 GB app + your audio<br>(≈ 100 GB for 1k sets)</dd>
+        <dt>OS</dt><dd>Linux + Docker 24</dd>
+        <dt>Note</dt><dd>Ingest jobs take 5–15 min for a 90 min set on Pi 4.</dd>
+      </dl>
     </div>
 
-    <div class="badges">
-      <span>v0.1.0</span>
-      <span>GPL-3.0</span>
-      <span>multi-arch GHCR images</span>
-      <span>SBOM + cosign signed</span>
+    <div class="req-tier recommended">
+      <span class="pill">Recommended</span>
+      <h3>NUC-class</h3>
+      <dl>
+        <dt>CPU</dt><dd>4 cores x86_64 · modern Intel / AMD · Apple Silicon native</dd>
+        <dt>RAM</dt><dd>8 GB</dd>
+        <dt>Disk</dt><dd>SSD for app/DB · SSD or fast HDD for audio</dd>
+        <dt>OS</dt><dd>Debian / Ubuntu / Fedora / Alpine · Docker 24 · Compose v2</dd>
+        <dt>Network</dt><dd>HTTPS via reverse proxy · public DNS optional</dd>
+      </dl>
     </div>
 
-    <h2>What's in v0.1.0</h2>
-    <div class="grid">
-      <div class="feat"><h3>Ingest</h3><p>tus resumable uploads · paste-URL rip via yt-dlp · watch-folder auto-ingest · Opus + R128 normalize · waveform peaks</p></div>
-      <div class="feat"><h3>Tracklists</h3><p>Time-coded editor · M-key live add · paste-parse · 1001tracklists scrape · OCR import</p></div>
-      <div class="feat"><h3>Metadata</h3><p>Pluggable providers · MusicBrainz · Discogs · AcoustID · Bulk resolve · "ID this"</p></div>
-      <div class="feat"><h3>Player</h3><p>wavesurfer.js · 0.5×–2× variable speed · A↔B loop · mediaSession tracklist jumps</p></div>
-      <div class="feat"><h3>Engagement</h3><p>Comments w/ waveform markers · bookmarks · private notes · email + in-app notifications</p></div>
-      <div class="feat"><h3>Distribution</h3><p>Per-user RSS · HMAC-signed enclosures · embeddable /embed/[slug] player</p></div>
-      <div class="feat"><h3>PWA</h3><p>Installable · offline set detail · admin-capped audio cache · phone widths everywhere</p></div>
-      <div class="feat"><h3>Operations</h3><p>Multi-arch GHCR · SBOM (CycloneDX) · cosign keyless signatures · Alembic migrations · audit log</p></div>
+    <div class="req-tier">
+      <h3>Power-user</h3>
+      <dl>
+        <dt>CPU</dt><dd>6+ cores</dd>
+        <dt>RAM</dt><dd>16 GB</dd>
+        <dt>Disk</dt><dd>NVMe for DB/cache · separate bulk for audio · multi-TB OK</dd>
+        <dt>GPU</dt><dd>Not used</dd>
+        <dt>Workload</dt><dd>Batch enrichment, bigger libraries, more crew.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<div class="container"><div class="rule"></div></div>
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="container" style="padding: var(--sp-8) 0;">
+  <div class="quick-grid">
+    <div>
+      <div class="section-kicker">// quickstart</div>
+      <h2>From <code style="color:var(--accent)">curl</code> to <b>"the crew is listening"</b> in 60 seconds.</h2>
+      <p class="lede">Three commands. No build. No registration. Default config works on a fresh box.</p>
+      <ol>
+        <li>Pull the example <code>compose.yml</code> and <code>.env</code> from the repo.</li>
+        <li>Set <code>SECRET_KEY</code>, <code>POSTGRES_PASSWORD</code>, <code>BASE_URL</code>.</li>
+        <li><code>docker compose pull && docker compose up -d</code>.</li>
+        <li>Open <code>BASE_URL</code> (port 1970 by default). Create the admin via the first-run flow. Invite your crew.</li>
+      </ol>
     </div>
 
-    <h2>Self-host in three commands</h2>
-    <pre><code>curl -L -o compose.yml https://raw.githubusercontent.com/Bardesss/setvault/main/infra/docker/compose.example.yml
-curl -L -o .env       https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
-# edit .env: SECRET_KEY, POSTGRES_PASSWORD, BASE_URL
-docker compose pull &amp;&amp; docker compose up -d</code></pre>
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="title">setvault@nuc:~</span>
+      </div>
+<pre><span class="cmt"># fetch the example compose + env</span>
+<span class="prompt">$</span> curl -L -o compose.yml \
+    https://raw.githubusercontent.com/Bardesss/setvault/main/infra/docker/compose.example.yml
+<span class="prompt">$</span> curl -L -o .env \
+    https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
 
-    <p>
-      Multi-arch (<code>linux/amd64</code> + <code>linux/arm64</code>)
-      images live at
-      <a href="https://github.com/Bardesss/setvault/pkgs/container/setvault-web"><code>ghcr.io/bardesss/setvault-web</code></a>
-      and
-      <a href="https://github.com/Bardesss/setvault/pkgs/container/setvault-worker"><code>ghcr.io/bardesss/setvault-worker</code></a>.
-      Every release is signed with cosign and ships a CycloneDX SBOM.
-    </p>
+<span class="cmt"># set the three required env vars</span>
+<span class="prompt">$</span> openssl rand -base64 48
+<span class="prompt">$</span> $EDITOR .env <span class="cmt"># SECRET_KEY, POSTGRES_PASSWORD, BASE_URL</span>
 
+<span class="cmt"># pull + launch</span>
+<span class="prompt">$</span> docker compose pull
+<span class="prompt">$</span> docker compose up -d
+
+<span class="ok">✓</span> postgres: ready
+<span class="ok">✓</span> redis: ready
+<span class="ok">✓</span> tusd: listening on 1080
+<span class="ok">✓</span> setvault: <span class="url">http://localhost:1970</span>
+
+<span class="cmt"># open the URL printed by your reverse proxy</span></pre>
+    </div>
+  </div>
+
+  <!-- HONEST ABOUT AI -->
+  <div class="honest">
     <h2>Honest about AI</h2>
-    <p>
-      SetVault is built with substantial help from Claude Code. Every
-      change is reviewed, tested, and shipped by the human maintainer
-      — but the bulk of the code is co-authored with an LLM, and the
-      commits are marked accordingly.
-    </p>
+    <p>SetVault is built with substantial help from Claude Code. Every change is reviewed, tested, and shipped by the human maintainer — but the bulk of the code is co-authored with an LLM, and the commits are marked accordingly. If you'd rather not run code built that way, that's fine; the source is here for you to read either way.</p>
+  </div>
+</section>
 
-    <footer>
-      <p>
-        © 2026 SetVault contributors.
-        Source under <a href="https://github.com/Bardesss/setvault/blob/main/LICENSE">GPL-3.0-or-later</a>.
-        Translations via <a href="https://crowdin.com/project/setvault">Crowdin</a>.
-      </p>
-    </footer>
-  </main>
+<!-- CTA -->
+<section class="cta-section container">
+  <div class="section-kicker">// next step</div>
+  <h2>Stop letting Mixcloud rate-limit your <b>own crew's listening</b>.</h2>
+  <p class="lede">SetVault is open-source and runs on hardware you already own. The vault is yours; the data is yours; the listening is yours.</p>
+  <div class="ctas">
+    <a class="btn btn-primary" href="https://github.com/Bardesss/setvault">Source on GitHub →</a>
+    <a class="btn" href="https://github.com/Bardesss/setvault/blob/main/CHANGELOG.md">Release notes</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer container">
+  <div class="footer-row">
+    <a class="brand" href="/"><span class="brand-dot"></span><span class="brand-name">SETVAULT</span></a>
+    <span style="color: var(--text-faint)">·</span>
+    <a href="https://github.com/Bardesss/setvault#readme">Docs</a>
+    <a href="https://github.com/Bardesss/setvault/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/Bardesss/setvault">GitHub</a>
+    <a href="https://github.com/Bardesss/setvault/issues">Issues</a>
+    <a href="https://github.com/Bardesss/setvault/discussions">Discussions</a>
+    <a href="https://crowdin.com/project/setvault">Translate</a>
+    <span class="footer-right">GPL-3.0 · &copy; 2026</span>
+  </div>
+  <div class="footer-credit">
+    Built with FastAPI + SvelteKit · postgres + pgvector · self-hosted fonts (bricolage grotesque + jetbrains mono) · zero CDN deps in production · zero telemetry
+  </div>
+</footer>
+
+</div>
 </body>
 </html>
