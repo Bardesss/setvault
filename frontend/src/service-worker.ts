@@ -1,5 +1,6 @@
 /// <reference types="@sveltejs/kit" />
 import { build, files, version } from "$service-worker";
+import { chooseStrategy } from "$lib/sw-strategy";
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -35,4 +36,86 @@ sw.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch handler is appended in the next task.
+sw.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== sw.location.origin) return;  // skip cross-origin
+
+  const strategy = chooseStrategy(url.pathname, PRECACHE_URLS);
+  if (strategy === "api" || strategy === "bypass") return;
+
+  if (strategy === "static") {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
+  } else if (strategy === "audio") {
+    event.respondWith(audioCacheFirst(request));
+  } else {
+    event.respondWith(networkFirst(request, RUNTIME_CACHE));
+  }
+});
+
+async function cacheFirst(request: Request, cacheName: string): Promise<Response> {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
+
+async function audioCacheFirst(request: Request): Promise<Response> {
+  const cache = await caches.open(AUDIO_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    await cache.put(request, response.clone());
+    await enforceAudioCap();
+  }
+  return response;
+}
+
+async function networkFirst(request: Request, cacheName: string): Promise<Response> {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw err;
+  }
+}
+
+// Audio-cap state. Main thread sends `{type: "set-cap", bytes}` via
+// postMessage; default keeps us under 1 GB until the user opens settings.
+let _audioCapBytes = 1024 * 1024 * 1024;
+
+sw.addEventListener("message", (event) => {
+  const data = event.data as { type?: string; bytes?: number } | null;
+  if (data?.type === "set-cap" && typeof data.bytes === "number") {
+    _audioCapBytes = data.bytes;
+  }
+});
+
+async function enforceAudioCap(): Promise<void> {
+  const cache = await caches.open(AUDIO_CACHE);
+  const keys = await cache.keys();
+  let total = 0;
+  const sized: { req: Request; size: number }[] = [];
+  for (const req of keys) {
+    const res = await cache.match(req);
+    if (!res) continue;
+    const blob = await res.clone().blob();
+    sized.push({ req, size: blob.size });
+    total += blob.size;
+  }
+  // Cache iteration order is roughly insertion-order; evict oldest first.
+  while (total > _audioCapBytes && sized.length > 0) {
+    const oldest = sized.shift()!;
+    await cache.delete(oldest.req);
+    total -= oldest.size;
+  }
+}
