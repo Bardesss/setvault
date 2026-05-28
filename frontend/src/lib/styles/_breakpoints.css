@@ -1,0 +1,14 @@
+/* Responsive breakpoint tokens.
+ *
+ *   --bp-phone   : 0..600px           — phone portrait
+ *   --bp-tablet  : 600..900px         — tablet / small landscape phone
+ *   --bp-desktop : 900px+             — desktop / wide tablet
+ *
+ * Use as `@media (max-width: 600px) { ... }`. The tokens themselves are
+ * documentation; media-query syntax doesn't accept var().
+ */
+:root {
+  --bp-phone: 600px;
+  --bp-tablet: 900px;
+  --bp-desktop: 1200px;
+}

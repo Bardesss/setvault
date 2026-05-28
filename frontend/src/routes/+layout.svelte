@@ -1,6 +1,7 @@
 <script lang="ts">
   import "$lib/styles/fonts.css";
   import "$lib/styles/tokens.css";
+  import "$lib/styles/_breakpoints.css";
   import "$lib/styles/base.css";
   import "$lib/styles/components.css";
   import { onMount } from "svelte";
@@ -47,5 +48,11 @@
   .main { min-width: 0; }
   @media (max-width: 760px) {
     .app-shell { grid-template-columns: 1fr; }
+  }
+  /* Phone: NavRail becomes a fixed bottom bar, so leave room for it */
+  @media (max-width: 600px) {
+    .app-shell:not(.no-shell) .main {
+      padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
   }
 </style>
