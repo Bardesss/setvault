@@ -20,21 +20,35 @@
   }
 </script>
 
-<form class="card" on:submit|preventDefault={accept}>
-  <h1>{$_("auth.invite.heading")}</h1>
-  <label><span>{$_("auth.invite.username")}</span><input bind:value={username} required minlength="2" /></label>
-  <label><span>{$_("auth.invite.display_name")}</span><input bind:value={display_name} required /></label>
-  <label><span>{$_("auth.invite.password")}</span><input type="password" bind:value={password} required minlength="12" /></label>
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <button type="submit">{$_("auth.invite.accept_invite")}</button>
-</form>
+<svelte:head><title>{$_("auth.invite.heading")} — SetVault</title></svelte:head>
 
-<style>
-  .card { max-width: 380px; margin: 10vh auto; display: grid; gap: var(--sp-3); }
-  label { display: grid; gap: var(--sp-1); }
-  input { padding: var(--sp-2); background: var(--bg-surface);
-          border: 1px solid var(--border-default); border-radius: var(--r-md); color: inherit; }
-  .error { color: var(--accent-warning); }
-  button { padding: var(--sp-3); background: var(--accent); color: var(--bg-base);
-           border: 0; border-radius: var(--r-md); font-weight: 700; }
-</style>
+<section class="auth-shell">
+  <form class="auth-card" on:submit|preventDefault={accept}>
+    <div class="auth-brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
+    </div>
+
+    <h1>{$_("auth.invite.heading")}</h1>
+    <p class="auth-caption">// finish creating your account</p>
+
+    <label>
+      <span>{$_("auth.invite.username")}</span>
+      <input bind:value={username} required minlength="2" />
+    </label>
+
+    <label>
+      <span>{$_("auth.invite.display_name")}</span>
+      <input bind:value={display_name} required />
+    </label>
+
+    <label>
+      <span>{$_("auth.invite.password")}</span>
+      <input type="password" bind:value={password} required minlength="12" />
+    </label>
+
+    {#if error}<p class="auth-error" role="alert">{error}</p>{/if}
+
+    <button class="btn btn-primary" type="submit">{$_("auth.invite.accept_invite")}</button>
+  </form>
+</section>
