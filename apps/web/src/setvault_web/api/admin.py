@@ -1,17 +1,25 @@
 from __future__ import annotations
 
+import logging
 import os
+import shutil
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from setvault_core.models.catalog import LiveSet
+from setvault_core.models.api_token import ApiToken
+from setvault_core.models.catalog import LiveSet, MediaRoot
+from setvault_core.models.enrichment import ProviderResponse
 from setvault_core.models.identity import User
-from setvault_core.models.system import AuditEvent
+from setvault_core.models.system import AuditEvent, NotificationConnector
+from setvault_core.services.system_config import get_config
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web import __version__
 from setvault_web.deps import db_session, require_admin
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -67,4 +75,113 @@ async def system_info(
         "user_count": int(user_count),
         "set_count": int(set_count),
         "env": env,
+    }
+
+
+def _disk_usage_for(host_path: str) -> dict | None:
+    try:
+        usage = shutil.disk_usage(host_path)
+    except OSError:
+        return None
+    return {
+        "free_bytes": int(usage.free),
+        "used_bytes": int(usage.used),
+        "total_bytes": int(usage.total),
+    }
+
+
+@router.get("/health")
+async def health(
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+):
+    """Consolidated admin health snapshot (§J11).
+
+    Returns storage roots (with disk usage + last probe), notification
+    connectors (with last delivery), API tokens (counts of expiring/expired),
+    plus the cached GitHub release info from the daily poll.
+    """
+    storage_roots: list[dict] = []
+    for r in (await session.execute(
+        select(MediaRoot).order_by(MediaRoot.created_at)
+    )).scalars():
+        storage_roots.append({
+            "id": str(r.id),
+            "name": r.name,
+            "host_path": r.host_path,
+            "last_health_check_at": (
+                r.last_health_check_at.isoformat() if r.last_health_check_at else None
+            ),
+            "last_health_status": r.last_health_status,
+            "default_for_ingest": r.default_for_ingest,
+            **(_disk_usage_for(r.host_path) or {}),
+        })
+
+    connectors: list[dict] = []
+    for c in (await session.execute(
+        select(NotificationConnector).order_by(NotificationConnector.created_at)
+    )).scalars():
+        connectors.append({
+            "id": str(c.id),
+            "name": c.name,
+            "kind": c.kind,
+            "enabled": c.enabled,
+            "last_test_at": c.last_test_at.isoformat() if c.last_test_at else None,
+            "last_test_status": c.last_test_status,
+        })
+
+    # API token counts. "Expired" + "expiring within 7 days" — we don't store
+    # an expires_at on ApiToken right now (rss-scope tokens are revocable but
+    # don't carry a TTL), so report active + revoked counts.
+    token_total = (await session.execute(select(func.count(ApiToken.id)))).scalar_one()
+    token_revoked = (await session.execute(
+        select(func.count(ApiToken.id)).where(ApiToken.revoked_at.is_not(None))
+    )).scalar_one()
+
+    # Provider hit-rate over the last 24h — cheap snapshot for the dashboard.
+    since = datetime.now(UTC) - timedelta(hours=24)
+    provider_24h: dict[str, dict] = {}
+    rows = (await session.execute(
+        select(ProviderResponse.provider, ProviderResponse.status, func.count())
+        .where(ProviderResponse.created_at > since)
+        .group_by(ProviderResponse.provider, ProviderResponse.status)
+    )).all()
+    for provider, status, count in rows:
+        bucket = provider_24h.setdefault(
+            provider, {"provider": provider, "ok": 0, "error": 0},
+        )
+        if status == "ok":
+            bucket["ok"] += int(count)
+        else:
+            bucket["error"] += int(count)
+    for bucket in provider_24h.values():
+        total = bucket["ok"] + bucket["error"]
+        bucket["error_rate_24h"] = (bucket["error"] / total) if total else 0.0
+
+    config = await get_config(session)
+    is_outdated = (
+        config.latest_release_version is not None
+        and config.latest_release_version.lstrip("v") != __version__.lstrip("v")
+    )
+
+    return {
+        "version": {
+            "current": __version__,
+            "latest_known": config.latest_release_version,
+            "latest_release_url": config.latest_release_url,
+            "latest_checked_at": (
+                config.latest_release_checked_at.isoformat()
+                if config.latest_release_checked_at else None
+            ),
+            "is_outdated": bool(is_outdated),
+        },
+        "audit_retention_days": config.audit_retention_days,
+        "storage_roots": storage_roots,
+        "connectors": connectors,
+        "providers": list(provider_24h.values()),
+        "tokens": {
+            "total": int(token_total),
+            "revoked": int(token_revoked),
+            "active": int(token_total) - int(token_revoked),
+        },
     }
