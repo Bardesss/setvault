@@ -24,6 +24,7 @@ from setvault_web.api import notes as notes_api
 from setvault_web.api import notifications as notifications_api
 from setvault_web.api import password_reset as password_reset_api
 from setvault_web.api import providers as providers_api
+from setvault_web.api import recycle as recycle_api
 from setvault_web.api import search as search_api
 from setvault_web.api import sets as sets_api
 from setvault_web.api import tracklist as tracklist_api
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(feeds_api.router)
     app.include_router(embed_api.router)
     app.include_router(watch_folders_api.router)
+    app.include_router(recycle_api.router)
     if dev_seed_api.is_enabled():
         app.include_router(dev_seed_api.router)
 
