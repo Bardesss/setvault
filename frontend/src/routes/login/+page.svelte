@@ -23,31 +23,32 @@
   }
 </script>
 
-<form class="login-card" on:submit|preventDefault={submit}>
-  <h1>{$_("auth.login.heading")}</h1>
-  <label>
-    <span>{$_("auth.login.email")}</span>
-    <input type="email" bind:value={email} required autocomplete="email" />
-  </label>
-  <label>
-    <span>{$_("auth.login.password")}</span>
-    <input type="password" bind:value={password} required autocomplete="current-password" />
-  </label>
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <button type="submit" disabled={busy}>{busy ? $_("auth.login.submitting") : $_("auth.login.submit")}</button>
-</form>
+<svelte:head><title>{$_("auth.login.heading")} — SetVault</title></svelte:head>
 
-<style>
-  .login-card { max-width: 360px; margin: 12vh auto; display: grid; gap: var(--sp-3); }
-  label { display: grid; gap: var(--sp-1); }
-  input { padding: var(--sp-2); background: var(--bg-surface);
-          border: 1px solid var(--border-default); border-radius: var(--r-md); color: inherit; }
-  .error { color: var(--accent-warning); }
-  button { padding: var(--sp-3); background: var(--accent); color: var(--bg-base);
-           border: 0; border-radius: var(--r-md); font-weight: 700; cursor: pointer; }
-  @media (max-width: 600px) {
-    .login-card { margin: var(--sp-6) var(--sp-3); max-width: none; }
-    input { font-size: 16px; padding: var(--sp-3); }  /* prevents iOS auto-zoom on focus */
-    button { padding: var(--sp-4); }
-  }
-</style>
+<section class="auth-shell">
+  <form class="auth-card" on:submit|preventDefault={submit}>
+    <div class="auth-brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">SETVAULT</span>
+    </div>
+
+    <h1>{$_("auth.login.heading")}</h1>
+    <p class="auth-caption">// access your vault</p>
+
+    <label>
+      <span>{$_("auth.login.email")}</span>
+      <input type="email" bind:value={email} required autocomplete="email" />
+    </label>
+
+    <label>
+      <span>{$_("auth.login.password")}</span>
+      <input type="password" bind:value={password} required autocomplete="current-password" />
+    </label>
+
+    {#if error}<p class="auth-error" role="alert">{error}</p>{/if}
+
+    <button class="btn btn-primary" type="submit" disabled={busy}>
+      {busy ? $_("auth.login.submitting") : $_("auth.login.submit")}
+    </button>
+  </form>
+</section>

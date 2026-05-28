@@ -75,15 +75,21 @@ Per spec §12:
 - No external script tags.
 - The whole `frontend/design/` folder runs offline from `file://` or a local static server.
 
-## How Phase 2 consumes this
+## How this design package is consumed
 
-The Phase 2 (Core vault) implementation plan should:
+**Phase 2 (Core vault, shipped)** consumed only the **foundation** layer:
+1. `assets/tokens.css` → `frontend/src/lib/styles/tokens.css` (single source of CSS variables; imported by every app route via `+layout.svelte`).
+2. `fonts/` → `frontend/static/fonts/` and `assets/fonts.css` → `frontend/src/lib/styles/fonts.css`.
+3. `assets/base.css` and `assets/components.css` copied identically.
 
-1. Copy `assets/tokens.css` into the SvelteKit app's `src/lib/styles/tokens.css`. Don't redefine tokens — import or `@import` this single source.
-2. Copy `fonts/` into the SvelteKit app's `static/fonts/` and `assets/fonts.css` into `src/lib/styles/fonts.css`.
-3. Each component pattern in `components.html` becomes one Svelte component with the same class names. The CSS in `assets/components.css` is the starting point — refactor into Svelte's scoped CSS pattern but keep the rendered classnames identical for visual continuity.
-4. Each screen in `screens/*.html` becomes a SvelteKit route under `frontend/src/routes/`. The HTML structure in those files is the production target — substituting `{#each}` blocks for repeated rows, etc.
-5. The landing page becomes a separate SvelteKit static-adapter build under `site/` per the spec.
+The Phase 2 app screens were built using these tokens but with simplified layouts — enough to be functional, not visually faithful to the screen mockups.
+
+**Phase 6 (Mockup Parity)** consumes the **screen layout** layer:
+1. Each screen in `screens/*.html` becomes the visual target for the corresponding SvelteKit route. HTML structure in those files is the production target — substituting `{#each}` blocks for repeated rows, etc.
+2. Patterns in `components.html` become Svelte components (or additions to `components.css`) with rendered classnames preserved for visual continuity.
+3. `landing.html` is ported into `site/index.html` as a plain static HTML page (no SvelteKit static-adapter — the original spec direction was relaxed because a one-page marketing site doesn't warrant a build step). Shared `tokens.css` / `fonts.css` / `base.css` / `components.css` reach the landing via a deploy-time copy step in `pages.yml`. See `docs/superpowers/specs/2026-05-28-phase-6-mockup-parity-design.md` for the full plan.
+
+The contract from Phase 2 — "rendered classnames stay identical for visual continuity" — still holds. Phase 6 extracts more patterns into `components.css` so the static landing can share them with the app.
 
 ## Reviewing this package
 

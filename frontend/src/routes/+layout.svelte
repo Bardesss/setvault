@@ -10,6 +10,7 @@
   import { session } from "$lib/stores/session";
   import { setupI18n } from "$lib/i18n";
   import NavRail from "$lib/components/NavRail.svelte";
+  import TopBar from "$lib/components/TopBar.svelte";
   import MiniPlayer from "$lib/components/MiniPlayer.svelte";
 
   setupI18n();
@@ -37,19 +38,39 @@
 </script>
 
 <div class="app-shell" class:no-shell={!showShell}>
-  {#if showShell && user}<NavRail {user} />{/if}
+  {#if showShell && user}
+    <TopBar {user} />
+    <NavRail {user} />
+  {/if}
   <main class="main"><slot /></main>
 </div>
 {#if showShell}<MiniPlayer />{/if}
 
 <style>
-  .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-  .app-shell.no-shell { grid-template-columns: 1fr; }
-  .main { min-width: 0; }
-  @media (max-width: 760px) {
-    .app-shell { grid-template-columns: 1fr; }
+  .app-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "topbar topbar"
+      "rail main";
+    min-height: 100vh;
   }
-  /* Phone: NavRail becomes a fixed bottom bar, so leave room for it */
+  .app-shell.no-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    grid-template-areas: "main";
+  }
+  .main { grid-area: main; min-width: 0; }
+  @media (max-width: 760px) {
+    .app-shell {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "topbar"
+        "main";
+    }
+    .app-shell :global(.rail) { grid-area: auto; }
+  }
   @media (max-width: 600px) {
     .app-shell:not(.no-shell) .main {
       padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));

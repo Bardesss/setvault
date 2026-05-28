@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,7 +18,7 @@ from setvault_core.schemas.feeds import (
 )
 from setvault_core.services.api_tokens import mint_api_token, revoke_api_token
 from setvault_core.services.passwords import hash_password, verify_password
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session
@@ -38,6 +39,17 @@ class ActivityItem(BaseModel):
     subject_id: str | None
     payload: dict
     created_at: str
+
+
+class HomeSummaryOut(BaseModel):
+    sets_count: int
+    tracks_resolved_count: int
+    tracks_needing_ids_count: int
+    audio_bytes: int
+    deltas_window_days: int
+    sets_delta: int
+    tracks_resolved_delta: int
+    tracks_needing_ids_delta: int
 
 
 class ChangePasswordIn(BaseModel):
@@ -105,6 +117,50 @@ async def activity(
         )
         for e in rows
     ]
+
+
+@router.get("/home-summary", response_model=HomeSummaryOut)
+async def home_summary(
+    _: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    from setvault_core.models.tracklist import TracklistEntry
+
+    window_days = 7
+    since = datetime.now(UTC) - timedelta(days=window_days)
+
+    sets_total_q = select(func.count(LiveSet.id)).where(LiveSet.deleted_at.is_(None))
+    sets_recent_q = sets_total_q.where(LiveSet.created_at >= since)
+
+    # "resolved" = status is "resolved" or "acoustid_confirmed" (anything except "raw")
+    tracks_resolved_q = select(func.count(TracklistEntry.id)).where(
+        TracklistEntry.status != "raw"
+    )
+    tracks_unresolved_q = select(func.count(TracklistEntry.id)).where(
+        TracklistEntry.status == "raw"
+    )
+    tracks_resolved_recent_q = tracks_resolved_q.where(TracklistEntry.created_at >= since)
+    tracks_unresolved_recent_q = tracks_unresolved_q.where(TracklistEntry.created_at >= since)
+
+    sets_count = (await session.execute(sets_total_q)).scalar_one() or 0
+    sets_delta = (await session.execute(sets_recent_q)).scalar_one() or 0
+    tracks_resolved = (await session.execute(tracks_resolved_q)).scalar_one() or 0
+    tracks_unresolved = (await session.execute(tracks_unresolved_q)).scalar_one() or 0
+    tracks_resolved_delta = (await session.execute(tracks_resolved_recent_q)).scalar_one() or 0
+    tracks_unresolved_delta = (
+        await session.execute(tracks_unresolved_recent_q)
+    ).scalar_one() or 0
+
+    return HomeSummaryOut(
+        sets_count=sets_count,
+        tracks_resolved_count=tracks_resolved,
+        tracks_needing_ids_count=tracks_unresolved,
+        audio_bytes=0,  # no file-size column exists on LiveSet yet
+        deltas_window_days=window_days,
+        sets_delta=sets_delta,
+        tracks_resolved_delta=tracks_resolved_delta,
+        tracks_needing_ids_delta=tracks_unresolved_delta,
+    )
 
 
 class NotificationPreferenceOut(BaseModel):

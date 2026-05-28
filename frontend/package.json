@@ -8,7 +8,9 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:unit": "vitest run --passWithNoTests",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "site:build": "node ../scripts/build-site-assets.mjs",
+    "site:serve": "npm run site:build && npx --yes serve ../site"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.0",
