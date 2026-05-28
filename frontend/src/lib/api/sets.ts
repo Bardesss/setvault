@@ -32,6 +32,7 @@ export interface SetDetail extends SetSummary {
 export interface SetState {
   position_seconds: number;
   completed: boolean;
+  playback_rate?: number;
 }
 
 export const listSets = () =>

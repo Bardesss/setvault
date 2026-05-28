@@ -19,6 +19,16 @@
   let commentMarkers: Array<{ id: string; t: number; author: string; excerpt: string }> = [];
   let tracklistEntries: TracklistEntry[] = [];
 
+  // §E4 variable speed (0.5×–2×, 0.05 step). Persisted per (user, set) via
+  // UserSetState.playback_rate so the choice sticks across sessions.
+  let playbackRate = 1.0;
+
+  // §E5 A↔B loop. Ephemeral client-side state: clears on page reload. The
+  // shortcuts are `[` (mark A at playhead), `]` (mark B at playhead),
+  // `\` (clear loop).
+  let loopStart: number | null = null;
+  let loopEnd: number | null = null;
+
   async function loadCommentMarkers(): Promise<void> {
     try {
       const data = await listComments(set.slug);
@@ -81,10 +91,52 @@
       await putSetState(set.slug, {
         position_seconds: position,
         completed,
+        playback_rate: playbackRate,
       });
     } catch {
       /* best-effort; ignore network errors during playback */
     }
+  }
+
+  function clampRate(r: number): number {
+    if (!Number.isFinite(r)) return 1.0;
+    return Math.max(0.5, Math.min(2.0, Math.round(r * 100) / 100));
+  }
+
+  function setRate(rate: number): void {
+    playbackRate = clampRate(rate);
+    if (ws) {
+      try {
+        ws.setPlaybackRate(playbackRate, true);
+      } catch {
+        // Older wavesurfer or unsupported browser — second arg silently ignored.
+        ws.setPlaybackRate(playbackRate);
+      }
+    }
+  }
+
+  function bumpRate(delta: number): void {
+    setRate(playbackRate + delta);
+    void saveState();
+  }
+
+  // §E5 — A↔B loop helpers
+  function setLoopStart(): void {
+    if (!ws) return;
+    loopStart = position;
+    if (loopEnd !== null && loopEnd <= loopStart) loopEnd = null;
+  }
+  function setLoopEnd(): void {
+    if (!ws) return;
+    if (loopStart === null || position <= loopStart) {
+      // Treat lone ] as "set start AND end at playhead" — sensible but rare.
+      loopStart = Math.max(0, position - 0.01);
+    }
+    loopEnd = position;
+  }
+  function clearLoop(): void {
+    loopStart = null;
+    loopEnd = null;
   }
 
   function setMediaSession(): void {
@@ -152,6 +204,21 @@
     } else if (key === "ArrowDown") {
       e.preventDefault();
       adjustVolume(-0.1);
+    } else if (key === "[") {
+      e.preventDefault();
+      setLoopStart();
+    } else if (key === "]") {
+      e.preventDefault();
+      setLoopEnd();
+    } else if (key === "\\") {
+      e.preventDefault();
+      clearLoop();
+    } else if (key === ">" || key === ".") {
+      e.preventDefault();
+      bumpRate(0.05);
+    } else if (key === "<" || key === ",") {
+      e.preventDefault();
+      bumpRate(-0.05);
     }
   }
 
@@ -221,12 +288,20 @@
             && remote.position_seconds < duration - 1) {
           ws?.setTime(remote.position_seconds);
         }
+        if (remote.playback_rate && remote.playback_rate !== playbackRate) {
+          setRate(remote.playback_rate);
+        }
       } catch {
         /* no prior state */
       }
     });
     ws.on("timeupdate", (t: number) => {
       position = t;
+      // §E5 A↔B loop bounce: if we've crossed the loop end, jump back to start.
+      if (loopStart !== null && loopEnd !== null && t >= loopEnd) {
+        ws?.setTime(loopStart);
+        return;
+      }
       player.update((p) => ({ ...p, position }));
     });
     ws.on("play", () => {
@@ -272,6 +347,14 @@
     bind:this={container}
     aria-label="audio waveform"
   ></div>
+  {#if duration > 0 && loopStart !== null && loopEnd !== null}
+    <div
+      class="loop-band"
+      style="left: {(loopStart / duration) * 100}%; width: {((loopEnd - loopStart) / duration) * 100}%"
+      aria-label="A↔B loop region"
+      data-test="loop-band"
+    ></div>
+  {/if}
   {#if duration > 0 && commentMarkers.length > 0}
     <div class="markers" aria-hidden="true">
       {#each commentMarkers as m (m.id)}
@@ -299,7 +382,30 @@
     <span class="time mono" aria-live="off">
       {formatTime(position)} / {formatTime(duration || (set.duration_seconds ?? 0))}
     </span>
-    <span class="hint">space play/pause - j/l seek -10/+10s - arrows seek/volume</span>
+
+    <label class="speed mono" data-test="speed-control">
+      <span class="lbl">Speed</span>
+      <input
+        type="range"
+        min="0.5"
+        max="2"
+        step="0.05"
+        bind:value={playbackRate}
+        on:input={() => setRate(playbackRate)}
+        on:change={() => void saveState()}
+        aria-label="playback speed"
+      />
+      <span class="rate">{playbackRate.toFixed(2)}×</span>
+    </label>
+
+    {#if loopStart !== null || loopEnd !== null}
+      <span class="loop-indicator mono" data-test="loop-indicator">
+        Loop {loopStart !== null ? formatTime(loopStart) : "—"}…{loopEnd !== null ? formatTime(loopEnd) : "—"}
+        <button type="button" class="loop-clear" on:click={clearLoop} aria-label="clear loop">×</button>
+      </span>
+    {/if}
+
+    <span class="hint">space play/pause - j/l seek -10/+10s - arrows seek/volume - [ ] \\ loop - &lt; &gt; speed</span>
   </div>
 </div>
 
@@ -365,5 +471,43 @@
   @media (max-width: 600px) {
     .markers { height: 14px; }
     .marker { width: 14px; height: 14px; }  /* bigger touch target */
+  }
+  .loop-band {
+    position: absolute;
+    top: var(--sp-2);
+    bottom: var(--sp-2);
+    background: var(--accent-soft, rgba(0, 255, 178, 0.14));
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .player { position: relative; }
+  .speed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--ts-xs);
+  }
+  .speed .lbl { color: var(--text-faint); }
+  .speed input[type="range"] { width: 80px; }
+  .speed .rate { min-width: 3em; text-align: right; }
+  .loop-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: 0 var(--sp-1);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    font-size: var(--ts-xs);
+    color: var(--accent);
+  }
+  .loop-clear {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: inherit;
   }
 </style>
