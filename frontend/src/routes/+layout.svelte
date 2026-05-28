@@ -3,6 +3,8 @@
   import "$lib/styles/tokens.css";
   import "$lib/styles/base.css";
   import "$lib/styles/components.css";
+  import { onMount } from "svelte";
+  import { browser } from "$app/environment";
   import { page } from "$app/stores";
   import { session } from "$lib/stores/session";
   import { setupI18n } from "$lib/i18n";
@@ -10,6 +12,18 @@
   import MiniPlayer from "$lib/components/MiniPlayer.svelte";
 
   setupI18n();
+
+  onMount(async () => {
+    if (browser && "serviceWorker" in navigator) {
+      try {
+        await navigator.serviceWorker.register("/service-worker.js", {
+          type: "module",
+        });
+      } catch {
+        // best-effort; offline mode just doesn't activate
+      }
+    }
+  });
 
   export let data: { user: import("$lib/api/auth").CurrentUser | null };
   $: session.set(data.user);
