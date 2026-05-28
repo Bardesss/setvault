@@ -1,6 +1,9 @@
 <script lang="ts">
   import SetCard from "$lib/components/SetCard.svelte";
   import FilterSidebar from "$lib/components/FilterSidebar.svelte";
+  import BulkActionToolbar from "$lib/components/BulkActionToolbar.svelte";
+  import { invalidateAll } from "$app/navigation";
+  import { session } from "$lib/stores/session";
   import type { PageData } from "./$types";
 
   export let data: PageData;
@@ -15,16 +18,102 @@
         .filter((y): y is number => y !== null && !Number.isNaN(y)),
     ),
   ).sort((a, b) => b - a);
+
+  $: isAdmin = $session?.role === "admin";
+
+  // Selection by set id. Reassigning the Set forces reactivity.
+  let selected = new Set<string>();
+  let lastClickedIndex: number | null = null;
+
+  function toggle(id: string, index: number, withShift: boolean) {
+    if (withShift && lastClickedIndex !== null) {
+      const [a, b] = [lastClickedIndex, index].sort((x, y) => x - y);
+      const target = !selected.has(id);
+      const next = new Set(selected);
+      for (let i = a; i <= b; i++) {
+        const setId = data.sets[i]?.id;
+        if (!setId) continue;
+        if (target) next.add(setId);
+        else next.delete(setId);
+      }
+      selected = next;
+    } else {
+      const next = new Set(selected);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      selected = next;
+    }
+    lastClickedIndex = index;
+  }
+
+  function toggleAll() {
+    if (selected.size === data.sets.length) {
+      selected = new Set();
+    } else {
+      selected = new Set(data.sets.map((s) => s.id));
+    }
+  }
+
+  function clearSelection() {
+    selected = new Set();
+    lastClickedIndex = null;
+  }
+
+  async function afterBulkAction(_action: string) {
+    clearSelection();
+    await invalidateAll();
+  }
 </script>
 
 <svelte:head><title>Library - SetVault</title></svelte:head>
 
 <section>
   <h1>Library</h1>
+
+  {#if isAdmin && selected.size > 0}
+    <BulkActionToolbar
+      selectedIds={Array.from(selected)}
+      onCleared={clearSelection}
+      onSubmitted={afterBulkAction}
+    />
+  {/if}
+
   <div class="layout">
     <FilterSidebar tags={tagOptions} venueKinds={[]} years={yearOptions} />
-    <div class="grid">
-      {#each data.sets as s (s.slug)}<SetCard set={s} />{/each}
+    <div>
+      {#if isAdmin && data.sets.length > 0}
+        <p class="select-all-row">
+          <label>
+            <input
+              type="checkbox"
+              checked={selected.size === data.sets.length}
+              indeterminate={selected.size > 0 && selected.size < data.sets.length}
+              on:change={toggleAll}
+            />
+            Select all ({selected.size}/{data.sets.length})
+          </label>
+        </p>
+      {/if}
+      <div class="grid">
+        {#each data.sets as s, i (s.slug)}
+          {#if isAdmin}
+            <div class="card-wrap" class:selected={selected.has(s.id)}>
+              <button
+                type="button"
+                class="select-toggle"
+                aria-label="Toggle selection"
+                aria-pressed={selected.has(s.id)}
+                on:click|preventDefault={(e) => toggle(s.id, i, e.shiftKey)}
+              >
+                <span class="checkbox" data-checked={selected.has(s.id)}></span>
+              </button>
+              <SetCard set={s} />
+            </div>
+          {:else}
+            <SetCard set={s} />
+          {/if}
+        {/each}
+      </div>
     </div>
   </div>
 </section>
@@ -43,6 +132,42 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--sp-3);
+  }
+  .select-all-row { margin: 0 0 var(--sp-2) 0; font-size: var(--ts-sm); }
+  .select-all-row label { display: inline-flex; align-items: center; gap: var(--sp-1); cursor: pointer; }
+  .card-wrap {
+    position: relative;
+    border-radius: var(--r-md);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    transition: outline-color 100ms;
+  }
+  .card-wrap.selected { outline-color: var(--accent); }
+  .select-toggle {
+    position: absolute;
+    top: var(--sp-2);
+    left: var(--sp-2);
+    z-index: 5;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  .checkbox {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-default);
+    border-radius: 3px;
+  }
+  .checkbox[data-checked="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
   }
   @media (max-width: 600px) {
     section { padding: var(--sp-3); }
