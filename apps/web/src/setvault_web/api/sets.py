@@ -13,8 +13,8 @@ from setvault_core.models.catalog import LiveSet, LiveSetTag, MediaRoot, Tag
 from setvault_core.models.engagement import UserSetState
 from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import PartyOut, SeriesOut, VenueOut
-from setvault_core.services.api_tokens import resolve_api_token, touch_last_used
 from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
+from setvault_core.services.signed_urls import verify_stream_sig
 from setvault_core.schemas.sets import (
     SetArtistOut,
     SetDetailOut,
@@ -32,35 +32,37 @@ from setvault_web.deps import current_user, db_session, require_admin
 router = APIRouter(prefix="/api/sets", tags=["sets"])
 
 
-async def _stream_authorize(
-    session: AsyncSession,
+def _stream_authorize(
     live: LiveSet,
     *,
-    token: str | None,
+    sig: str | None,
+    exp: int | None,
     session_cookie: str | None,
     signer: SessionSigner,
+    secret_key: str,
 ) -> None:
     """Authorize access to a set's stream/waveform.
 
     Order:
       1. If LiveSet.embed_allowed is True, anonymous access is permitted.
-      2. If a ?token= is provided and resolves to an rss-scope ApiToken,
-         allow and bump last_used_at.
+      2. If a valid ``?sig=&exp=`` pair is present for this slug, allow. The
+         signature is HMAC-SHA256 over ``slug:exp`` with secret_key; this is
+         the path podcast apps use, via short-TTL URLs embedded in RSS
+         enclosures.
       3. If a valid session cookie is present, allow.
       4. Otherwise, 401.
 
-    Returns nothing on success; raises HTTPException(401) on failure.
+    The rss-scope ApiToken does *not* authorize stream access by itself - it
+    only authorizes feed-XML fetches. Embedding a long-lived token in every
+    enclosure URL would leak it via referer/log/CDN; signatures bind a stream
+    URL to one slug and a 24h window instead.
     """
     if live.embed_allowed:
         return
-    if token:
-        api_token = await resolve_api_token(
-            session, token_plaintext=token, required_scope="rss",
-        )
-        if api_token is not None:
-            await touch_last_used(session, api_token)
-            await session.commit()
-            return
+    if sig and exp is not None and verify_stream_sig(
+        secret_key=secret_key, slug=live.slug, exp=exp, sig=sig,
+    ):
+        return
     if session_cookie:
         data = signer.read(session_cookie)
         if data is not None:
@@ -308,7 +310,8 @@ async def stream_set(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
-    token: str | None = None,
+    sig: str | None = None,
+    exp: int | None = None,
     session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
@@ -320,10 +323,11 @@ async def stream_set(
     ).scalar_one_or_none()
     if row is None or row.streaming_path is None:
         raise HTTPException(status_code=404, detail="not ready")
-    await _stream_authorize(
-        session, row, token=token,
+    _stream_authorize(
+        row, sig=sig, exp=exp,
         session_cookie=session_cookie,
         signer=SessionSigner(settings.secret_key),
+        secret_key=settings.secret_key,
     )
     root = await session.get(MediaRoot, row.media_root_id)
     path = Path(root.host_path) / row.streaming_path
@@ -338,7 +342,8 @@ async def waveform(
     slug: str,
     session: Annotated[AsyncSession, Depends(db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
-    token: str | None = None,
+    sig: str | None = None,
+    exp: int | None = None,
     session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ):
     row = (
@@ -350,10 +355,11 @@ async def waveform(
     ).scalar_one_or_none()
     if row is None or row.waveform_path is None:
         raise HTTPException(status_code=404, detail="not ready")
-    await _stream_authorize(
-        session, row, token=token,
+    _stream_authorize(
+        row, sig=sig, exp=exp,
         session_cookie=session_cookie,
         signer=SessionSigner(settings.secret_key),
+        secret_key=settings.secret_key,
     )
     root = await session.get(MediaRoot, row.media_root_id)
     return FileResponse(

@@ -41,11 +41,10 @@ def test_build_feed_produces_valid_rss():
         title="Test Feed", self_link="https://example/api/feed/recent/T.xml",
         description="desc",
         items=[(live, entries)],
-        base_url="https://example", rss_token="T",
+        base_url="https://example", signing_key="test-secret-key-XYZ",
     )
     assert xml.startswith(b"<?xml")
     root = ET.fromstring(xml)
-    # rss/channel/item
     items = root.findall(".//item")
     assert len(items) == 1
     title = items[0].findtext("title")
@@ -53,17 +52,21 @@ def test_build_feed_produces_valid_rss():
     desc = items[0].findtext("description")
     assert "Track A - Artist X" in desc
     assert "Track B - Artist Y" in desc
-    # Enclosure uses the token-scoped stream URL
+    # Enclosure is a signed short-TTL URL — never the raw rss_token.
     enc = items[0].find("enclosure")
     assert enc is not None
-    assert "token=T" in enc.attrib["url"]
-    assert "stream" in enc.attrib["url"]
+    url = enc.attrib["url"]
+    assert "stream" in url
+    assert "sig=" in url
+    assert "exp=" in url
+    assert "token=" not in url
 
 
 def test_build_feed_handles_empty_items():
     xml = build_feed(
         title="Empty Feed", self_link="https://example/x.xml",
-        description="d", items=[], base_url="https://example", rss_token="t",
+        description="d", items=[], base_url="https://example",
+        signing_key="test-secret-key-XYZ",
     )
     root = ET.fromstring(xml)
     assert root.findall(".//item") == []

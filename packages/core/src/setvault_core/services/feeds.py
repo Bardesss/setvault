@@ -17,6 +17,10 @@ from feedgen.feed import FeedGenerator
 
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.tracklist import TracklistEntry
+from setvault_core.services.signed_urls import (
+    DEFAULT_ENCLOSURE_TTL_SECONDS,
+    sign_stream_url,
+)
 
 
 def build_feed(
@@ -26,9 +30,15 @@ def build_feed(
     description: str,
     items: Iterable[tuple[LiveSet, list[TracklistEntry]]],
     base_url: str,
-    rss_token: str,
+    signing_key: str,
+    enclosure_ttl_seconds: int = DEFAULT_ENCLOSURE_TTL_SECONDS,
 ) -> bytes:
-    """Return UTF-8 XML bytes for the feed."""
+    """Return UTF-8 XML bytes for the feed.
+
+    Enclosure URLs are HMAC-signed and short-TTL (default 24h). The user's
+    long-lived RSS token is *not* embedded in enclosures - it only
+    authorizes the feed-XML fetch itself.
+    """
     fg = FeedGenerator()
     fg.load_extension("podcast")
     fg.title(title)
@@ -44,7 +54,11 @@ def build_feed(
         fe.title(live.title)
         fe.link(href=f"{base_url}/sets/{live.slug}")
         fe.description(_build_description(live, entries))
-        audio_url = f"{base_url}/api/sets/{live.slug}/stream?token={rss_token}"
+        sig, exp = sign_stream_url(
+            secret_key=signing_key, slug=live.slug,
+            ttl_seconds=enclosure_ttl_seconds,
+        )
+        audio_url = f"{base_url}/api/sets/{live.slug}/stream?sig={sig}&exp={exp}"
         fe.enclosure(url=audio_url, length="0", type="audio/ogg")
         fe.published(_pub_date(live))
 

@@ -26,6 +26,7 @@ from setvault_core.services.api_tokens import resolve_api_token, touch_last_used
 from setvault_core.services.audit import log as audit_log
 from setvault_core.services.feeds import build_feed
 
+from setvault_web.config import Settings, get_settings
 from setvault_web.deps import db_session
 from setvault_web.rate_limit import hit as _ratelimit_hit
 
@@ -113,6 +114,7 @@ async def feed(
     token: str,
     request: Request,
     session: Annotated[AsyncSession, Depends(db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     page: int = 1,
 ):
     user, api_token = await _resolve_rss_token(session, token)
@@ -136,7 +138,7 @@ async def feed(
         description=f"SetVault {kind} feed for {user.display_name}",
         items=items,
         base_url=base_url,
-        rss_token=token,
+        signing_key=settings.secret_key,
     )
 
     first_use = api_token.last_used_at is None
