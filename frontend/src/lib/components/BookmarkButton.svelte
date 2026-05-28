@@ -110,4 +110,13 @@
     color: inherit;
     font: inherit;
   }
+  @media (max-width: 600px) {
+    .bookmark {
+      width: 100%;
+      min-height: 44px;
+      text-align: center;
+    }
+    .ts-bookmarks { gap: var(--sp-1); }
+    .ts-bookmarks li { padding: var(--sp-1) var(--sp-2); min-height: 36px; }
+  }
 </style>
