@@ -3,6 +3,7 @@ import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory
+from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import (
     Artist,
     LiveSet,
@@ -207,6 +208,24 @@ async def _cleanup_invite_users():
                 | EmailToken.email.like("%@x.test")
             )
         )
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_api_tokens():
+    """Delete ApiToken rows so RSS-token tests can rerun. CASCADE handles
+    token cleanup when test users are deleted, but admin survives across tests
+    and his tokens would accumulate."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(ApiToken))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(ApiToken))
         await s.commit()
 
 
