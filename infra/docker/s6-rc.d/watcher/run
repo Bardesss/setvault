@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+# Filesystem watcher — watchdog-driven WatchFolder ingest
+cd /srv
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  python -m setvault_core.services.watcher

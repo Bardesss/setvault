@@ -1,22 +1,38 @@
-# SetVault — self-host compose stack
+# SetVault — minimal self-host stack
 #
-# Pulls published multi-arch images from GitHub Container Registry.
-# Save this as `compose.yml` next to a `.env` file (see .env.example),
-# then:
+# 1. curl this file + .env.example into the same directory
+# 2. fill in SECRET_KEY, POSTGRES_PASSWORD, BASE_URL in .env
+# 3. docker compose pull && docker compose up -d
 #
-#     docker compose pull
-#     docker compose up -d
+# Four services: setvault + postgres + redis + tusd. The setvault
+# container internally runs uvicorn + RQ worker + watcher under
+# s6-overlay (one image, three processes).
 #
-# See https://github.com/Bardesss/setvault for the full README.
+# https://github.com/Bardesss/setvault
 
 name: setvault
 
-x-image-tag: &image_tag
-  # Pin to a specific version for production; floats with `latest` if you
-  # want auto-bumps on each release (re-pull required).
-  SETVAULT_VERSION: ${SETVAULT_VERSION:-0.1.0}
-
 services:
+  setvault:
+    image: ghcr.io/bardesss/setvault:${SETVAULT_VERSION:-latest}
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${SETVAULT_HTTP_PORT:-8000}:8000"
+    volumes:
+      # All persistent state for the setvault container lives under these
+      # four host paths. Defaults drop everything under ./.data/setvault.
+      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
+      - ${SETVAULT_CACHE_PATH:-./.data/cache}:/srv/cache
+      - ${SETVAULT_CONFIG_PATH:-./.data/config}:/srv/config
+      - ${SETVAULT_WATCH_FOLDERS_PATH:-./.data/watch}:/srv/watch
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -51,67 +67,13 @@ services:
     command: >
       -behind-proxy
       -base-path /uploads/
-      -hooks-http http://web:8000/api/uploads/tusd-hooks
+      -hooks-http http://setvault:8000/api/uploads/tusd-hooks
       -hooks-http-forward-headers Authorization,Cookie
       -upload-dir /uploads
     volumes:
       - ${SETVAULT_CACHE_PATH:-./.data/cache}/tus:/uploads
     depends_on:
-      web:
+      setvault:
         condition: service_started
     restart: unless-stopped
     security_opt: [no-new-privileges:true]
-
-  web:
-    image: ghcr.io/bardesss/setvault-web:${SETVAULT_VERSION:-0.1.0}
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "${SETVAULT_HTTP_PORT:-8000}:8000"
-    volumes:
-      # Media roots are bind-mounted into the web service so streams can
-      # be served from local disk. Add additional `- /host:/host` lines
-      # to mirror each MediaRoot.host_path you configure in the admin UI.
-      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
-    restart: unless-stopped
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
-  worker:
-    image: ghcr.io/bardesss/setvault-worker:${SETVAULT_VERSION:-0.1.0}
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
-      - ${SETVAULT_CACHE_PATH:-./.data/cache}:/srv/cache
-    restart: unless-stopped
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
-
-  # Filesystem watcher — subscribes to admin-configured WatchFolder paths,
-  # enqueues a watch_folder_ingest job per audio file detected. Shares the
-  # worker image. Mount each WatchFolder's host_path into this container
-  # at the same path the admin configured, so watchdog can see the events.
-  # Disable this service if you don't use watch folders.
-  watcher:
-    image: ghcr.io/bardesss/setvault-worker:${SETVAULT_VERSION:-0.1.0}
-    command: ["python", "-m", "setvault_core.services.watcher"]
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ${SETVAULT_WATCH_FOLDERS_PATH:-./.data/watch}:/srv/watch
-    restart: unless-stopped
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]

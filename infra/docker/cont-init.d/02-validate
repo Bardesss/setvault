@@ -1,0 +1,30 @@
+#!/usr/bin/with-contenv bash
+#
+# Required-env check. Fails fast with a clear human message if the user
+# forgot one of the three things every install needs.
+
+set -e
+
+missing=()
+[ -z "${SECRET_KEY}" ]  && missing+=("SECRET_KEY")
+[ -z "${BASE_URL}" ]    && missing+=("BASE_URL")
+[ -z "${DATABASE_URL}" ] && missing+=("DATABASE_URL (or POSTGRES_PASSWORD if using the bundled postgres)")
+
+if [ ${#missing[@]} -gt 0 ]; then
+  cat <<EOF >&2
+
+============================================================
+ SetVault: missing required environment variable(s):
+EOF
+  for v in "${missing[@]}"; do
+    echo "   - ${v}" >&2
+  done
+  cat <<EOF >&2
+
+ Edit your .env file (see .env.example) and restart.
+ Generate strong secrets with:
+     openssl rand -base64 48
+============================================================
+EOF
+  exit 1
+fi

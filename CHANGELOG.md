@@ -4,6 +4,73 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-29
+
+**Noob-friendly self-host.** v0.1.0 shipped two container images
+(`setvault-web` + `setvault-worker`) and a six-line `.env` of required
+secrets. v0.1.1 collapses that into a **single `setvault` container**
+running uvicorn + RQ worker + watchdog under s6-overlay, with **three
+required env vars** total and everything else defaulted inside the
+image. The self-host compose file drops from six services to four
+(`setvault` + `postgres` + `redis` + `tusd`).
+
+### Container
+
+- **Single image**: `ghcr.io/bardesss/setvault:0.1.1` replaces
+  `setvault-web` + `setvault-worker`. (Old image names will not be
+  republished going forward.)
+- **s6-overlay PID 1** supervises uvicorn, the RQ worker, and the
+  watchdog watcher. Per-process crashes auto-restart without taking
+  down the container.
+- **Container-init scripts** (`/etc/cont-init.d/`) run on every boot:
+  - `01-defaults` — auto-generates `TUSD_HOOK_SECRET` if missing
+    (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`), synthesizes
+    `DATABASE_URL` from `POSTGRES_PASSWORD` when no explicit URL is
+    given, and chowns bind mounts to `PUID:PGID`.
+  - `02-validate` — fails fast with a clear message if required env
+    is missing.
+  - `03-migrate` — runs `alembic upgrade head` once before any
+    longrun starts, with retry-on-postgres-not-ready backoff.
+- **Multi-arch fix**: per-arch native binaries (`audiowaveform`,
+  `s6-overlay`) are selected from `$TARGETARCH` instead of being
+  hardcoded to amd64. v0.1.0's tag attempt failed on the arm64 leg
+  because of this; v0.1.1 builds both arches cleanly.
+- **Workspace fix**: `packages/providers` (workspace member) is now
+  copied into the build context. v0.1.0's `uv sync` failed at
+  `Failed to parse entry: setvault-providers`.
+
+### Configuration
+
+- **Required env shrinks to 3**: `SECRET_KEY`, `POSTGRES_PASSWORD`,
+  `BASE_URL`. Everything else is defaulted or auto-generated.
+- `.env.example` rewritten to a 3-required + commented-optional
+  layout (~40 lines, was ~70).
+- `compose.example.yml` rewritten to 4 services (was 6).
+
+### Migration from 0.1.0
+
+If you ran v0.1.0:
+
+1. `docker compose pull` — picks up new `setvault:0.1.1` image
+2. Replace your `compose.yml` with the new `compose.example.yml`
+   (services renamed, fewer of them)
+3. Strip `TUSD_HOOK_SECRET` and `PUID`/`PGID` from your `.env` if you
+   want — they're defaulted now
+4. `docker compose up -d` — `alembic upgrade head` runs automatically
+   on first boot
+
+No data migration required; the database schema is unchanged from
+0.1.0.
+
+### Fixed
+
+- v0.1.0 docker workflow could not publish on multi-arch tag pushes
+  (#23 fix landed but didn't cover the arch issue). v0.1.1 fixes both.
+- Old separate Dockerfiles deleted; only `infra/docker/Dockerfile`
+  remains.
+
+---
+
 ## [0.1.0] — 2026-05-28
 
 **The inaugural release.** Eleven months of design, twenty-one merged
@@ -166,4 +233,5 @@ contribution shape is honest.
 
 ---
 
+[0.1.1]: https://github.com/Bardesss/setvault/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Bardesss/setvault/releases/tag/v0.1.0
