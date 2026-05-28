@@ -20,6 +20,7 @@ from setvault_core.models.engagement_3c import (
 )
 from setvault_core.models.identity import EmailToken, NotificationPreference, User
 from setvault_core.models.system import AuditEvent, Job, NotificationConnector
+from setvault_core.models.url_rip import RipJob
 
 __all__ = [
                                           "ActivityEvent",
@@ -41,6 +42,7 @@ __all__ = [
                                           "NotificationPreference",
                                           "Party",
                                           "PrivateNote",
+                                          "RipJob",
                                           "Series",
                                           "SetFingerprint",
                                           "Tag",
