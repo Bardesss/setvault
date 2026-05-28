@@ -4,15 +4,15 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.2](https://github.com/Bardesss/setvault/compare/v0.1.1...v0.1.2) (2026-05-28)
 
-### Changed
+### Features
 
 - **Default HTTP port is now `1970`** (the year of David Mancuso's first
   Loft parties — the year the DJ live set as we know it was born) —
   previously `8000`. Applies to `SETVAULT_HTTP_PORT`, the bundled compose
   file's port mapping, the container's `EXPOSE`, the dev-stack uvicorn
-  flag, and the bundled landing's quickstart copy.
+  flag, and the bundled landing's quickstart copy. ([ce490ef](https://github.com/Bardesss/setvault/commit/ce490ef939fa52b5d3762626ee33d21f362ffce8))
 
   **Breaking change for existing deployments that didn't set
   `SETVAULT_HTTP_PORT` explicitly.** After pulling this version:
