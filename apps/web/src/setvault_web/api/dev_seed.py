@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.identity import User
 from setvault_core.services.passwords import hash_password
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import db_session
@@ -76,6 +76,12 @@ class SeedOut(BaseModel):
 
 @router.post("/seed-e2e", response_model=SeedOut)
 async def seed_e2e(session: Annotated[AsyncSession, Depends(db_session)]) -> SeedOut:
+    # Playwright runs test files in parallel; each loginAs() races against
+    # this endpoint on a fresh DB. Serialize concurrent seeders with a
+    # transaction-scoped advisory lock (auto-released at commit). The
+    # constant key is arbitrary — just a stable u32 unique to this seed.
+    await session.execute(text("SELECT pg_advisory_xact_lock(0x5e7eedaa)"))
+
     # 1. Ensure admin
     admin = (
         await session.execute(select(User).where(User.email == SEED_ADMIN_EMAIL))
