@@ -123,52 +123,44 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<aside class="tracklist" aria-label={$_("tracklist.heading")}>
-  <header>
-    <h3>{$_("tracklist.heading")}</h3>
-    <div class="actions">
-      <button on:click={addAtPlayhead} title={$_("tracklist.add_at_playhead")}>+ M</button>
-      <button on:click={() => (importModalOpen = true)}>{$_("tracklist.import")}</button>
-      <button on:click={() => (shiftOpen = true)}>{$_("tracklist.time_shift")}</button>
-      <button on:click={runBulkResolve} disabled={bulkBusy}>
-        {$_("tracklist.bulk_resolve")}
-      </button>
+<section class="tracks-section" aria-label={$_("tracklist.heading")}>
+  <div class="tracks-header">
+    <h3>{$_("tracklist.heading")} <b>· {$tracklist.entries.length} entries</b></h3>
+    <div class="right">
+      <button class="btn btn-sm" on:click={addAtPlayhead} title={$_("tracklist.add_at_playhead")}>+ <span class="kbd">M</span></button>
+      <button class="btn btn-sm" on:click={() => (importModalOpen = true)}>{$_("tracklist.import")}</button>
+      <button class="btn btn-sm" on:click={() => (shiftOpen = true)}>{$_("tracklist.time_shift")}</button>
+      <button class="btn btn-sm" on:click={runBulkResolve} disabled={bulkBusy}>{$_("tracklist.bulk_resolve")}</button>
     </div>
-  </header>
+  </div>
 
   {#if bulkStatus}<p class="bulk-status">{bulkStatus}</p>{/if}
 
   {#if $tracklist.entries.length === 0}
     <p class="empty">{$_("tracklist.empty")}</p>
   {:else}
-    <ol>
+    <div>
       {#each $tracklist.entries as entry, idx (entry.id)}
-        <li
-          class:current={idx === currentIdx}
-          class:status-raw={entry.status === "raw"}
-          class:status-resolved={entry.status === "resolved"}
-          class:status-acoustid={entry.status === "acoustid_confirmed"}
-        >
-          <button class="seek" on:click={() => seekTo(entry.start_seconds)}>
-            <span class="t mono">{fmtTime(entry.start_seconds)}</span>
-            <span class="label">{entry.raw_label}</span>
-          </button>
-          {#if entry.status === "raw"}
-            <button class="resolve" on:click={() => (popoverEntry = entry)}>
-              {$_("tracklist.resolve")}
-            </button>
-          {/if}
+        <div class="track-row" class:now={idx === currentIdx}>
+          <button class="ts seek-cell" on:click={() => seekTo(entry.start_seconds)}>{fmtTime(entry.start_seconds)}</button>
+          <span class="pos">{String(idx + 1).padStart(2, "0")}.</span>
+          <div class="track-main">
+            <div class="tn">{entry.raw_label}</div>
+            {#if entry.edit_notes}<div class="ta">{entry.edit_notes}</div>{/if}
+          </div>
+          <span class="bpm-key"></span>
           <span class="badge" data-status={entry.status}>{entry.status}</span>
-          <button
-            class="edit"
-            on:click={() => (drawerEntry = entry)}
-            aria-label={$_("tracklist.edit_entry")}>✎</button
-          >
-        </li>
+          <div class="actions">
+            {#if entry.status === "raw"}
+              <button class="btn btn-ghost btn-sm" on:click={() => (popoverEntry = entry)}>{$_("tracklist.resolve")}</button>
+            {/if}
+            <button class="btn btn-ghost btn-sm btn-icon" on:click={() => (drawerEntry = entry)} aria-label={$_("tracklist.edit_entry")}>✎</button>
+          </div>
+        </div>
       {/each}
-    </ol>
+    </div>
   {/if}
-</aside>
+</section>
 
 {#if drawerEntry}
   <TracklistEditDrawer {slug} entry={drawerEntry} on:close={() => (drawerEntry = null)} />
@@ -191,88 +183,25 @@
 {/if}
 
 <style>
-  .tracklist {
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-    padding: var(--sp-4);
-    background: var(--bg-surface);
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--sp-3);
-  }
-  h3 { margin: 0; font-size: var(--ts-lg); }
-  .actions { display: flex; gap: var(--sp-2); }
-  .actions button {
-    background: none;
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    padding: var(--sp-1) var(--sp-2);
-    color: var(--text-muted);
-    cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-  }
-  .actions button:hover { color: var(--text-default); }
-  ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
-  li {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: var(--sp-2);
-    align-items: center;
-    padding: var(--sp-2);
-    border-radius: var(--r-sm);
-  }
-  li.current { background: var(--bg-now); }
-  button.seek {
-    display: flex;
-    gap: var(--sp-2);
-    align-items: baseline;
-    min-width: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    text-align: left;
-    padding: 0;
-  }
-  .t { font-family: var(--font-mono); color: var(--text-muted); min-width: 5ch; }
-  .label { color: var(--text-default); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .resolve {
-    background: none;
-    border: 1px solid var(--accent-warning);
-    border-radius: var(--r-sm);
-    padding: 2px var(--sp-2);
-    color: var(--accent-warning);
-    cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-  }
-  .bulk-status {
-    margin: 0 0 var(--sp-2);
-    color: var(--text-muted);
-    font-size: var(--ts-sm);
-  }
-  .badge {
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-    padding: 2px 6px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-pill);
-    color: var(--text-muted);
-  }
-  .badge[data-status="raw"] {
+  .tracks-section :global(.badge[data-status="raw"]) {
     color: var(--accent-warning);
     border-color: var(--accent-warning);
   }
-  .badge[data-status="resolved"] { color: var(--accent); border-color: var(--accent); }
-  .badge[data-status="acoustid_confirmed"] {
+  .tracks-section :global(.badge[data-status="resolved"]),
+  .tracks-section :global(.badge[data-status="acoustid_confirmed"]) {
     color: var(--accent);
     border-color: var(--accent);
   }
-  .edit { background: none; border: none; cursor: pointer; color: var(--text-muted); }
-  .edit:hover { color: var(--text-default); }
-  .empty { color: var(--text-muted); font-style: italic; }
+  .track-row .ts.seek-cell {
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    padding: 0;
+    color: var(--accent-secondary, var(--accent));
+  }
+  .track-main { min-width: 0; }
+  .track-main .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bulk-status { margin: 0 var(--sp-8); padding: var(--sp-2) 0; color: var(--text-muted); font-size: var(--ts-sm); }
+  .empty { margin: var(--sp-4) var(--sp-8); color: var(--text-muted); font-style: italic; }
 </style>

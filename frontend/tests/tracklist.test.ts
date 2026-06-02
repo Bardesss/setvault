@@ -6,11 +6,11 @@ import { loginAs } from "./helpers/auth";
 // endpoint does not clear tracklist rows, so assertions are relative to the
 // row count observed at the start of each test rather than absolute.
 
-const rowsOf = (page: Page) => page.locator("aside.tracklist ol li");
+const rowsOf = (page: Page) => page.locator(".tracks-section .track-row");
 
 async function openSet(page: Page): Promise<void> {
   await page.goto("/sets/seeded-set");
-  await page.waitForSelector("aside.tracklist");
+  await page.waitForSelector(".tracks-section");
   // The set page fetches its data in two passes on first load; wait for the
   // network to settle so interactions land on the stable component tree.
   await page.waitForLoadState("networkidle");
@@ -22,7 +22,7 @@ test.describe("tracklist editor", () => {
     await openSet(page);
     // Click a neutral element so keyboard events reach the window handler
     // (mirrors set-detail.test.ts, which clicks before keyboard.press).
-    await page.locator("aside.tracklist h3").click();
+    await page.locator(".tracks-section h3").click();
     const rows = rowsOf(page);
     const before = await rows.count();
     await page.keyboard.press("m");
