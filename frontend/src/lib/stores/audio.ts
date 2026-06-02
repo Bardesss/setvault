@@ -86,6 +86,11 @@ export function init(): void {
   initialized = true;
   el = new Audio();
   el.preload = "metadata";
+  // The element must be connected to the document or browsers (notably
+  // headless Chromium under the autoplay policy) refuse to start playback on
+  // a detached, unmuted media element. Hidden — it only produces sound.
+  el.style.display = "none";
+  document.body.appendChild(el);
   el.addEventListener("timeupdate", () => {
     if (!el) return;
     const st = get(player);
@@ -192,6 +197,7 @@ export function dispose(): void {
   if (saveTimer) clearInterval(saveTimer);
   saveTimer = null;
   el?.pause();
+  el?.remove();
   el = null;
   initialized = false;
   player.set(initial);
