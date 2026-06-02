@@ -17,6 +17,17 @@ def test_parses_hh_mm_ss_format():
     assert out[0].start_seconds == 5025
 
 
+def test_parses_bracketed_timestamp_format():
+    # YouTube-style chapter markers: timestamp wrapped in [ ], em-dash label.
+    raw = "[00:00] Aphex Twin — Xtal\n[1:23:45] Floating Points — Last Bloom"
+    out = parse_tracklist_text(raw)
+    assert len(out) == 2
+    assert out[0].start_seconds == 0
+    assert out[0].raw_label == "Aphex Twin — Xtal"
+    assert out[1].start_seconds == 5025
+    assert out[1].raw_label == "Floating Points — Last Bloom"
+
+
 def test_handles_numbered_list_without_timestamp():
     raw = "1. Artist - Title\n2. Other - Thing"
     out = parse_tracklist_text(raw)

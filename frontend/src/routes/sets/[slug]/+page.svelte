@@ -1,10 +1,8 @@
 <script lang="ts">
   import Player from "$lib/components/Player.svelte";
   import Tracklist from "$lib/components/Tracklist.svelte";
-  import CommentThread from "$lib/components/CommentThread.svelte";
-  import BookmarkButton from "$lib/components/BookmarkButton.svelte";
+  import SidePanel from "$lib/components/SidePanel.svelte";
   import EmbedToggleAdmin from "$lib/components/EmbedToggleAdmin.svelte";
-  import PrivateNotesPanel from "$lib/components/PrivateNotesPanel.svelte";
   import { session } from "$lib/stores/session";
   import type { PageData } from "./$types";
 
@@ -17,104 +15,73 @@
 
 <svelte:head><title>{set.title} - SetVault</title></svelte:head>
 
-<section class="detail">
-  <header class="hero">
-    <p class="kicker mono">live set</p>
-    <h1>{set.title}</h1>
-    <p class="meta">
-      <span>{artistNames}</span>
-      {#if set.date}<span> - {set.date}</span>{/if}
-      {#if set.venue}<span> - {set.venue.name}</span>{/if}
-    </p>
+<article class="set-detail">
+  <!-- HERO -->
+  <section class="set-hero">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/sets">Library</a>
+      <span class="sep">›</span>
+      <span class="current">{set.title}</span>
+    </nav>
+
+    <div class="set-title-row">
+      <div>
+        <h1 class="set-title">
+          {set.title}<span class="by"> — {artistNames}</span>
+        </h1>
+        <div class="set-meta">
+          <a href="/search?q={encodeURIComponent(artistNames)}">{artistNames}</a>
+          {#if set.venue}<span class="sep">@</span><span>{set.venue.name}</span>{/if}
+          {#if set.date}<span class="sep">·</span><span>{set.date}</span>{/if}
+        </div>
+      </div>
+      {#if isAdmin}
+        <div class="set-title-actions">
+          <EmbedToggleAdmin slug={set.slug} allowed={set.embed_allowed} />
+        </div>
+      {/if}
+    </div>
+
     {#if set.tags.length > 0}
-      <ul class="tags" aria-label="tags">
+      <div class="set-tags" aria-label="tags">
         {#each set.tags as tag (tag)}
-          <li>{tag}</li>
+          <span class="tag-pill">{tag}</span>
         {/each}
-      </ul>
+      </div>
     {/if}
-  </header>
+  </section>
 
-  <BookmarkButton slug={set.slug} />
-
-  {#if isAdmin}
-    <EmbedToggleAdmin slug={set.slug} allowed={set.embed_allowed} />
-  {/if}
-
+  <!-- PLAYER (wave-stage + transport) -->
   <Player {set} />
 
   {#if set.description}
-    <section class="description">
-      <h2>About</h2>
-      <p>{set.description}</p>
+    <section class="set-hero" style="border-bottom:none">
+      <div class="side-section">
+        <h4>About</h4>
+        <p class="description">{set.description}</p>
+      </div>
     </section>
   {/if}
 
-  <Tracklist slug={set.slug} />
-
-  <PrivateNotesPanel slug={set.slug} />
-
-  <CommentThread slug={set.slug} />
-</section>
+  <!-- BODY: tracklist + engagement side panel -->
+  <section class="body-grid">
+    <Tracklist slug={set.slug} />
+    <SidePanel slug={set.slug} />
+  </section>
+</article>
 
 <style>
-  .detail {
-    padding: var(--sp-8) var(--sp-6) calc(var(--shell-mini-player, 64px) + var(--sp-8));
-    display: grid;
-    gap: var(--sp-6);
-    max-width: 1100px;
-    margin: 0 auto;
+  .set-detail {
+    padding-bottom: calc(var(--shell-mini-player, 64px) + var(--sp-8));
   }
-  .hero { display: grid; gap: var(--sp-2); }
-  .kicker {
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-    text-transform: uppercase;
-    letter-spacing: var(--ls-uppercase);
-    color: var(--text-faint);
-    margin: 0;
-  }
-  h1 {
-    margin: 0;
-    font-size: var(--ts-3xl);
-    letter-spacing: var(--ls-tight);
-    line-height: var(--lh-tight);
-  }
-  .meta {
-    color: var(--text-muted);
-    margin: 0;
-  }
-  .tags {
-    list-style: none;
-    padding: 0;
-    margin: var(--sp-2) 0 0 0;
-    display: flex;
-    gap: var(--sp-2);
-    flex-wrap: wrap;
-  }
-  .tags li {
-    padding: 2px var(--sp-2);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-pill);
-    font-family: var(--font-mono);
-    font-size: var(--ts-xs);
-    color: var(--text-muted);
-  }
-  .description h2 {
-    margin: 0 0 var(--sp-2) 0;
-    font-size: var(--ts-xl);
-  }
-  .description p {
+  .description {
     margin: 0;
     color: var(--text-default);
     line-height: var(--lh-relaxed);
   }
-  .mono { font-family: var(--font-mono); }
   @media (max-width: 600px) {
-    .detail {
-      padding: var(--sp-3) var(--sp-3) calc(64px + var(--sp-4) + env(safe-area-inset-bottom, 0px));
-      gap: var(--sp-4);
+    .set-detail {
+      padding-bottom: calc(64px + var(--sp-4) + env(safe-area-inset-bottom, 0px));
     }
-    h1 { font-size: var(--ts-xl); }
   }
 </style>

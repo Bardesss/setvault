@@ -8,8 +8,13 @@ test("set page renders BookmarkButton + CommentThread + PrivateNotesPanel", asyn
   const seed = await loginAs(page, request);
   await page.goto(`/sets/${seed.set.slug}`, { waitUntil: "networkidle" });
 
-  await expect(page.locator("button.bookmark")).toBeVisible();
+  // Engagement now lives in the tabbed SidePanel (Comments / Bookmarks /
+  // Notes); Comments is the default tab. Each component stays mounted —
+  // click through the tabs to confirm all three render.
   await expect(page.locator("section.comments")).toBeVisible();
+  await page.getByRole("tab", { name: "Bookmarks" }).click();
+  await expect(page.locator("button.bookmark")).toBeVisible();
+  await page.getByRole("tab", { name: "Notes" }).click();
   await expect(page.locator("section.notes")).toBeVisible();
 });
 

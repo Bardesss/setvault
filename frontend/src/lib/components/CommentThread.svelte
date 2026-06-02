@@ -7,6 +7,7 @@
   import CommentComposer from "./CommentComposer.svelte";
 
   export let slug: string;
+  export let flat = false;
 
   $: canModerate = (c: Comment): boolean =>
     !!$session && ($session.id === c.author.id || $session.role === "admin");
@@ -38,10 +39,10 @@
   }
 </script>
 
-<section class="comments" aria-label={$_("comments.heading")}>
-  <h3>{$_("comments.heading")}</h3>
+<section class="comments" class:flat aria-label={$_("comments.heading")}>
+  {#if !flat}<h3>{$_("comments.heading")}</h3>{/if}
 
-  <CommentComposer {slug} on:posted={(e) => onPosted(e.detail)} />
+  <CommentComposer {slug} {flat} on:posted={(e) => onPosted(e.detail)} />
 
   <ul>
     {#each topLevel as c (c.id)}
@@ -92,6 +93,7 @@
 
 <style>
   .comments { padding: var(--sp-4); display: grid; gap: var(--sp-3); }
+  .comments.flat { padding: 0; }
   h3 { margin: 0; font-size: var(--ts-lg); }
   ul { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-3); }
   li { padding: var(--sp-3); border: 1px solid var(--border-default); border-radius: var(--r-md); }
