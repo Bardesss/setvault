@@ -4,6 +4,24 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/Bardesss/setvault/compare/v0.2.0...v0.3.0) (2026-06-02)
+
+
+### Features
+
+* **engagement:** TabStrip + SidePanel; flat prop on engagement components ([4306d13](https://github.com/Bardesss/setvault/commit/4306d138d4e5936fbc21ca617a0ed30b4da428c5))
+* **phase-6b:** set detail rebuild + engagement SidePanel + tracklist editor ([2cda1bc](https://github.com/Bardesss/setvault/commit/2cda1bc0191f76460f2fa4bde1d467c3493f61db))
+* **player:** restyle to wave-stage + transport-bar (01 mockup) ([cb6ee1f](https://github.com/Bardesss/setvault/commit/cb6ee1ffcff9eaf4d17c26c69e5807713bba2561))
+* **set-detail:** rebuild to 01 mockup — hero + body-grid + SidePanel ([7bb077f](https://github.com/Bardesss/setvault/commit/7bb077fe72cd26a85bf1b39117410669f6868c02))
+* **styles:** set-detail layout classes for Phase 6B ([6c28490](https://github.com/Bardesss/setvault/commit/6c28490d115c38fa1b1bbe0aaec274f0a6b7bca2))
+* **tracklist:** accept bracketed [hh:mm:ss] paste timestamps ([cb55ef3](https://github.com/Bardesss/setvault/commit/cb55ef3b7b778dc744f2503088b4e6cddc660552))
+* **tracklist:** restyle rows to .track-row (01 mockup) ([9c89515](https://github.com/Bardesss/setvault/commit/9c8951556f8d264d0b6caee6d1d06ce4e7f6c294))
+
+
+### Documentation
+
+* **readme:** roadmap to Phase 6 mockup-parity split + renumber 7–12 ([6685acd](https://github.com/Bardesss/setvault/commit/6685acd82afd27a7136e31a11561b994612517bb))
+
 ## [0.2.0](https://github.com/Bardesss/setvault/compare/v0.1.2...v0.2.0) (2026-05-28)
 
 
