@@ -310,13 +310,17 @@ with conventional commits driving the CHANGELOG.
 | 5D — Player polish + bulk editor | ✅ merged | Variable speed, A↔B loop, bulk actions |
 | 5E — Tech debt | ✅ merged | Pure-ASGI middleware, yt-dlp pin, cache eviction e2e |
 | 5F — Release engineering | ✅ merged | CHANGELOG, SBOM, cosign, GHCR, README rewrite, landing page (`v0.1.0`) |
-| **5G — Noob-friendly single image** | **🚀 this release** | **Single `setvault` image (uvicorn + worker + watcher under s6-overlay), 3-required-env config, 4-service compose, `TARGETARCH` multi-arch fix (`v0.1.1`)** |
-| 6 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
-| 7 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
-| 8 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
-| 9 — Sonos | ⏳ planned | SMAPI sidecar |
-| 10 — Smart playlists + similarity | ⏳ planned | pgvector, BPM/key detection, Snapcast |
-| 11 — OIDC + forward-auth | ⏳ planned | SSO + final admin polish |
+| 5G — Noob-friendly single image | ✅ merged | Single `setvault` image (uvicorn + worker + watcher under s6-overlay), 3-required-env config, 4-service compose, `TARGETARCH` multi-arch fix (`v0.1.1`) |
+| 6A — First impressions + browse | ✅ merged | Landing port, home, library, auth/embed/search design-language (`v0.2.0`) |
+| **6B — Set detail + engagement** | **🚀 this release** | **Set-detail 3-column rebuild, engagement SidePanel, tracklist editor (`v0.3.0`)** |
+| 6C — Mobile player | ⏳ planned | MiniPlayer + full-screen modal + MediaSession |
+| 6D — Admin & management surfaces | ⏳ planned | Admin shell + 12 tabs, Settings, Sets/new |
+| 7 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
+| 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
+| 9 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
+| 10 — Sonos | ⏳ planned | SMAPI sidecar |
+| 11 — Smart playlists + similarity | ⏳ planned | pgvector, BPM/key detection, Snapcast |
+| 12 — OIDC + forward-auth | ⏳ planned | SSO + final admin polish |
 
 ---
 
