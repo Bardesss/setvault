@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { player } from "$lib/stores/player";
+  import { player } from "$lib/stores/audio";
 
   function fmt(seconds: number): string {
     if (!Number.isFinite(seconds) || seconds < 0) return "0:00";

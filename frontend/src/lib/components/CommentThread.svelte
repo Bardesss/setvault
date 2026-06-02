@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { _ } from "svelte-i18n";
   import { deleteComment, listComments, type Comment } from "$lib/api/comments";
-  import { seekTo } from "$lib/stores/player";
+  import { seekTo } from "$lib/stores/audio";
   import { session } from "$lib/stores/session";
   import CommentComposer from "./CommentComposer.svelte";
 
