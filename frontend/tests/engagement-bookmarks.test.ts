@@ -16,6 +16,9 @@ test("set-level bookmark toggles via button", async ({ page, request }) => {
   // direction of the toggle non-deterministic.
   await page.waitForLoadState("networkidle");
 
+  // BookmarkButton now lives behind the Bookmarks tab in the SidePanel.
+  await page.getByRole("tab", { name: "Bookmarks" }).click();
+
   const btn = page.locator("button.bookmark");
   await btn.waitFor({ state: "visible", timeout: 15_000 });
 

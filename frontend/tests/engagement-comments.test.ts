@@ -8,6 +8,10 @@ test("post and view a comment", async ({ page, request }) => {
   // to settle so the composer is fully wired before we type into it.
   await page.waitForLoadState("networkidle");
 
+  // Comments is the default SidePanel tab, but click it explicitly so the
+  // test is robust to the default tab changing.
+  await page.getByRole("tab", { name: "Comments" }).click();
+
   const composer = page.locator("section.comments textarea");
   await composer.waitFor({ state: "visible", timeout: 15_000 });
   // Focus the textarea before filling so the `input` event lands on a
