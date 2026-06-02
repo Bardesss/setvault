@@ -342,75 +342,79 @@
 </script>
 
 <div class="player">
-  <div
-    class="wave"
-    bind:this={container}
-    aria-label="audio waveform"
-  ></div>
-  {#if duration > 0 && loopStart !== null && loopEnd !== null}
-    <div
-      class="loop-band"
-      style="left: {(loopStart / duration) * 100}%; width: {((loopEnd - loopStart) / duration) * 100}%"
-      aria-label="A↔B loop region"
-      data-test="loop-band"
-    ></div>
-  {/if}
-  {#if duration > 0 && commentMarkers.length > 0}
-    <div class="markers" aria-hidden="true">
-      {#each commentMarkers as m (m.id)}
-        <button
-          type="button"
-          class="marker"
-          style="left: {(m.t / duration) * 100}%"
-          title="{m.author}: {m.excerpt}"
-          on:click={() => ws?.setTime(Math.max(0, m.t))}
-        ></button>
-      {/each}
-    </div>
-  {/if}
-  <div class="controls" aria-label="player controls">
-    <button
-      type="button"
-      class="play"
-      on:click={() => ws?.playPause()}
-      data-test="play-state"
-      data-state={playing ? "playing" : "paused"}
-      aria-label={playing ? "pause" : "play"}
-    >
-      {playing ? "Pause" : "Play"}
-    </button>
-    <span class="time mono" aria-live="off">
-      {formatTime(position)} / {formatTime(duration || (set.duration_seconds ?? 0))}
-    </span>
-
-    <label class="speed mono" data-test="speed-control">
-      <span class="lbl">Speed</span>
-      <input
-        type="range"
-        min="0.5"
-        max="2"
-        step="0.05"
-        bind:value={playbackRate}
-        on:input={() => setRate(playbackRate)}
-        on:change={() => void saveState()}
-        aria-label="playback speed"
-      />
-      <span class="rate">{playbackRate.toFixed(2)}×</span>
-    </label>
-
-    {#if loopStart !== null || loopEnd !== null}
-      <span class="loop-indicator mono" data-test="loop-indicator">
-        Loop {loopStart !== null ? formatTime(loopStart) : "—"}…{loopEnd !== null ? formatTime(loopEnd) : "—"}
-        <button type="button" class="loop-clear" on:click={clearLoop} aria-label="clear loop">×</button>
-      </span>
+  <!-- WAVE STAGE: wavesurfer mounts into .wave; keep it untouched so the
+       shadow-DOM canvas tagging in onMount still finds it. -->
+  <section class="wave-stage">
+    <div class="wave" bind:this={container} aria-label="audio waveform"></div>
+    {#if duration > 0 && loopStart !== null && loopEnd !== null}
+      <div
+        class="loop-band"
+        style="left: {(loopStart / duration) * 100}%; width: {((loopEnd - loopStart) / duration) * 100}%"
+        aria-label="A↔B loop region"
+        data-test="loop-band"
+      ></div>
     {/if}
+    {#if duration > 0 && commentMarkers.length > 0}
+      <div class="markers" aria-hidden="true">
+        {#each commentMarkers as m (m.id)}
+          <button
+            type="button"
+            class="marker"
+            style="left: {(m.t / duration) * 100}%"
+            title="{m.author}: {m.excerpt}"
+            on:click={() => ws?.setTime(Math.max(0, m.t))}
+          ></button>
+        {/each}
+      </div>
+    {/if}
+  </section>
 
-    <span class="hint">space play/pause - j/l seek -10/+10s - arrows seek/volume - [ ] \\ loop - &lt; &gt; speed</span>
-  </div>
+  <!-- TRANSPORT BAR -->
+  <section class="transport-bar" aria-label="player controls">
+    <div class="transport-time">
+      <b>{formatTime(position)}</b>
+      <span class="div">/</span>
+      {formatTime(duration || (set.duration_seconds ?? 0))}
+      {#if loopStart !== null || loopEnd !== null}
+        <span class="loop-indicator mono" data-test="loop-indicator">
+          Loop {loopStart !== null ? formatTime(loopStart) : "—"}…{loopEnd !== null ? formatTime(loopEnd) : "—"}
+          <button type="button" class="loop-clear" on:click={clearLoop} aria-label="clear loop">×</button>
+        </span>
+      {/if}
+    </div>
+
+    <div class="transport-controls">
+      <button type="button" class="btn btn-icon" on:click={() => seek(-10)} aria-label="Back 10 seconds">−10</button>
+      <button
+        type="button"
+        class="play-large"
+        on:click={() => ws?.playPause()}
+        data-test="play-state"
+        data-state={playing ? "playing" : "paused"}
+        aria-label={playing ? "pause" : "play"}
+      >
+        {#if playing}
+          <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg>
+        {:else}
+          <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
+        {/if}
+      </button>
+      <button type="button" class="btn btn-icon" on:click={() => seek(10)} aria-label="Forward 10 seconds">+10</button>
+    </div>
+
+    <div class="transport-aux">
+      <div class="speed-toggle" data-test="speed-control" role="group" aria-label="playback speed">
+        {#each [0.75, 1, 1.25, 1.5] as r}
+          <button type="button" class:on={Math.abs(playbackRate - r) < 0.001} on:click={() => { setRate(r); void saveState(); }}>{r}×</button>
+        {/each}
+      </div>
+    </div>
+  </section>
 </div>
 
 <style>
-  .player { display: grid; gap: var(--sp-3); }
+  .player { position: relative; display: block; }
+  .wave-stage { position: relative; }
   .wave {
     width: 100%;
     min-height: 96px;
@@ -419,42 +423,8 @@
     border-radius: var(--r-md);
     padding: var(--sp-2);
   }
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    flex-wrap: wrap;
-  }
-  .play {
-    padding: var(--sp-2) var(--sp-4);
-    background: var(--accent);
-    color: var(--text-on-accent);
-    border: none;
-    border-radius: var(--r-sm);
-    font-family: var(--font-mono);
-    font-size: var(--ts-sm);
-    text-transform: uppercase;
-    letter-spacing: var(--ls-loose);
-    cursor: pointer;
-  }
-  .play:hover { filter: brightness(1.1); }
-  .time {
-    font-family: var(--font-mono);
-    font-size: var(--ts-sm);
-    color: var(--text-muted);
-  }
-  .hint {
-    font-family: var(--font-mono);
-    font-size: var(--ts-xxs);
-    color: var(--text-faint);
-    letter-spacing: var(--ls-loose);
-  }
   .mono { font-variant-numeric: tabular-nums; }
-  .markers {
-    position: relative;
-    height: 8px;
-    margin-top: calc(var(--sp-2) * -1 + 2px);
-  }
+  .markers { position: relative; height: 8px; margin-top: 2px; }
   .marker {
     position: absolute;
     top: 0;
@@ -470,7 +440,7 @@
   .marker:hover { transform: translateX(-50%) scale(1.4); }
   @media (max-width: 600px) {
     .markers { height: 14px; }
-    .marker { width: 14px; height: 14px; }  /* bigger touch target */
+    .marker { width: 14px; height: 14px; }
   }
   .loop-band {
     position: absolute;
@@ -482,20 +452,11 @@
     pointer-events: none;
     z-index: 1;
   }
-  .player { position: relative; }
-  .speed {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-1);
-    font-size: var(--ts-xs);
-  }
-  .speed .lbl { color: var(--text-faint); }
-  .speed input[type="range"] { width: 80px; }
-  .speed .rate { min-width: 3em; text-align: right; }
   .loop-indicator {
     display: inline-flex;
     align-items: center;
     gap: var(--sp-1);
+    margin-left: var(--sp-3);
     padding: 0 var(--sp-1);
     border: 1px solid var(--accent);
     border-radius: var(--r-sm);

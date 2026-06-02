@@ -1,19 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
-test("variable-speed slider renders and changes label", async ({ page, request }) => {
+test("variable-speed preset buttons render and activate on click", async ({ page, request }) => {
   const seed = await loginAs(page, request);
   await page.goto(`/sets/${seed.set.slug}`, { waitUntil: "networkidle" });
 
-  const slider = page.locator('[data-test="speed-control"] input[type="range"]');
-  await expect(slider).toBeVisible();
-  await expect(slider).toHaveAttribute("min", "0.5");
-  await expect(slider).toHaveAttribute("max", "2");
+  const speedControl = page.locator('[data-test="speed-control"]');
+  await expect(speedControl).toBeVisible();
 
-  // Change rate via input event and verify label updates.
-  await slider.fill("1.5");
-  await slider.evaluate((el) => el.dispatchEvent(new Event("input")));
-  await expect(page.locator('[data-test="speed-control"] .rate')).toHaveText("1.50×");
+  // All four preset buttons should be rendered.
+  await expect(speedControl.locator("button")).toHaveCount(4);
+
+  // Click the 1.25× preset and verify it receives the .on class.
+  const btn125 = speedControl.locator("button", { hasText: "1.25×" });
+  await btn125.click();
+  await expect(btn125).toHaveClass(/\bon\b/);
 });
 
 test("A↔B loop shortcut sets visual band + indicator", async ({ page, request }) => {
