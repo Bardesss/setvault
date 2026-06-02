@@ -4,6 +4,32 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/Bardesss/setvault/compare/v0.3.0...v0.4.0) (2026-06-02)
+
+
+### Features
+
+* **phase-6c:** global persistent player + mobile mini/full-screen ([4814b9b](https://github.com/Bardesss/setvault/commit/4814b9b90eb0397f8c25e80ea5c80cf8abe4cc61))
+* **player:** audio engine service (stores/audio.ts) for 6C ([9e7b0a1](https://github.com/Bardesss/setvault/commit/9e7b0a1890ab29b5bd0183517a30c1d293db65ba))
+* **player:** AudioHost — init engine + app-wide shortcuts (6C) ([029c0c7](https://github.com/Bardesss/setvault/commit/029c0c70f5c91ef1af889f428fc703b8b9dd8339))
+* **player:** FullScreenPlayer overlay + fullscreen guard (6C) ([697edd4](https://github.com/Bardesss/setvault/commit/697edd4f8ca12f93c2795a831574900d999c91d4))
+* **player:** rewrite MiniPlayer as persistent bottom-sheet (6C) ([563e9dd](https://github.com/Bardesss/setvault/commit/563e9dd7f78ae85ca530482611af8e2b46c38d8e))
+* **player:** slim set-page Player onto the audio service (6C) ([5e597a7](https://github.com/Bardesss/setvault/commit/5e597a7a67ffe3ad65cbf9974457b73d8f9b1eed))
+* **player:** Waveform view bound to the shared audio element (6C) ([7c16b80](https://github.com/Bardesss/setvault/commit/7c16b809f3cf9f52b6c0b99c7cf975668dff67c1))
+* **styles:** mobile mini-player + full-screen player classes (6C) ([c3d680b](https://github.com/Bardesss/setvault/commit/c3d680b917863f2a5dcca7f4f8daeb1a89ba2bb6))
+
+
+### Bug Fixes
+
+* **player:** attach engine &lt;audio&gt; to the DOM so playback starts (6C) ([a0abc93](https://github.com/Bardesss/setvault/commit/a0abc93d79643c09ef43553ad0e71179c5b51925))
+* **player:** render Waveform from URL, not the engine element (6C) ([6bcf36a](https://github.com/Bardesss/setvault/commit/6bcf36a2fc1c709695743c71aef079af6ab22e3d))
+* **sw:** don't cache.put 206 range responses — fixes audio playback (6C) ([ee44c64](https://github.com/Bardesss/setvault/commit/ee44c64af93f7d8d45a5d2c1b58161cc2df49fbd))
+
+
+### Documentation
+
+* **readme:** mark 6C global persistent player as this release ([5d2cf4c](https://github.com/Bardesss/setvault/commit/5d2cf4cade7ef45e8eb69e84f14345e0116765a5))
+
 ## [0.3.0](https://github.com/Bardesss/setvault/compare/v0.2.0...v0.3.0) (2026-06-02)
 
 
