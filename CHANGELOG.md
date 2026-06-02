@@ -4,6 +4,41 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/Bardesss/setvault/compare/v0.1.2...v0.2.0) (2026-05-28)
+
+
+### Features
+
+* **api:** GET /api/me/home-summary for Phase 6A home KPI grid ([cd5d024](https://github.com/Bardesss/setvault/commit/cd5d024af4fd46e2798e00b6af57b254cdcee387))
+* **bookmarks:** FilterBar + grouped-by-set list, restyled cards ([53180ee](https://github.com/Bardesss/setvault/commit/53180eef4e42a97cd8cafd93ca1483ca68423224))
+* **components:** FilterBar + SetRow for library / search / bookmarks ([de381d0](https://github.com/Bardesss/setvault/commit/de381d098732d6ea5eeb063e1109d0c6666585c4))
+* **components:** RoadmapTag for landing roadmap items ([d7efe43](https://github.com/Bardesss/setvault/commit/d7efe435a89f8b2ad1eb349b643520e83f682623))
+* **components:** SectionHeader, KpiGrid+Kpi, ContinueCard, RecentCard ([1efa19b](https://github.com/Bardesss/setvault/commit/1efa19b02a4dec075f694b6b8f66e9e342cd52fd))
+* **embed:** compact chrome with brand + Open in SetVault footer ([a7d4ddd](https://github.com/Bardesss/setvault/commit/a7d4ddd51ed4d25e4c546e0b682d3bb6e3fca926))
+* **home:** rebuild to match 03-home mockup with KPI grid ([de58271](https://github.com/Bardesss/setvault/commit/de58271f1fc476c92f04c902bd8e03e2cb3971db))
+* **invite:** auth-card design language ([be9e40a](https://github.com/Bardesss/setvault/commit/be9e40a407857e747d640b3059c90063696f4430))
+* **landing:** port underground-terminal design to deployed site ([98a0bc1](https://github.com/Bardesss/setvault/commit/98a0bc12aa3a1efb0f63d51336d8446d167e1f5b))
+* **library:** FilterBar header + list/grid toggle + SetRow ([a4a59ac](https://github.com/Bardesss/setvault/commit/a4a59ac8dacac18d40e9f066321ba1c578ddb4fd))
+* **login:** auth-card design language with scanline shell ([4cc86cc](https://github.com/Bardesss/setvault/commit/4cc86cc805063a7fc8a98389bb200d6ed13ea0aa))
+* **phase-6a:** first impressions + browse foundation ([21f04de](https://github.com/Bardesss/setvault/commit/21f04de89e372c969bb4761a714d2393812a0e85))
+* **reset:** auth-card design language ([192594f](https://github.com/Bardesss/setvault/commit/192594f098e43482c01244013d19ae4c1b54d15a))
+* **search:** FilterBar + grouped results design-language ([cf1f5f2](https://github.com/Bardesss/setvault/commit/cf1f5f2f2cfb626d807c613484b36391c947d17a))
+* **shell:** TopBar + grouped NavRail per 03-home mockup ([9e3e6ac](https://github.com/Bardesss/setvault/commit/9e3e6ac4449557e91311e2b41c1442469bed4963))
+* **shell:** TopBar + grouped NavRail wired into +layout.svelte ([602d503](https://github.com/Bardesss/setvault/commit/602d5036cfdbd8aff59b9f65f951409bd4918073))
+* **site:** build-time copy of shared design assets for landing ([595b50f](https://github.com/Bardesss/setvault/commit/595b50fb929f3bfcd776a2e165e14721b4536081))
+* **styles:** shared Phase 6A class patterns in components.css ([006adf5](https://github.com/Bardesss/setvault/commit/006adf5ba287560da35b5084c39bdf1f96e2a701))
+
+
+### Bug Fixes
+
+* **6a:** restore &lt;h1&gt; headings on embed + bookmarks ([2f5ec61](https://github.com/Bardesss/setvault/commit/2f5ec616b772f87a5c1e1e94556d810e853df12c))
+
+
+### Documentation
+
+* **6a:** design-language pointer in root README + design-package readme refresh ([1e7e8c3](https://github.com/Bardesss/setvault/commit/1e7e8c3bbdafd18b6fec1109d349ecd214d9d116))
+* **readme:** bump version refs to v0.1.2 + 6A design-language section ([52602d0](https://github.com/Bardesss/setvault/commit/52602d002f10920419a453009e77146900c831dc))
+
 ## [0.1.2](https://github.com/Bardesss/setvault/compare/v0.1.1...v0.1.2) (2026-05-28)
 
 ### Features
