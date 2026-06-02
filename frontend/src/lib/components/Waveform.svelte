@@ -2,17 +2,26 @@
   import { onMount, onDestroy } from "svelte";
   import WaveSurfer from "wavesurfer.js";
   import { listComments } from "$lib/api/comments";
-  import { player, seekTo, getElement } from "$lib/stores/audio";
+  import { player, seekTo } from "$lib/stores/audio";
 
   export let slug: string;
+  export let url: string;
 
   let container: HTMLDivElement;
   let ws: WaveSurfer | null = null;
+  let ready = false;
   let markers: Array<{ id: string; t: number; title: string }> = [];
 
   $: duration = $player.duration;
+  $: position = $player.position;
   $: loopStart = $player.loopStart;
   $: loopEnd = $player.loopEnd;
+
+  // Drive the (otherwise idle) waveform's cursor/progress from the engine's
+  // position — wavesurfer here is a picture, not the player.
+  $: if (ws && ready && Number.isFinite(position)) {
+    try { ws.setTime(position); } catch { /* not ready yet */ }
+  }
 
   async function loadMarkers(): Promise<void> {
     try {
@@ -44,18 +53,23 @@
   }
 
   onMount(() => {
-    const media = getElement();
-    if (!media) return;
+    // Render from the URL with wavesurfer's OWN internal element (decode for
+    // the picture only). We never bind it to the engine's <audio> and never
+    // play it — so ws.destroy() on unmount can't touch live playback. The
+    // engine (stores/audio) is the single source of truth for playback; this
+    // view's cursor is driven by the reactive setTime above.
     ws = WaveSurfer.create({
       container,
-      media, // attach to the persistent audio element — do not own playback
+      url,
       waveColor: getComputedStyle(document.documentElement).getPropertyValue("--waveform-unplayed").trim() || "#6c707d",
       progressColor: getComputedStyle(document.documentElement).getPropertyValue("--waveform-played").trim() || "#00ffb2",
       cursorColor: getComputedStyle(document.documentElement).getPropertyValue("--playhead").trim() || "#00ffb2",
       cursorWidth: 1, barWidth: 2, barGap: 1, height: 96, normalize: true,
+      autoplay: false,
     });
+    ws.setMuted?.(true);
     if (!tagCanvas()) queueMicrotask(tagCanvas);
-    ws.on("ready", tagCanvas);
+    ws.on("ready", () => { ready = true; tagCanvas(); });
     // click-to-seek: wavesurfer 'interaction' gives the clicked time
     ws.on("interaction", (t: number) => seekTo(t));
     void loadMarkers();

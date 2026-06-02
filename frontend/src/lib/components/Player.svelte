@@ -16,7 +16,7 @@
 <div class="player">
   <section class="wave-stage">
     {#if !$fullscreenOpen}
-      <Waveform slug={set.slug} />
+      <Waveform slug={set.slug} url={set.audio_stream_url} />
     {/if}
   </section>
 
