@@ -5,6 +5,7 @@
   import { player, seekTo } from "$lib/stores/player";
 
   export let slug: string;
+  export let flat = false;
 
   let bookmarks: Bookmark[] = [];
 
@@ -60,7 +61,7 @@
 
 <svelte:window on:keydown={onKey} />
 
-<button class="bookmark" on:click={toggleSetLevel} aria-pressed={!!setBookmark}>
+<button class="bookmark" class:flat on:click={toggleSetLevel} aria-pressed={!!setBookmark}>
   {setBookmark ? "★" : "☆"}
   {$_(setBookmark ? "bookmarks.unsave_set" : "bookmarks.save_set")}
 </button>
@@ -85,6 +86,7 @@
     color: var(--text-default);
     font: inherit;
   }
+  .bookmark.flat { width: 100%; }
   .ts-bookmarks {
     list-style: none;
     padding: 0;

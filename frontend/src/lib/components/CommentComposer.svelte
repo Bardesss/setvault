@@ -6,6 +6,7 @@
 
   export let slug: string;
   export let parent_id: string | null = null;
+  export let flat = false;
 
   let body = "";
   let attachTimestamp = false;
@@ -26,7 +27,7 @@
   }
 </script>
 
-<form class="composer" on:submit|preventDefault={send}>
+<form class="composer" class:flat on:submit|preventDefault={send}>
   <textarea
     bind:value={body}
     placeholder={$_("comments.composer_placeholder")}
@@ -43,6 +44,7 @@
 <style>
   .composer { display: grid; gap: var(--sp-2); padding: var(--sp-3);
               border: 1px solid var(--border-default); border-radius: var(--r-md); }
+  .composer.flat { padding: 0; border: none; }
   textarea { font: inherit; padding: var(--sp-2); border: 1px solid var(--border-default);
              background: var(--surface-0); color: var(--text-default);
              border-radius: var(--r-sm); resize: vertical; }

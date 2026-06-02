@@ -4,8 +4,9 @@
   import { getNote, saveNote, type PrivateNote } from "$lib/api/notes";
 
   export let slug: string;
+  export let flat = false;
 
-  let collapsed = true;
+  let collapsed = flat ? false : true;
   let note: PrivateNote = { body_md: "", body_html: "", updated_at: null };
   let dirty = false;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -35,11 +36,15 @@
   }
 </script>
 
-<section class="notes" data-open={!collapsed}>
+<section class="notes" class:flat data-open={!collapsed}>
   <header>
-    <button on:click={() => (collapsed = !collapsed)} aria-expanded={!collapsed}>
-      {collapsed ? "▶" : "▼"} {$_("notes.heading")}
-    </button>
+    {#if flat}
+      <span class="notes-label">{$_("notes.heading")}</span>
+    {:else}
+      <button on:click={() => (collapsed = !collapsed)} aria-expanded={!collapsed}>
+        {collapsed ? "▶" : "▼"} {$_("notes.heading")}
+      </button>
+    {/if}
     {#if dirty}<span class="status">{$_("notes.saving")}</span>{/if}
   </header>
   {#if !collapsed}
@@ -71,6 +76,8 @@
     border: 1px solid var(--border-default);
     border-radius: var(--r-md);
   }
+  .notes.flat { padding: 0; border: none; }
+  .notes-label { color: var(--text-default); font: inherit; }
   header {
     display: flex;
     justify-content: space-between;
