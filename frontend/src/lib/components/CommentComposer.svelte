@@ -2,7 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import { _ } from "svelte-i18n";
   import { postComment } from "$lib/api/comments";
-  import { player } from "$lib/stores/player";
+  import { player } from "$lib/stores/audio";
 
   export let slug: string;
   export let parent_id: string | null = null;

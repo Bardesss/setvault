@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { _ } from "svelte-i18n";
   import { createBookmark, deleteBookmark, listForSet, type Bookmark } from "$lib/api/bookmarks";
-  import { player, seekTo } from "$lib/stores/player";
+  import { player, seekTo } from "$lib/stores/audio";
 
   export let slug: string;
   export let flat = false;

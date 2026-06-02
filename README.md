@@ -313,7 +313,7 @@ with conventional commits driving the CHANGELOG.
 | 5G — Noob-friendly single image | ✅ merged | Single `setvault` image (uvicorn + worker + watcher under s6-overlay), 3-required-env config, 4-service compose, `TARGETARCH` multi-arch fix (`v0.1.1`) |
 | 6A — First impressions + browse | ✅ merged | Landing port, home, library, auth/embed/search design-language (`v0.2.0`) |
 | **6B — Set detail + engagement** | **🚀 this release** | **Set-detail 3-column rebuild, engagement SidePanel, tracklist editor (`v0.3.0`)** |
-| 6C — Mobile player | ⏳ planned | MiniPlayer + full-screen modal + MediaSession |
+| **6C — Global persistent player** | **🚀 this release** | **Persistent audio across navigation, bottom-sheet mini-player, full-screen player, MediaSession lockscreen (`v0.4.0`)** |
 | 6D — Admin & management surfaces | ⏳ planned | Admin shell + 12 tabs, Settings, Sets/new |
 | 7 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
 | 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |

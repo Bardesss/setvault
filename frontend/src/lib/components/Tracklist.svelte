@@ -3,7 +3,7 @@
   import { _ } from "svelte-i18n";
   import { bulkResolve } from "$lib/api/enrichment";
   import { createEntry, listTracklist, type TracklistEntry } from "$lib/api/tracklist";
-  import { player, seekTo } from "$lib/stores/player";
+  import { player, seekTo } from "$lib/stores/audio";
   import { tracklist, setEntries, upsertEntry, removeEntry } from "$lib/stores/tracklist";
   import ResolveCandidatesPopover from "./ResolveCandidatesPopover.svelte";
   import TracklistEditDrawer from "./TracklistEditDrawer.svelte";

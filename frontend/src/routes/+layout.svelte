@@ -12,6 +12,8 @@
   import NavRail from "$lib/components/NavRail.svelte";
   import TopBar from "$lib/components/TopBar.svelte";
   import MiniPlayer from "$lib/components/MiniPlayer.svelte";
+  import FullScreenPlayer from "$lib/components/FullScreenPlayer.svelte";
+  import AudioHost from "$lib/components/AudioHost.svelte";
 
   setupI18n();
 
@@ -37,6 +39,7 @@
                   && !$page.url.pathname.startsWith("/embed/");
 </script>
 
+<AudioHost />
 <div class="app-shell" class:no-shell={!showShell}>
   {#if showShell && user}
     <TopBar {user} />
@@ -45,6 +48,7 @@
   <main class="main"><slot /></main>
 </div>
 {#if showShell}<MiniPlayer />{/if}
+{#if showShell}<FullScreenPlayer />{/if}
 
 <style>
   .app-shell {

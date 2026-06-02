@@ -69,7 +69,12 @@ async function audioCacheFirst(request: Request): Promise<Response> {
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) {
+  // Only full (200) responses can be stored. `<audio>` elements issue Range
+  // requests, which the server answers with 206 Partial Content — and
+  // Cache.put() rejects a 206, which would reject this handler and fail the
+  // media element with net::ERR_FAILED. Pass partial responses straight
+  // through; the explicit "cache this set offline" full GET (200) still caches.
+  if (response.status === 200) {
     await cache.put(request, response.clone());
     await enforceAudioCap();
   }
