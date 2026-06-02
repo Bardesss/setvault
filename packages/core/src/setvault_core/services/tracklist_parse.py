@@ -12,14 +12,15 @@ class ParsedEntry:
 
 
 # Anchored at line start, allows leading whitespace, then either:
-#   HH:MM:SS or MM:SS  (timestamp form)
+#   HH:MM:SS or MM:SS  (timestamp form, optionally wrapped in [ ])
 #   N. or N)           (numbered form, no timestamp)
 # Followed by the label.
 _TIMESTAMP = re.compile(
-    r"^\s*"
+    r"^\s*\[?"
     r"(?:(?P<h>\d{1,2}):)?"
     r"(?P<m>\d{1,2}):"
     r"(?P<s>\d{2})"
+    r"\]?"
     r"\s+(?P<label>.+?)\s*$"
 )
 _NUMBERED = re.compile(r"^\s*(?P<n>\d{1,3})[.)]\s+(?P<label>.+?)\s*$")
