@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bash
+# tusd — resumable uploads. Always bundled; loopback only. The app proxies
+# (Caddy in bundled mode, the operator's proxy in external mode) route
+# /uploads/* here.
+TUS_DIR="${SETVAULT_CACHE_PATH:-/srv/cache}/tus"
+mkdir -p "${TUS_DIR}"
+chown -R "${PUID:-1000}:${PGID:-1000}" "${TUS_DIR}" 2>/dev/null || true
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  /usr/local/bin/tusd \
+    -behind-proxy \
+    -host 127.0.0.1 -port 8080 \
+    -base-path /uploads/ \
+    -hooks-http http://127.0.0.1:1970/api/uploads/tusd-hooks \
+    -hooks-http-forward-headers Authorization,Cookie \
+    -upload-dir "${TUS_DIR}"
