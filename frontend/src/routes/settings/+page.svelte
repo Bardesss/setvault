@@ -2,6 +2,9 @@
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
   import OfflineAudioCache from "$lib/components/OfflineAudioCache.svelte";
+  import TabStrip from "$lib/components/TabStrip.svelte";
+  import AdminForm from "$lib/components/AdminForm.svelte";
+  import StatusBlock from "$lib/components/StatusBlock.svelte";
   import {
     createRssToken,
     listMyRssTokens,
@@ -11,6 +14,15 @@
   } from "$lib/api/feeds";
   import { session } from "$lib/stores/session";
   import { _ } from "svelte-i18n";
+
+  let active = "profile";
+  $: tabs = [
+    { id: "profile", label: $_("settings.tabs.profile") },
+    { id: "security", label: $_("settings.tabs.security") },
+    { id: "feeds", label: $_("settings.tabs.feeds") },
+    { id: "offline", label: $_("settings.tabs.offline") },
+    { id: "notifications", label: $_("settings.tabs.notifications") },
+  ];
 
   let currentPassword = "";
   let newPassword = "";
@@ -136,193 +148,147 @@
 <section class="settings">
   <h1>{$_("settings.heading")}</h1>
 
-  {#if $session}
-    <div class="card profile">
-      <h2>{$_("settings.profile")}</h2>
-      <dl>
-        <dt>{$_("settings.display_name")}</dt><dd>{$session.display_name}</dd>
-        <dt>{$_("settings.username")}</dt><dd>{$session.username}</dd>
-        <dt>{$_("settings.email")}</dt><dd>{$session.email}</dd>
-        <dt>{$_("settings.role")}</dt><dd>{$session.role}</dd>
-      </dl>
-    </div>
-  {/if}
+  <TabStrip {tabs} bind:active />
 
-  <form class="card" on:submit|preventDefault={submit}>
-    <h2>{$_("settings.change_password")}</h2>
-    <label>
-      <span>{$_("settings.current_password")}</span>
-      <input
-        type="password"
-        bind:value={currentPassword}
-        required
-        autocomplete="current-password"
+  {#if active === "profile"}
+    {#if $session}
+      <StatusBlock
+        title={$_("settings.profile")}
+        rows={[
+          { label: $_("settings.display_name"), value: $session.display_name },
+          { label: $_("settings.username"), value: $session.username },
+          { label: $_("settings.email"), value: $session.email },
+          { label: $_("settings.role"), value: $session.role },
+        ]}
       />
-    </label>
-    <label>
-      <span>{$_("settings.new_password")}</span>
-      <input
-        type="password"
-        bind:value={newPassword}
-        required
-        minlength="12"
-        autocomplete="new-password"
-      />
-    </label>
-    {#if error}<p class="error" role="alert">{error}</p>{/if}
-    {#if success}<p class="success" role="status">{success}</p>{/if}
-    <button type="submit" disabled={busy}>
-      {busy ? $_("settings.saving") : $_("settings.change_password")}
-    </button>
-  </form>
-
-  <section class="card feeds">
-    <h2>{$_("feeds.heading")}</h2>
-    <p class="muted">{$_("feeds.description")}</p>
-
-    {#if rssJustMinted}
-      {@const minted = rssJustMinted}
-      <aside class="just-minted" role="status">
-        <p><strong>{$_("feeds.shown_once")}</strong></p>
-        <ul>
-          <li>
-            <span>{$_("feeds.favorites")}</span>
-            <code>{minted.favorites_url}</code>
-            <button type="button" on:click={() => copyToClipboard(minted.favorites_url)}>
-              {$_("feeds.copy")}
-            </button>
-          </li>
-          <li>
-            <span>{$_("feeds.recent")}</span>
-            <code>{minted.recent_url}</code>
-            <button type="button" on:click={() => copyToClipboard(minted.recent_url)}>
-              {$_("feeds.copy")}
-            </button>
-          </li>
-          <li>
-            <span>{$_("feeds.everything")}</span>
-            <code>{minted.everything_url}</code>
-            <button type="button" on:click={() => copyToClipboard(minted.everything_url)}>
-              {$_("feeds.copy")}
-            </button>
-          </li>
-        </ul>
-        <button type="button" on:click={() => (rssJustMinted = null)}>OK</button>
-      </aside>
     {/if}
-
-    <form on:submit|preventDefault={mintRssToken}>
-      <label>
-        <span>{$_("feeds.name_label")}</span>
-        <input type="text" bind:value={rssNewName} disabled={rssBusy} placeholder="Podcast app" />
+  {:else if active === "security"}
+    <AdminForm title={$_("settings.change_password")} on:submit={submit}>
+      <label class="admin-field">
+        <span>{$_("settings.current_password")}</span>
+        <input
+          type="password"
+          bind:value={currentPassword}
+          required
+          autocomplete="current-password"
+        />
       </label>
-      <button type="submit" disabled={rssBusy}>
-        {$_("feeds.create")}
-      </button>
-      {#if rssError}<p class="error">{rssError}</p>{/if}
-    </form>
+      <label class="admin-field">
+        <span>{$_("settings.new_password")}</span>
+        <input
+          type="password"
+          bind:value={newPassword}
+          required
+          minlength="12"
+          autocomplete="new-password"
+        />
+      </label>
+      {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
+      {#if success}<p class="admin-msg is-success" role="status">{success}</p>{/if}
+      <svelte:fragment slot="actions">
+        <button type="submit" class="btn btn-primary" disabled={busy}>
+          {busy ? $_("settings.saving") : $_("settings.change_password")}
+        </button>
+      </svelte:fragment>
+    </AdminForm>
+  {:else if active === "feeds"}
+    <div class="feeds">
+      <p class="muted">{$_("feeds.description")}</p>
 
-    {#if rssTokensLoaded && rssTokens.length > 0}
-      <ul class="token-list">
-        {#each rssTokens as t (t.id)}
-          <li>
-            <strong>{t.name}</strong>
-            <span class="muted">— {t.last_used_at ? `used ${t.last_used_at.slice(0, 10)}` : "unused"}</span>
-            <button type="button" on:click={() => doRevoke(t.id)}>{$_("feeds.revoke")}</button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-  </section>
+      {#if rssJustMinted}
+        {@const minted = rssJustMinted}
+        <aside class="just-minted" role="status">
+          <p><strong>{$_("feeds.shown_once")}</strong></p>
+          <ul>
+            <li>
+              <span>{$_("feeds.favorites")}</span>
+              <code>{minted.favorites_url}</code>
+              <button type="button" class="btn btn-sm" on:click={() => copyToClipboard(minted.favorites_url)}>
+                {$_("feeds.copy")}
+              </button>
+            </li>
+            <li>
+              <span>{$_("feeds.recent")}</span>
+              <code>{minted.recent_url}</code>
+              <button type="button" class="btn btn-sm" on:click={() => copyToClipboard(minted.recent_url)}>
+                {$_("feeds.copy")}
+              </button>
+            </li>
+            <li>
+              <span>{$_("feeds.everything")}</span>
+              <code>{minted.everything_url}</code>
+              <button type="button" class="btn btn-sm" on:click={() => copyToClipboard(minted.everything_url)}>
+                {$_("feeds.copy")}
+              </button>
+            </li>
+          </ul>
+          <button type="button" class="btn btn-sm" on:click={() => (rssJustMinted = null)}>OK</button>
+        </aside>
+      {/if}
 
-  <OfflineAudioCache />
+      <AdminForm on:submit={mintRssToken}>
+        <label class="admin-field">
+          <span>{$_("feeds.name_label")}</span>
+          <input type="text" bind:value={rssNewName} disabled={rssBusy} placeholder="Podcast app" />
+        </label>
+        {#if rssError}<p class="admin-msg is-error">{rssError}</p>{/if}
+        <svelte:fragment slot="actions">
+          <button type="submit" class="btn btn-primary" disabled={rssBusy}>
+            {$_("feeds.create")}
+          </button>
+        </svelte:fragment>
+      </AdminForm>
 
-  <section class="card prefs">
-    <h2>{$_("settings.notifications")}</h2>
-    {#if !prefsLoaded}
-      <p>{$_("settings.loading")}</p>
-    {:else}
-      <dl>
-        {#each KINDS as kind (kind)}
-          <dt>{$_(`settings.notification_kinds.${kind}`)}</dt>
-          <dd>
-            <select
-              value={prefs[kind] ?? "both"}
-              on:change={(e) => onPrefChange(kind, e)}
-              aria-label={$_(`settings.notification_kinds.${kind}`)}
-            >
-              <option value="in_app">{$_("settings.channel.in_app")}</option>
-              <option value="email">{$_("settings.channel.email")}</option>
-              <option value="both">{$_("settings.channel.both")}</option>
-              <option value="off">{$_("settings.channel.off")}</option>
-            </select>
-          </dd>
-        {/each}
-      </dl>
-    {/if}
-  </section>
+      {#if rssTokensLoaded && rssTokens.length > 0}
+        <ul class="token-list">
+          {#each rssTokens as t (t.id)}
+            <li>
+              <strong>{t.name}</strong>
+              <span class="muted">— {t.last_used_at ? `used ${t.last_used_at.slice(0, 10)}` : "unused"}</span>
+              <button type="button" class="btn btn-sm" on:click={() => doRevoke(t.id)}>{$_("feeds.revoke")}</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  {:else if active === "offline"}
+    <OfflineAudioCache />
+  {:else if active === "notifications"}
+    <section class="status-block prefs">
+      {#if !prefsLoaded}
+        <p class="muted">{$_("settings.loading")}</p>
+      {:else}
+        <dl>
+          {#each KINDS as kind (kind)}
+            <dt>{$_(`settings.notification_kinds.${kind}`)}</dt>
+            <dd>
+              <select
+                value={prefs[kind] ?? "both"}
+                on:change={(e) => onPrefChange(kind, e)}
+                aria-label={$_(`settings.notification_kinds.${kind}`)}
+              >
+                <option value="in_app">{$_("settings.channel.in_app")}</option>
+                <option value="email">{$_("settings.channel.email")}</option>
+                <option value="both">{$_("settings.channel.both")}</option>
+                <option value="off">{$_("settings.channel.off")}</option>
+              </select>
+            </dd>
+          {/each}
+        </dl>
+      {/if}
+    </section>
+  {/if}
 </section>
 
 <style>
   .settings { padding: var(--sp-6); display: grid; gap: var(--sp-4); max-width: 560px; }
-  .card {
-    display: grid;
-    gap: var(--sp-3);
-    padding: var(--sp-4);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-  }
-  .profile dl,
-  .prefs dl {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--sp-2) var(--sp-3);
-    margin: 0;
-    align-items: center;
-  }
-  .profile dt,
-  .prefs dt { color: var(--text-faint); }
-  .profile dd,
-  .prefs dd { margin: 0; }
-  .prefs select {
-    padding: var(--sp-1) var(--sp-2);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    color: inherit;
-    font: inherit;
-  }
-  label { display: grid; gap: var(--sp-1); }
-  input {
-    padding: var(--sp-2);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-    color: inherit;
-  }
-  .error { color: var(--accent-warning); margin: 0; }
-  .success { color: var(--accent); margin: 0; }
-  button {
-    padding: var(--sp-3);
-    background: var(--accent);
-    color: var(--bg-base);
-    border: 0;
-    border-radius: var(--r-md);
-    font-weight: 700;
-    cursor: pointer;
-  }
-  button:disabled { opacity: 0.6; cursor: progress; }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .feeds form { display: grid; gap: var(--sp-2); }
+
+  .feeds { display: grid; gap: var(--sp-3); }
   .feeds .token-list { list-style: none; padding: 0; margin: 0;
                         display: grid; gap: var(--sp-1); }
   .feeds .token-list li { display: flex; gap: var(--sp-2);
                           align-items: baseline; flex-wrap: wrap; }
-  .feeds .token-list button { padding: var(--sp-1) var(--sp-2);
-                              background: transparent; color: inherit;
-                              border: 1px solid var(--border-default);
-                              font-weight: 400; }
   .feeds .just-minted {
     padding: var(--sp-2); background: var(--bg-base);
     border: 1px dashed var(--accent); border-radius: var(--r-sm);
@@ -337,11 +303,29 @@
     font-family: var(--font-mono); font-size: var(--ts-xs);
     overflow-wrap: anywhere;
   }
+
+  .prefs dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--sp-2) var(--sp-3);
+    margin: 0;
+    align-items: center;
+  }
+  .prefs dt { color: var(--text-faint); }
+  .prefs dd { margin: 0; }
+  .prefs select {
+    padding: var(--sp-1) var(--sp-2);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    color: inherit;
+    font: inherit;
+  }
+
   @media (max-width: 600px) {
     .settings { padding: var(--sp-3); max-width: none; }
-    .card { padding: var(--sp-3); }
     input { font-size: 16px; }  /* prevents iOS auto-zoom on focus */
-    .profile dl, .prefs dl { grid-template-columns: 1fr; gap: var(--sp-1); }
+    .prefs dl { grid-template-columns: 1fr; gap: var(--sp-1); }
     .feeds .just-minted li {
       grid-template-columns: 1fr;
       gap: var(--sp-1);

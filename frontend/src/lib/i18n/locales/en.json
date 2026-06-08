@@ -33,6 +33,13 @@
     "failed": "failed",
     "notifications": "Notification preferences",
     "loading": "Loading…",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "feeds": "RSS feeds",
+      "offline": "Offline cache",
+      "notifications": "Notifications"
+    },
     "notification_kinds": {
       "account_security": "Account security",
       "mention": "Mentions",
