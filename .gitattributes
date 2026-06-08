@@ -1,0 +1,9 @@
+# Container init scripts MUST be LF. s6-overlay's s6-rc-compile rejects a
+# `type` file containing CRLF ("longrun\r"), and a CRLF shebang breaks the
+# interpreter line. Windows checkouts with core.autocrlf=true would otherwise
+# corrupt these — pin them to LF regardless of platform.
+infra/docker/s6-rc.d/**   text eol=lf
+infra/docker/cont-init.d/** text eol=lf
+infra/docker/lib/**       text eol=lf
+infra/docker/Caddyfile    text eol=lf
+*.sh                      text eol=lf

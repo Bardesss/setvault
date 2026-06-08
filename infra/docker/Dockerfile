@@ -87,9 +87,13 @@ RUN case "${TARGETARCH}" in \
     esac && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-noarch.tar.xz && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" -o /tmp/s6-arch.tar.xz && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-symlinks-noarch.tar.xz" -o /tmp/s6-symlinks-noarch.tar.xz && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-symlinks-arch.tar.xz" -o /tmp/s6-symlinks-arch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-noarch.tar.xz && \
     tar -C / -Jxpf /tmp/s6-arch.tar.xz && \
-    rm /tmp/s6-noarch.tar.xz /tmp/s6-arch.tar.xz
+    tar -C / -Jxpf /tmp/s6-symlinks-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-symlinks-arch.tar.xz && \
+    rm /tmp/s6-noarch.tar.xz /tmp/s6-arch.tar.xz /tmp/s6-symlinks-noarch.tar.xz /tmp/s6-symlinks-arch.tar.xz
 
 RUN pip install --no-cache-dir uv
 
