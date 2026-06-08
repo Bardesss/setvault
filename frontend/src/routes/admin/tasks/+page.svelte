@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
 
   interface ScheduledTask {
     id: string;
@@ -73,44 +75,35 @@
     </p>
   </header>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  {#if notice}<p class="ok" role="status">{notice}</p>{/if}
+  {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
+  {#if notice}<p class="admin-msg is-success" role="status">{notice}</p>{/if}
 
   {#if loading}
-    <p>Loading…</p>
+    <p class="loading">Loading…</p>
   {:else if items.length === 0}
-    <p class="empty">No scheduled jobs registered.</p>
+    <EmptyState message="No scheduled jobs registered." />
   {:else}
-    <table>
-      <thead>
+    <AdminTable
+      columns={["Job", "Interval", "Next run", "Last run", "Status", ""]}
+    >
+      {#each items as task (task.id)}
         <tr>
-          <th>Job</th>
-          <th>Interval</th>
-          <th>Next run</th>
-          <th>Last run</th>
-          <th>Status</th>
-          <th></th>
+          <td class="mono">{task.short_name}</td>
+          <td class="mono">{fmtInterval(task.interval_seconds)}</td>
+          <td class="mono">{fmtDate(task.next_run_at)}</td>
+          <td class="mono">{fmtDate(task.last_run_at)}</td>
+          <td class="mono">{task.last_status ?? "—"}</td>
+          <td class="cell-actions">
+            <button
+              type="button"
+              class="btn btn-sm"
+              disabled={busy[task.func_name]}
+              on:click={() => runNow(task.func_name)}
+            >Run now</button>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        {#each items as task (task.id)}
-          <tr>
-            <td><code>{task.short_name}</code></td>
-            <td class="mono">{fmtInterval(task.interval_seconds)}</td>
-            <td class="mono">{fmtDate(task.next_run_at)}</td>
-            <td class="mono">{fmtDate(task.last_run_at)}</td>
-            <td class="mono">{task.last_status ?? "—"}</td>
-            <td>
-              <button
-                type="button"
-                disabled={busy[task.func_name]}
-                on:click={() => runNow(task.func_name)}
-              >Run now</button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+      {/each}
+    </AdminTable>
   {/if}
 </section>
 
@@ -118,25 +111,5 @@
   .tasks { display: grid; gap: var(--sp-3); }
   header { display: grid; gap: var(--sp-1); }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .error { color: #c33; }
-  .ok { color: var(--accent); }
-  .empty { color: var(--text-faint); font-style: italic; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td {
-    text-align: left;
-    padding: var(--sp-2);
-    border-bottom: 1px solid var(--border-default);
-  }
-  th { color: var(--text-faint); font-weight: 600; font-size: var(--ts-sm); }
-  code { font-family: var(--font-mono); font-size: var(--ts-sm); }
-  .mono { font-family: var(--font-mono); font-size: var(--ts-sm); color: var(--text-faint); }
-  button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .loading { color: var(--text-faint); }
 </style>
