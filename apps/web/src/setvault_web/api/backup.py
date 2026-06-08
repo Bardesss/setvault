@@ -46,7 +46,14 @@ def _pg_dump_args_from_url(database_url: str) -> list[str]:
     ``-d <full-url>`` so passwords don't end up on the command line.
     """
     plain = database_url.replace("+asyncpg", "")
-    return ["pg_dump", "--no-owner", "--no-privileges", "-d", plain]
+    # --clean --if-exists makes the dump drop-then-recreate each object, so a
+    # restore works whether the target DB is empty OR already has the migrated
+    # schema (the bundled-mode reality: the embedded PG auto-migrates on boot).
+    # Without it, restore fails on "<object> already exists".
+    return [
+        "pg_dump", "--no-owner", "--no-privileges", "--clean", "--if-exists",
+        "-d", plain,
+    ]
 
 
 def _stream_pg_dump(database_url: str):
