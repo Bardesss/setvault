@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 from typing import Annotated
 
@@ -23,6 +24,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 _REDACT_SUFFIXES = ("_KEY", "_SECRET", "_TOKEN", "_PASSWORD", "_HOOK_SECRET")
+
+# Scrub credentials embedded in URL-shaped env values (e.g. DATABASE_URL =
+# postgresql://user:PASSWORD@host/db). The key name passes the suffix filter,
+# so without this the password would be echoed in /api/admin/system.
+_URL_CRED_RE = re.compile(r"(://[^:/?#@\s]+):([^@/?#\s]+)@")
+
+
+def _scrub_url_creds(value: str) -> str:
+    return _URL_CRED_RE.sub(r"\1:***@", value)
 
 
 @router.get("/audit")
@@ -63,7 +73,7 @@ async def system_info(
         select(func.count(LiveSet.id)).where(LiveSet.deleted_at.is_(None))
     )).scalar_one()
     env = {
-        k: v
+        k: _scrub_url_creds(v)
         for k, v in os.environ.items()
         if not any(k.upper().endswith(suf) for suf in _REDACT_SUFFIXES)
         and "PASS" not in k.upper()

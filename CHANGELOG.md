@@ -7,6 +7,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.6.0](https://github.com/Bardesss/setvault/compare/v0.5.0...v0.6.0) (2026-06-08)
 
 
+> **⚠️ Upgrade caveat — Postgres 16 → 18.** The bundled stack now pins
+> **Postgres 18** (earlier builds used Postgres 16). A PG-16 data directory is
+> not binary-compatible with PG 18 and Postgres will refuse to start on it. If
+> you ran an earlier SetVault on Postgres 16, **dump on 16 and restore into 18**
+> via the admin backup endpoint + the new `python -m setvault_web.restore` CLI —
+> the old `/data/db` cannot be reused. See the README "Upgrading" and "Backup &
+> restore" sections.
+
+
 ### Features
 
 * **deploy:** single-container bundled mode + external datastores from one image ([f932c09](https://github.com/Bardesss/setvault/commit/f932c090210ebb694e1301121015eae390759497))

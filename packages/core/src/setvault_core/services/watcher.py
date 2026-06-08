@@ -2,9 +2,9 @@
 
 Subscribes to ``created`` / ``moved`` events under every enabled
 ``WatchFolder.host_path`` and enqueues a ``watch_folder_ingest`` RQ job for
-each audio file. Designed to run as a long-lived process — either as its own
-container or absorbed into ``setvault-worker`` via the entry-point script
-at ``apps/worker/src/setvault_worker/watcher_entrypoint.py``.
+each audio file. Designed to run as a long-lived process, launched via
+``python -m setvault_core.services.watcher`` (in the bundled image it runs as
+its own s6-overlay longrun alongside uvicorn and the RQ worker).
 
 Re-syncs the active set of watched paths every ``RECONCILE_INTERVAL_SECONDS``
 (default 30) so admin-side enable/disable + path changes pick up without

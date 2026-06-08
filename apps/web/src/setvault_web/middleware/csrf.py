@@ -9,11 +9,12 @@ ASGI form has no inner task group, so the race cannot fire.
 from __future__ import annotations
 
 import json
-import os
 import secrets
 from collections.abc import Awaitable, Callable
 from http.cookies import SimpleCookie
 from typing import Any
+
+from setvault_web.cookies import cookie_secure as _cookie_secure
 
 CSRF_COOKIE = "csrf_token"
 CSRF_HEADER = "x-csrf-token"
@@ -25,24 +26,16 @@ EXEMPT_PATHS = frozenset({
     "/api/dev/seed-e2e",  # gated by SETVAULT_DEV_SEED; router not registered otherwise
 })
 EXEMPT_PATH_PREFIXES = ("/api/invites/", "/api/password-reset/")
-# /api/password-reset/ is exempted because /request and /{token}/redeem are anonymous endpoints
-# (no session cookie yet, so no CSRF cookie to validate against).
-# Trade-off: the /admin-link sub-path also matches the prefix and loses CSRF enforcement,
-# but admin-link is already gated by require_admin (session + role check), which provides
-# equivalent protection. Revisit with per-route CSRF if needed.
+# /api/password-reset/ is exempted because /request and /{token}/redeem are anonymous
+# endpoints (no session cookie yet, so no CSRF cookie to validate against). The one
+# authenticated mutating sub-path, /admin-link, is explicitly RE-protected below so it
+# doesn't ride the prefix exemption.
+CSRF_FORCE_PROTECT = frozenset({"/api/password-reset/admin-link"})
 
 
 Scope = dict[str, Any]
 Receive = Callable[[], Awaitable[dict[str, Any]]]
 Send = Callable[[dict[str, Any]], Awaitable[None]]
-
-
-def _cookie_secure() -> bool:
-    return os.environ.get("SETVAULT_ALLOW_INSECURE_COOKIE", "").lower() not in (
-        "1",
-        "true",
-        "yes",
-    )
 
 
 def _read_cookies(scope: Scope) -> dict[str, str]:
@@ -91,7 +84,8 @@ class CsrfMiddleware:
         method = scope.get("method", "GET")
         path = scope.get("path", "/")
         is_exempt = (
-            path in EXEMPT_PATHS or any(path.startswith(p) for p in EXEMPT_PATH_PREFIXES)
+            path not in CSRF_FORCE_PROTECT
+            and (path in EXEMPT_PATHS or any(path.startswith(p) for p in EXEMPT_PATH_PREFIXES))
         )
         cookies = _read_cookies(scope)
         existing = cookies.get(CSRF_COOKIE)

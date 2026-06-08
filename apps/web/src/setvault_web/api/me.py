@@ -99,12 +99,15 @@ async def continue_listening(
 
 @router.get("/activity", response_model=list[ActivityItem])
 async def activity(
-    _: Annotated[User, Depends(current_user)],
+    user: Annotated[User, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
     rows = (
         await session.execute(
-            select(ActivityEvent).order_by(ActivityEvent.created_at.desc()).limit(30)
+            select(ActivityEvent)
+            .where(ActivityEvent.user_id == user.id)
+            .order_by(ActivityEvent.created_at.desc())
+            .limit(30)
         )
     ).scalars().all()
     return [

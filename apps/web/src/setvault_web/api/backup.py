@@ -46,7 +46,14 @@ def _pg_dump_args_from_url(database_url: str) -> list[str]:
     ``-d <full-url>`` so passwords don't end up on the command line.
     """
     plain = database_url.replace("+asyncpg", "")
-    return ["pg_dump", "--no-owner", "--no-privileges", "-d", plain]
+    # --clean --if-exists makes the dump drop-then-recreate each object, so a
+    # restore works whether the target DB is empty OR already has the migrated
+    # schema (the bundled-mode reality: the embedded PG auto-migrates on boot).
+    # Without it, restore fails on "<object> already exists".
+    return [
+        "pg_dump", "--no-owner", "--no-privileges", "--clean", "--if-exists",
+        "-d", plain,
+    ]
 
 
 def _stream_pg_dump(database_url: str):
@@ -81,20 +88,29 @@ def _stream_tar(database_url: str, roots: list[MediaRoot]):
     Uncompressed tar lets us stream chunk-by-chunk without buffering the
     whole archive. Browsers happily download .tar; the admin can compress
     locally if disk space is a concern.
+
+    The pg_dump output is spooled to a temp file (not accumulated in memory)
+    so a large DB doesn't cause an admin-triggered OOM. The temp file gives
+    us a known size for the tar header and constant memory usage; it's
+    deleted as soon as the dump has been streamed into the archive.
     """
     import io
+    import tempfile
 
     buffer = io.BytesIO()
     tar = tarfile.open(fileobj=buffer, mode="w|")
 
-    # 1) db.sql streamed in
-    db_bytes = b""
-    for chunk in _stream_pg_dump(database_url):
-        db_bytes += chunk
-    info = tarfile.TarInfo(name="db.sql")
-    info.size = len(db_bytes)
-    info.mtime = int(datetime.now(UTC).timestamp())
-    tar.addfile(info, io.BytesIO(db_bytes))
+    # 1) db.sql — spool pg_dump to a temp file, then add it from that file so
+    #    the dump never lives fully in memory.
+    with tempfile.TemporaryFile() as dump_fp:
+        for chunk in _stream_pg_dump(database_url):
+            dump_fp.write(chunk)
+        size = dump_fp.tell()
+        dump_fp.seek(0)
+        info = tarfile.TarInfo(name="db.sql")
+        info.size = size
+        info.mtime = int(datetime.now(UTC).timestamp())
+        tar.addfile(info, dump_fp)
     buffer.seek(0)
     yield buffer.read()
     buffer.seek(0)
