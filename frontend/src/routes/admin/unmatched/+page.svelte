@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
 
   interface UnmatchedFile {
     id: string;
@@ -94,38 +96,33 @@
     </p>
   </header>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
 
   {#if loading}
-    <p>Loading…</p>
+    <p class="loading">Loading…</p>
   {:else if items.length === 0}
-    <p class="empty">Inbox is empty.</p>
+    <EmptyState message="Inbox is empty." />
   {:else}
-    <table>
-      <thead><tr>
-        <th>File</th><th>Detected</th><th>Error</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        {#each items as uf (uf.id)}
-          <tr>
-            <td class="mono ellipsis" title={uf.file_path}>{uf.file_path}</td>
-            <td class="mono">{fmtDate(uf.detected_at)}</td>
-            <td class="error-cell">{uf.error_text ?? ""}</td>
-            <td class="actions">
-              <button type="button" disabled={busy[uf.id]} on:click={() => openLinkPicker(uf)}>
-                Link…
-              </button>
-              <button type="button" disabled={busy[uf.id]} on:click={() => resolve(uf, "create_draft")}>
-                Draft
-              </button>
-              <button type="button" class="danger" disabled={busy[uf.id]} on:click={() => resolve(uf, "discard")}>
-                Discard
-              </button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <AdminTable columns={["File", "Detected", "Error", "Actions"]}>
+      {#each items as uf (uf.id)}
+        <tr>
+          <td class="mono ellipsis" title={uf.file_path}>{uf.file_path}</td>
+          <td class="mono">{fmtDate(uf.detected_at)}</td>
+          <td class="error-cell">{uf.error_text ?? ""}</td>
+          <td class="cell-actions">
+            <button type="button" class="btn btn-sm" disabled={busy[uf.id]} on:click={() => openLinkPicker(uf)}>
+              Link…
+            </button>
+            <button type="button" class="btn btn-sm" disabled={busy[uf.id]} on:click={() => resolve(uf, "create_draft")}>
+              Draft
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" disabled={busy[uf.id]} on:click={() => resolve(uf, "discard")}>
+              Discard
+            </button>
+          </td>
+        </tr>
+      {/each}
+    </AdminTable>
   {/if}
 
   {#if linkPicker}
@@ -151,7 +148,7 @@
           <li class="empty">No matches.</li>
         {/if}
       </ul>
-      <button type="button" on:click={() => { linkPicker = null; }}>Cancel</button>
+      <button type="button" class="btn btn-sm" on:click={() => { linkPicker = null; }}>Cancel</button>
     </aside>
   {/if}
 </section>
@@ -160,26 +157,9 @@
   .unmatched { display: grid; gap: var(--sp-3); }
   header { display: grid; gap: var(--sp-1); }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .error { color: #c33; }
-  .empty { color: var(--text-faint); font-style: italic; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: var(--sp-1) var(--sp-2);
-           border-bottom: 1px solid var(--border-default); }
-  th { color: var(--text-faint); font-weight: 600; font-size: var(--ts-sm); }
-  .mono { font-family: var(--font-mono); font-size: var(--ts-sm); }
+  .loading { color: var(--text-faint); }
   .ellipsis { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .error-cell { color: var(--text-faint); font-size: var(--ts-sm); }
-  .actions { display: flex; gap: var(--sp-1); }
-  .actions button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .actions button.danger { border-color: #c33; color: #c33; }
   .picker {
     position: fixed;
     bottom: var(--sp-4);
