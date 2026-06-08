@@ -1422,3 +1422,127 @@
 .fs-tracklist button:hover { background: var(--bg-surface); }
 .fs-tracklist button.now { background: var(--bg-now, var(--accent-soft)); }
 .fs-tracklist .ts { font-family: var(--font-mono); font-size: var(--ts-sm); color: var(--text-muted); }
+
+/* =========================================================
+   Phase 6D — admin + management shared chrome. Token-only.
+   Replaces the per-tab duplicated table/form/status CSS.
+   ========================================================= */
+
+/* --- data table ------------------------------------------- */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--ts-md);
+}
+.admin-table th {
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: var(--ts-sm);
+}
+.admin-table tbody tr:last-child td { border-bottom: 0; }
+.admin-table tbody tr:hover { background: var(--bg-elevated); }
+.admin-table .mono { font-family: var(--font-mono); font-size: var(--ts-sm); }
+.admin-table .cell-actions { display: flex; gap: var(--sp-1); }
+.admin-table tr.is-disabled td { opacity: 0.5; }
+
+/* --- form card -------------------------------------------- */
+.admin-form {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+}
+.admin-field { display: grid; gap: var(--sp-1); font-size: var(--ts-sm); }
+.admin-field.inline { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.admin-field > span { color: var(--text-muted); }
+.admin-form input,
+.admin-form textarea,
+.admin-form select {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  color: var(--text-default);
+  font: inherit;
+}
+.admin-form input:focus,
+.admin-form textarea:focus,
+.admin-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--accent-glow);
+}
+.admin-form fieldset {
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2);
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.admin-form fieldset legend {
+  padding: 0 var(--sp-1);
+  color: var(--text-faint);
+  font-size: var(--ts-sm);
+}
+.admin-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.admin-msg { margin: 0; font-family: var(--font-mono); font-size: var(--ts-sm); }
+.admin-msg.is-error { color: var(--accent-error); }
+.admin-msg.is-success { color: var(--accent); }
+
+/* --- empty state ------------------------------------------ */
+.empty-state {
+  padding: var(--sp-6);
+  text-align: center;
+  color: var(--text-faint);
+  font-size: var(--ts-md);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-md);
+}
+
+/* --- status block ----------------------------------------- */
+.status-block {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+}
+.status-block h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--ts-md);
+  color: var(--text-strong);
+}
+/* (status rows reuse the 6B .stat-line class) */
+
+/* --- danger button + admin banner ------------------------- */
+.btn-danger {
+  border: 1px solid var(--accent-error);
+  color: var(--accent-error);
+  background: transparent;
+}
+.btn-danger:hover { background: var(--accent-error); color: var(--text-on-accent); }
+.admin-banner {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--ts-md);
+}
+.admin-banner code { font-family: var(--font-mono); font-size: var(--ts-sm); }
