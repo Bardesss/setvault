@@ -6,6 +6,8 @@
     type ProviderConfig,
     type ProviderKind,
   } from "$lib/api/providers";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import AdminForm from "$lib/components/AdminForm.svelte";
   import type { PageData } from "./$types";
 
   export let data: PageData;
@@ -43,80 +45,52 @@
 <section>
   <h1>{$_("admin.providers.title")}</h1>
 
-  <table>
-    <thead><tr>
-      <th>{$_("admin.providers.kind")}</th>
-      <th>{$_("admin.providers.enabled")}</th>
-      <th>{$_("admin.providers.priority")}</th>
-      <th>{$_("admin.providers.actions")}</th>
-    </tr></thead>
-    <tbody>
-      {#each providers as p (p.id)}
-        <tr>
-          <td>{p.provider_kind}</td>
-          <td>{p.enabled ? "OK" : "off"}</td>
-          <td>{p.priority}</td>
-          <td>
-            <button on:click={() => runTest(p.provider_kind)}>
-              {$_("admin.providers.test")}
-            </button>
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <AdminTable
+    columns={[
+      $_("admin.providers.kind"),
+      $_("admin.providers.enabled"),
+      $_("admin.providers.priority"),
+      $_("admin.providers.actions"),
+    ]}
+  >
+    {#each providers as p (p.id)}
+      <tr>
+        <td>{p.provider_kind}</td>
+        <td>{p.enabled ? "OK" : "off"}</td>
+        <td>{p.priority}</td>
+        <td class="cell-actions">
+          <button class="btn btn-sm" on:click={() => runTest(p.provider_kind)}>
+            {$_("admin.providers.test")}
+          </button>
+        </td>
+      </tr>
+    {/each}
+  </AdminTable>
 
-  <h2>{$_("admin.providers.add_or_update")}</h2>
-  <label>
-    {$_("admin.providers.kind")}
-    <select bind:value={kind}>
-      <option value="musicbrainz">MusicBrainz</option>
-      <option value="discogs">Discogs</option>
-      <option value="acoustid">AcoustID</option>
-    </select>
-  </label>
-  {#each configSchema as f (f.key)}
-    <label>
-      {f.label}
-      <input type="text" bind:value={configFields[f.key]} />
+  <AdminForm title={$_("admin.providers.add_or_update")} on:submit={save}>
+    <label class="admin-field">
+      <span>{$_("admin.providers.kind")}</span>
+      <select bind:value={kind}>
+        <option value="musicbrainz">MusicBrainz</option>
+        <option value="discogs">Discogs</option>
+        <option value="acoustid">AcoustID</option>
+      </select>
     </label>
-  {/each}
-  <button class="primary" on:click={save} disabled={saving}>
-    {$_("admin.providers.save")}
-  </button>
-  {#if testResult}<p>Test: {testResult}</p>{/if}
+    {#each configSchema as f (f.key)}
+      <label class="admin-field">
+        <span>{f.label}</span>
+        <input type="text" bind:value={configFields[f.key]} />
+      </label>
+    {/each}
+    <svelte:fragment slot="actions">
+      <button type="submit" class="btn btn-primary" disabled={saving}>
+        {$_("admin.providers.save")}
+      </button>
+    </svelte:fragment>
+  </AdminForm>
+  {#if testResult}<p class="admin-msg">Test: {testResult}</p>{/if}
 </section>
 
 <style>
   section { display: grid; gap: var(--sp-4); }
-  table { width: 100%; border-collapse: collapse; }
-  th, td {
-    text-align: left;
-    padding: var(--sp-2);
-    border-bottom: 1px solid var(--border-default);
-  }
-  label { display: grid; gap: var(--sp-1); max-width: 480px; }
-  input, select {
-    padding: var(--sp-2);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    background: var(--bg-input);
-    color: var(--text-default);
-    font: inherit;
-  }
-  button {
-    background: none;
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    padding: var(--sp-1) var(--sp-3);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-  .primary {
-    background: var(--accent);
-    color: var(--text-on-accent);
-    border: none;
-    padding: var(--sp-2) var(--sp-3);
-    justify-self: start;
-  }
 </style>
