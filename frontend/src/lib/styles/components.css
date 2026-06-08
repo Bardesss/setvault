@@ -1527,13 +1527,8 @@
 }
 /* (status rows reuse the 6B .stat-line class) */
 
-/* --- danger button + admin banner ------------------------- */
-.btn-danger {
-  border: 1px solid var(--accent-error);
-  color: var(--accent-error);
-  background: transparent;
-}
-.btn-danger:hover { background: var(--accent-error); color: var(--text-on-accent); }
+/* --- admin banner ----------------------------------------- */
+/* (.btn-danger already defined above with the 6B button set) */
 .admin-banner {
   padding: var(--sp-2) var(--sp-3);
   background: var(--accent-soft);
