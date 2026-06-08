@@ -4,6 +4,23 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/Bardesss/setvault/compare/v0.6.0...v0.7.0) (2026-06-08)
+
+
+### Features
+
+* **admin:** create-admin CLI for safe first-admin bootstrap (B1) ([c8d508c](https://github.com/Bardesss/setvault/commit/c8d508ce13852736b3d368f3258109853359a085))
+* **ops:** restore CLI + backup memory hardening + backup tests (B3) ([466a472](https://github.com/Bardesss/setvault/commit/466a472ac21ef60db8eb1c9eca4a3099abd4d846))
+
+
+### Bug Fixes
+
+* **ops:** pg_dump --clean --if-exists so restore works into a populated DB ([7c0684c](https://github.com/Bardesss/setvault/commit/7c0684c25ec31534bfe6cb9debcb85dd49a531e9))
+* pre-launch hardening — security, admin bootstrap, restore, reachability ([b9ba404](https://github.com/Bardesss/setvault/commit/b9ba404bd7f0b90f68ad2c347f5a23121061119f))
+* **security:** effective validation gate, activity scoping, secret hygiene ([28f5d50](https://github.com/Bardesss/setvault/commit/28f5d508776305a949e6d3b018c1cdfb9827d5ee))
+* **security:** SECRET_KEY strength gate + cookie/CSRF/redaction hardening ([fa2ea34](https://github.com/Bardesss/setvault/commit/fa2ea34af8d3929c2b863bf90f2f82cc01926faf))
+* **ui:** reachable /sets/new + mount NotificationBell; drop dead RoadmapTag ([b6538ce](https://github.com/Bardesss/setvault/commit/b6538ce16b9b86ac3b2273c2822a4336f535fde8))
+
 ## [0.6.0](https://github.com/Bardesss/setvault/compare/v0.5.0...v0.6.0) (2026-06-08)
 
 
