@@ -1,7 +1,7 @@
 # SetVault
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.2-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.0-brightgreen.svg)](CHANGELOG.md)
 [![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-1f6feb.svg)](https://github.com/Bardesss/setvault/pkgs/container/setvault)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/Bardesss/setvault/issues)
 
@@ -17,7 +17,7 @@ per-user RSS feeds, an embeddable player, and an installable PWA.
 
 ---
 
-## ✨ What's in the box (v0.1.0)
+## ✨ What's in the box (v0.6.0)
 
 | Area | What you get |
 |---|---|
@@ -73,6 +73,18 @@ then `docker compose -f infra/docker/compose.aio.yml up -d`.
 The `/data` volume holds the database, Redis, and all media/config — **back it
 up**. Put TLS termination on your own reverse proxy in front (Caddy/nginx/Traefik).
 
+> ### ⚠️ You MUST front SetVault with an HTTPS reverse proxy
+>
+> The bundled Caddy serves **plain HTTP on `:1970`** (`auto_https off`), but
+> session cookies are flagged `Secure` by default. On a plain-HTTP origin the
+> browser **silently drops the session cookie** — login returns `200` but the
+> session never persists, so you appear logged out on the next request. Always
+> terminate TLS at a reverse proxy in front (Caddy / nginx / Traefik) and set
+> `BASE_URL` to the `https://` URL.
+>
+> For local HTTP-only testing **only**, set `SETVAULT_ALLOW_INSECURE_COOKIE=1`
+> to drop the `Secure` flag. Never set it in production.
+
 > **Caveat (bundled mode):** the bundled Postgres is pinned to **PG 18** and
 > its data dir is tied to that major version. A future major upgrade can't
 > reuse `/data/db` — use external mode for rolling/managed upgrades, or
@@ -84,9 +96,29 @@ On first boot, the container:
 - runs `alembic upgrade head`
 - starts uvicorn + RQ worker + watchdog under s6-overlay
 
-The first admin is created by enabling `SETVAULT_DEV_SEED=1` for one
-boot, hitting `/api/dev/seed-e2e`, then unsetting it — or by running
-an invite-redeem flow against the API.
+### Create the first admin
+
+Create (or promote) the first admin with the bundled CLI. It reads the
+credentials from the environment so the password never lands on the command
+line or in the container logs:
+
+```bash
+docker exec \
+  -e ADMIN_EMAIL='you@example.com' \
+  -e ADMIN_PASSWORD='a-strong-password-min-12-chars' \
+  setvault python -m setvault_web.create_admin
+```
+
+- `ADMIN_EMAIL` (required) and `ADMIN_PASSWORD` (required, **≥ 12 characters**).
+- `ADMIN_USERNAME` (optional, defaults to the email local-part) and
+  `ADMIN_DISPLAY_NAME` (optional, defaults to the username).
+- Idempotent: if the user already exists it is promoted to admin; if they are
+  already an admin it is a no-op. Re-running is safe.
+
+> **`SETVAULT_DEV_SEED` is dev/e2e only.** The `/api/dev/seed-e2e` endpoint it
+> exposes ships a public, well-known credential — it exists solely for the test
+> suite. **Never set `SETVAULT_DEV_SEED` in production.** Use the
+> `create_admin` CLI above for real deployments.
 
 ### Option B — External datastores (compose)
 
@@ -137,18 +169,29 @@ synthesized at first boot.
 | `REDIS_URL` | optional | `redis://redis:6379/0` | Set to use an external Redis; unset = bundled datastore. RQ queue + rate-limit store |
 | `TUSD_HOOK_SECRET` | optional | auto-generated on first boot | Shared secret tusd uses when calling back into setvault |
 | `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / media / cache / config / watch |
-| `SETVAULT_VERSION` | optional | `latest` | Pin to a specific image tag |
+| `SETVAULT_VERSION` | optional | `latest` | Image tag. **Pin to an explicit version in production** (e.g. `0.6.0`) — the default floats on `latest` and an unattended pull can ship a breaking change. |
 | `SETVAULT_HTTP_PORT` | optional | `1970` | Host port the setvault service binds (1970 — year of the first DJ live set) |
 | `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
 | `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |
 
 ### Reverse-proxy tips
 
-- Set `BASE_URL` to your public HTTPS URL so signed enclosures and
-  invite links resolve.
+- Set `BASE_URL` to your public **HTTPS** URL so signed enclosures and
+  invite links resolve — and so the `Secure` session cookie sticks (see the
+  HTTPS warning in the bundled section above).
 - Forward `X-Forwarded-Proto` and `X-Forwarded-For`.
 - The web service listens on port `1970`; tusd is internal-only and
   reached via the web service at `/uploads/`.
+
+> ### ⚠️ Never publish port 1970 directly (external mode)
+>
+> SetVault **trusts** `X-Forwarded-*` headers (so it can see the real client
+> scheme/IP behind your proxy). If port `1970` is reachable directly, a client
+> can spoof `X-Forwarded-For` / `X-Forwarded-Proto` and defeat rate-limiting and
+> the `Secure`-cookie logic. **Always** keep `1970` behind a reverse proxy that
+> **strips client-supplied `X-Forwarded-For`** and sets it itself. Use
+> `SETVAULT_FORWARDED_ALLOW_IPS` to scope which upstream IPs are trusted to set
+> those headers (e.g. just your proxy's address).
 
 ---
 
@@ -165,6 +208,22 @@ docker compose up -d
 Always read the [CHANGELOG](CHANGELOG.md) for any breaking-change notes
 before bumping a major or minor version.
 
+> ### ⚠️ v0.6.0 Postgres 16 → 18 upgrade caveat
+>
+> The bundled stack now pins **Postgres 18** (previous SetVault builds used
+> Postgres 16). A PG 16 data directory is **not** binary-compatible with PG 18
+> — Postgres 18 will refuse to start on a 16 data dir. If you ran an earlier
+> SetVault on Postgres 16, you must dump on 16 and restore into 18:
+>
+> 1. **Before upgrading**, on your still-running PG-16 instance, take a backup
+>    via the admin backup endpoint (see [Backup & restore](#-backup--restore)).
+> 2. Pull `v0.6.0` and start it on a **fresh** data directory (do not reuse the
+>    old `/data/db`).
+> 3. Restore the backup into the new PG-18-backed instance with the restore CLI.
+>
+> External-mode operators with managed Postgres should run their provider's
+> `pg_dumpall` / major-version upgrade path instead.
+
 ---
 
 ## 💾 Backup & restore
@@ -179,8 +238,32 @@ curl -fsSL -o setvault-backup-$(date +%F).tar \
   https://your-instance/api/admin/backup
 ```
 
-Restore is documented in the wiki (post-v0.1.0). Until then: untar,
-`psql < dump.sql`, restore media directories under each `MediaRoot.host_path`.
+### Restore
+
+Restore is the inverse, via the bundled restore CLI. The backup tar contains
+a `pg_dump` (`db.sql`) plus every media file keyed by MediaRoot. The CLI loads
+the dump with `psql` and copies media back under each root's `host_path`.
+
+```bash
+# 1. Download the backup tar (authenticated admin session, as above).
+# 2. Copy it into the container (or bind-mount it), e.g. to /data:
+docker cp setvault-backup-2026-06-08.tar setvault:/data/restore.tar
+
+# 3. Run the restore. It is DESTRUCTIVE — it overwrites the live database
+#    and media files — so it refuses to run without --yes.
+docker exec setvault \
+  python -m setvault_web.restore /data/restore.tar --yes
+```
+
+- The DB dump is loaded first; the restore then re-reads the MediaRoots from
+  the freshly restored database to know where each root's `host_path` is, then
+  copies media into place. `psql` must be on `PATH` (it is in the image).
+- `--yes` (or `RESTORE_CONFIRM=1`) is mandatory — without it the CLI exits
+  rather than overwrite anything.
+- **Bundled mode:** restore loads into the **embedded Postgres 18** — this is
+  also the path to migrate a pre-v0.6.0 (PG 16) backup forward (see the
+  [upgrade caveat](#-upgrading)). The DB password is never printed; the libpq
+  URL passed to `psql` is redacted in all output.
 
 ---
 
@@ -251,7 +334,7 @@ redis + tusd), see `infra/docker/compose.yml` (builds from source) or
                 ┌───────────────────┼──────────────────┐
                 ▼                   ▼                  ▼
         ┌──────────────┐    ┌──────────────┐   ┌──────────────┐
-        │ Postgres 16  │    │   Redis 7    │   │ ffmpeg+fpcalc│
+        │ Postgres 18  │    │   Redis 7    │   │ ffmpeg+fpcalc│
         └──────────────┘    └──────────────┘   └──────────────┘
 ```
 
@@ -305,6 +388,22 @@ the deployed landing locally, run `npm run site:serve` from `frontend/`.
   `infra/scripts/update-yt-dlp.sh`
 - `security_opt: no-new-privileges` + `cap_drop: ALL` on every container
 - Audit log records every state-changing admin action
+
+### Hardening — firewall container egress (defense-in-depth)
+
+URL-rip / source ingest hands URLs to `yt-dlp`, which follows HTTP redirects
+**without an internal-IP guard**. The host allowlist (YT / SoundCloud /
+Mixcloud / Internet Archive / Bandcamp) constrains the *initial* host, but an
+allowlisted host could in principle redirect to an internal address. As
+defense-in-depth, operators should **firewall the container/worker egress** to
+block:
+
+- the cloud metadata endpoint `169.254.169.254` (and `fd00:ec2::254`),
+- RFC-1918 / link-local ranges (`10.0.0.0/8`, `172.16.0.0/12`,
+  `192.168.0.0/16`, `127.0.0.0/8`, `169.254.0.0/16`).
+
+This stops a redirect-based SSRF from reaching your metadata service or other
+internal hosts even if it slips past the host allowlist.
 
 Report security issues privately to the maintainer rather than via
 public GitHub issues.
