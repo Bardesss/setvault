@@ -4,6 +4,32 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/Bardesss/setvault/compare/v0.5.0...v0.6.0) (2026-06-08)
+
+
+### Features
+
+* **deploy:** single-container bundled mode + external datastores from one image ([f932c09](https://github.com/Bardesss/setvault/commit/f932c090210ebb694e1301121015eae390759497))
+* **docker:** 00-mode cont-init resolves bundled/external + /data paths ([0e912d4](https://github.com/Bardesss/setvault/commit/0e912d430e9876bbafd3301174f3071bd4b1775f))
+* **docker:** bundle tusd + Caddy proxy; uvicorn binds mode port ([8e48215](https://github.com/Bardesss/setvault/commit/8e4821567d9d4d67ab61ec8d6343d54d397533e3))
+* **docker:** bundled Postgres + init-db oneshot; migrate via s6-rc deps ([980e79e](https://github.com/Bardesss/setvault/commit/980e79e0a250fb9e03b25deba705b1c801f13810))
+* **docker:** bundled Redis s6 service (idle in external mode) ([daf972e](https://github.com/Bardesss/setvault/commit/daf972ea37f7729a4eeaebfe7842340ceafea11a))
+* **docker:** external compose (pg18, tusd bundled) + compose.aio.yml + env docs ([0e31b80](https://github.com/Bardesss/setvault/commit/0e31b8040f878f990b79fac3e9f8833862c664f8))
+* **docker:** install PG18, Redis, tusd, Caddy; mode-aware ENV ([06f06d6](https://github.com/Bardesss/setvault/commit/06f06d6e88c2bdb4cd25c68f42c6a67261383efb))
+* **docker:** mode-detection lib + unit tests for bundled/external ([9eb2a44](https://github.com/Bardesss/setvault/commit/9eb2a440633834582de4588826ad77e45b68254f))
+
+
+### Bug Fixes
+
+* **docker:** external-mode boot — PG18 volume path + init-db readiness ([896168b](https://github.com/Bardesss/setvault/commit/896168b39803b89c979c01273e57661b8659ca03))
+* **docker:** make bundled single-container image actually boot ([c75ac53](https://github.com/Bardesss/setvault/commit/c75ac53b8846c867158aa52fbbfc53c29affa39d))
+
+
+### Documentation
+
+* **readme:** bundled vs external install paths + PG18 caveat ([79893c4](https://github.com/Bardesss/setvault/commit/79893c42c9e0acedcc240bd7b47f290cbce1c161))
+* **readme:** flip 6D to merged; bundled deploy is the sole this-release row ([6e81756](https://github.com/Bardesss/setvault/commit/6e81756ec6e770284c46495f357badb068b04e15))
+
 ## [0.5.0](https://github.com/Bardesss/setvault/compare/v0.4.0...v0.5.0) (2026-06-08)
 
 
