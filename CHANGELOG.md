@@ -4,6 +4,42 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/Bardesss/setvault/compare/v0.4.0...v0.5.0) (2026-06-08)
+
+
+### Features
+
+* **admin:** connectors adopts AdminTable + EmptyState ([f185249](https://github.com/Bardesss/setvault/commit/f18524937201b3e2a1d38744523486bece3f80f9))
+* **admin:** EmptyState, StatusBlock, AdminTable, AdminForm components ([a957a15](https://github.com/Bardesss/setvault/commit/a957a15ed002d7ebdef1d9bf22b8ce69f86d3601))
+* **admin:** health adopts StatusBlock/AdminTable/EmptyState ([8955e7f](https://github.com/Bardesss/setvault/commit/8955e7fabb4d5948946c2b7b2f9b68f4344dfbd0))
+* **admin:** jobs adopts AdminTable + EmptyState ([1460129](https://github.com/Bardesss/setvault/commit/1460129cabcfda2183acb7c578e083ead4a1812e))
+* **admin:** providers adopts AdminTable + AdminForm ([d3fa1c9](https://github.com/Bardesss/setvault/commit/d3fa1c98641bb9220909fd03c9f0ea11bf14bc69))
+* **admin:** recycle adopts AdminTable/EmptyState + shared buttons ([1a94ec6](https://github.com/Bardesss/setvault/commit/1a94ec672fefebd0d3c064b399e41cab31db3ee1))
+* **admin:** restyle shell to shared chrome (banner + tabs) ([5af9d80](https://github.com/Bardesss/setvault/commit/5af9d80757487109db695a07a2c30661bb769202))
+* **admin:** storage adopts AdminTable + EmptyState ([2ea0dcc](https://github.com/Bardesss/setvault/commit/2ea0dcc24138c66a2bc21488b1d932b1cc9a0d54))
+* **admin:** system adopts StatusBlock/AdminTable ([b449d02](https://github.com/Bardesss/setvault/commit/b449d021d56bbf983adaae768f573dcd4de9e9de))
+* **admin:** tasks adopts AdminTable/EmptyState + shared buttons ([5636fcf](https://github.com/Bardesss/setvault/commit/5636fcf0f7a447ed3dc5a320f773763a2e37fdb9))
+* **admin:** unmatched adopts AdminTable/EmptyState + shared buttons ([eb7847d](https://github.com/Bardesss/setvault/commit/eb7847de0ea648005581fc428e8eee0fadae9fd7))
+* **admin:** users adopts AdminTable + EmptyState ([c143822](https://github.com/Bardesss/setvault/commit/c143822f182bc3ff87e68de291e6ab5f5d6d5b73))
+* **admin:** watch-folders adopts AdminTable/AdminForm/EmptyState ([14b0cbe](https://github.com/Bardesss/setvault/commit/14b0cbe4afe37987d742cb9f054a63f7134a182f))
+* **admin:** webhooks adopts AdminTable/AdminForm/EmptyState ([234b607](https://github.com/Bardesss/setvault/commit/234b607b3ba1b4fac4a577454c573869e9b4cebe))
+* **phase-6d:** shared admin components across 12 tabs + Settings + Sets/new ([1770f87](https://github.com/Bardesss/setvault/commit/1770f87c95c449fa4b29006ac4f0de8d0b342d4b))
+* **sets-new:** design-language pass with shared TabStrip ([f3d4688](https://github.com/Bardesss/setvault/commit/f3d468811bb016d93bc2524f150184362188e31d))
+* **settings:** TabStrip layout + shared form/status components ([b3a5bc7](https://github.com/Bardesss/setvault/commit/b3a5bc728c9384ecc3757a5ade989ffcbf973d06))
+* **styles:** shared .btn:disabled state ([d707e4e](https://github.com/Bardesss/setvault/commit/d707e4edf57afd0460068c6ef15e5df60582b699))
+* **styles:** shared admin chrome classes for Phase 6D ([fe83323](https://github.com/Bardesss/setvault/commit/fe833237787aff01b1357beaf9d2cff4608bb08e))
+
+
+### Bug Fixes
+
+* **admin:** restore muted style for unmatched picker no-matches row ([adb0e63](https://github.com/Bardesss/setvault/commit/adb0e63f370fbb809b68cf86ad09017097dc79da))
+* **styles:** drop duplicate .btn-danger from Phase 6D block ([58366ca](https://github.com/Bardesss/setvault/commit/58366ca293eb499060b9c6e6d231751dad5c3cfb))
+
+
+### Documentation
+
+* **readme:** mark 6D admin/management as this release ([c784079](https://github.com/Bardesss/setvault/commit/c7840793030a7737b3dbaf27b1073bacf8f4e4dc))
+
 ## [0.4.0](https://github.com/Bardesss/setvault/compare/v0.3.0...v0.4.0) (2026-06-02)
 
 
