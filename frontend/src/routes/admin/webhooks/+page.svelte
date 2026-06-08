@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import AdminForm from "$lib/components/AdminForm.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
 
   interface Webhook {
     id: string;
@@ -187,33 +190,33 @@
     </p>
   </header>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
 
   <div class="recipes">
     {#each RECIPES as recipe (recipe.label)}
-      <button type="button" on:click={() => applyRecipe(recipe.preset)}>
+      <button type="button" class="btn btn-sm" on:click={() => applyRecipe(recipe.preset)}>
         + {recipe.label}
       </button>
     {/each}
-    <button type="button" on:click={() => { draft = newDraft(); creating = true; }}>
+    <button type="button" class="btn btn-sm" on:click={() => { draft = newDraft(); creating = true; }}>
       + Empty
     </button>
   </div>
 
   {#if creating}
-    <form class="card" on:submit|preventDefault={save}>
-      <label>
-        Name
+    <AdminForm on:submit={save}>
+      <label class="admin-field">
+        <span>Name</span>
         <input type="text" bind:value={draft.name} required />
       </label>
-      <label>
-        Target URL
+      <label class="admin-field">
+        <span>Target URL</span>
         <input type="url" bind:value={draft.target_url} required />
       </label>
       <fieldset>
         <legend>Events</legend>
         {#each KNOWN_EVENTS as ev (ev)}
-          <label class="inline">
+          <label class="admin-field inline">
             <input
               type="checkbox"
               checked={draft.events?.includes(ev)}
@@ -231,46 +234,50 @@
           on:input={onBodyTemplateInput}
         >{draft.body_template ? JSON.stringify(draft.body_template, null, 2) : ""}</textarea>
       </details>
-      <div class="form-actions">
-        <button type="submit" class="primary">Save</button>
-        <button type="button" on:click={() => { creating = false; }}>Cancel</button>
-      </div>
-    </form>
+      <svelte:fragment slot="actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn" on:click={() => { creating = false; }}>Cancel</button>
+      </svelte:fragment>
+    </AdminForm>
   {/if}
 
   {#if loading}
-    <p>Loading…</p>
+    <p class="loading">Loading…</p>
   {:else if items.length === 0}
-    <p class="empty">No webhooks configured yet.</p>
+    <EmptyState message="No webhooks configured yet." />
   {:else}
-    <table>
-      <thead><tr>
-        <th>Name</th><th>URL</th><th>Events</th><th>Enabled</th>
-        <th>Last call</th><th>Status</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        {#each items as wh (wh.id)}
-          <tr class:disabled={!wh.enabled}>
-            <td>{wh.name}</td>
-            <td class="mono ellipsis" title={wh.target_url}>{wh.target_url}</td>
-            <td class="mono">{wh.events.join(", ")}</td>
-            <td>{wh.enabled ? "✓" : "—"}</td>
-            <td class="mono">{fmtDate(wh.last_call_at)}</td>
-            <td class="mono">
-              {wh.last_status_code ?? "—"}
-              {#if wh.last_error}<span class="err" title={wh.last_error}>!</span>{/if}
-            </td>
-            <td class="actions">
-              <button type="button" disabled={busy[wh.id]} on:click={() => test(wh)}>Test</button>
-              <button type="button" disabled={busy[wh.id]} on:click={() => toggleEnabled(wh)}>
-                {wh.enabled ? "Disable" : "Enable"}
-              </button>
-              <button type="button" class="danger" disabled={busy[wh.id]} on:click={() => remove(wh)}>Delete</button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <AdminTable
+      columns={[
+        "Name",
+        "URL",
+        "Events",
+        "Enabled",
+        "Last call",
+        "Status",
+        "Actions",
+      ]}
+    >
+      {#each items as wh (wh.id)}
+        <tr class:is-disabled={!wh.enabled}>
+          <td>{wh.name}</td>
+          <td class="mono ellipsis" title={wh.target_url}>{wh.target_url}</td>
+          <td class="mono">{wh.events.join(", ")}</td>
+          <td>{wh.enabled ? "✓" : "—"}</td>
+          <td class="mono">{fmtDate(wh.last_call_at)}</td>
+          <td class="mono">
+            {wh.last_status_code ?? "—"}
+            {#if wh.last_error}<span class="err" title={wh.last_error}>!</span>{/if}
+          </td>
+          <td class="cell-actions">
+            <button type="button" class="btn btn-sm" disabled={busy[wh.id]} on:click={() => test(wh)}>Test</button>
+            <button type="button" class="btn btn-sm" disabled={busy[wh.id]} on:click={() => toggleEnabled(wh)}>
+              {wh.enabled ? "Disable" : "Enable"}
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" disabled={busy[wh.id]} on:click={() => remove(wh)}>Delete</button>
+          </td>
+        </tr>
+      {/each}
+    </AdminTable>
   {/if}
 </section>
 
@@ -278,57 +285,8 @@
   .webhooks { display: grid; gap: var(--sp-3); }
   header { display: grid; gap: var(--sp-1); }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .error { color: #c33; }
-  .empty { color: var(--text-faint); font-style: italic; }
+  .loading { color: var(--text-faint); }
   .recipes { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
-  .recipes button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px dashed var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  .card {
-    padding: var(--sp-3);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-    background: var(--bg-surface);
-    display: grid;
-    gap: var(--sp-2);
-  }
-  .card label { display: grid; gap: var(--sp-1); font-size: var(--ts-sm); }
-  .card label.inline { display: inline-flex; align-items: center; gap: var(--sp-1); }
-  .card input, .card textarea {
-    padding: var(--sp-1);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    color: inherit;
-    font: inherit;
-  }
-  fieldset { border: 1px solid var(--border-default); border-radius: var(--r-sm);
-             padding: var(--sp-2); display: flex; gap: var(--sp-2); flex-wrap: wrap; }
-  fieldset legend { padding: 0 var(--sp-1); color: var(--text-faint); font-size: var(--ts-sm); }
-  .form-actions { display: flex; gap: var(--sp-2); }
-  .primary { background: var(--accent); color: var(--text-on-accent, var(--bg-base)); border: 0; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: var(--sp-1) var(--sp-2);
-           border-bottom: 1px solid var(--border-default); }
-  th { color: var(--text-faint); font-weight: 600; font-size: var(--ts-sm); }
-  .mono { font-family: var(--font-mono); font-size: var(--ts-sm); }
   .ellipsis { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .disabled td { opacity: 0.5; }
-  .err { color: #c33; font-weight: 700; margin-left: var(--sp-1); }
-  .actions { display: flex; gap: var(--sp-1); }
-  .actions button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .actions button.danger { border-color: #c33; color: #c33; }
+  .err { color: var(--accent-error); font-weight: 700; margin-left: var(--sp-1); }
 </style>
