@@ -1,0 +1,26 @@
+#!/usr/bin/with-contenv bash
+# Bundled PostgreSQL 18. First boot: initdb (offline). Loopback only. Idle if
+# the user supplied DATABASE_URL / external POSTGRES_HOST.
+if [ "${SETVAULT_PG_EMBEDDED}" != "1" ]; then
+  echo "[setvault] external postgres — bundled instance idle" >&2
+  exec sleep infinity
+fi
+PGBIN=/usr/lib/postgresql/18/bin
+PGDATA="${SETVAULT_PGDATA:-/data/db}"
+mkdir -p "${PGDATA}"
+chown -R "${PUID:-1000}:${PGID:-1000}" "${PGDATA}" 2>/dev/null || true
+
+if [ ! -s "${PGDATA}/PG_VERSION" ]; then
+  echo "[setvault] initializing embedded postgres at ${PGDATA}" >&2
+  s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+    "${PGBIN}/initdb" -D "${PGDATA}" -U setvault \
+      --auth-local=trust --auth-host=scram-sha-256 -E UTF8 >&2
+  {
+    echo "listen_addresses = '127.0.0.1'"
+    echo "unix_socket_directories = '/tmp'"
+    echo "port = 5432"
+  } >> "${PGDATA}/postgresql.conf"
+fi
+
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  "${PGBIN}/postgres" -D "${PGDATA}"

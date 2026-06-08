@@ -1,0 +1,1 @@
+/usr/bin/with-contenv bash /etc/setvault/init-db.sh

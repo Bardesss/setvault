@@ -1,0 +1,46 @@
+name: AIO smoke
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  bundled-boot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (amd64, load locally)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: setvault:ci
+
+      - name: Run bundled container
+        run: |
+          docker run -d --name sv -p 1970:1970 \
+            -e SECRET_KEY="$(openssl rand -base64 48)" \
+            -e BASE_URL="http://localhost:1970" \
+            -e POSTGRES_PASSWORD="cipass" \
+            setvault:ci
+
+      - name: Wait for health (bundled boots Postgres+Redis+migrations)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:1970/api/health; then echo OK; exit 0; fi
+            sleep 3
+          done
+          echo "health never came up"; docker logs sv; exit 1
+
+      - name: Uploads route reaches tusd (not 404)
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X OPTIONS http://localhost:1970/uploads/)
+          echo "OPTIONS /uploads/ -> $code"
+          test "$code" != "404"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker logs sv || true

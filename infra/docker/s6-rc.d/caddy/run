@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bash
+# Reverse proxy (bundled mode only): :1970 -> /uploads/* to tusd, else uvicorn.
+# In external mode uvicorn serves :1970 directly, so idle as a placeholder
+# (keeps s6-rc deps satisfiable without occupying the port).
+if [ "${SETVAULT_CADDY_ENABLED}" != "1" ]; then
+  echo "[setvault] external mode — bundled Caddy idle" >&2
+  exec sleep infinity
+fi
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  /usr/local/bin/caddy run --config /etc/setvault/Caddyfile --adapter caddyfile

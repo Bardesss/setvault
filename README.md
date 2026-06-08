@@ -37,37 +37,48 @@ Full feature list and release notes: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## 🚀 Quick start (Docker compose, GHCR pull)
+## 🚀 Deploy
 
-One image. Three required env vars. Four containers in the stack.
-Zero local build — pulls the published multi-arch image from GitHub
-Container Registry.
+SetVault ships as **one image** that runs two ways. Pick one.
 
 **Prereqs:** Docker 24+, Compose v2, ~2 GB RAM for the stack, and disk
 space for your live-set library.
 
+### Which do I pick?
+
+| | Bundled (single container) | External datastores |
+|---|---|---|
+| **Best for** | homelab / single node, simplest setup | shared/managed Postgres+Redis, multi-node |
+| **You run** | 1 container | Postgres + Redis + the app (compose) |
+| **Datastores** | Postgres + Redis + tusd **inside** the image | your own Postgres + Redis |
+| **Upgrades** | app + DB move together (see caveat) | independent |
+
+### Option A — Single container (bundled) — recommended for most
+
+Everything (Postgres 18, Redis, tusd, a Caddy proxy) runs inside the image.
+One data volume.
+
 ```bash
-# 1. Grab the example compose + env files
-curl -L -o compose.yml \
-  https://raw.githubusercontent.com/Bardesss/setvault/main/infra/docker/compose.example.yml
-curl -L -o .env \
-  https://raw.githubusercontent.com/Bardesss/setvault/main/.env.example
-
-# 2. Edit .env — exactly three required vars:
-#    SECRET_KEY, POSTGRES_PASSWORD, BASE_URL.
-#    Generate a strong SECRET_KEY:
-openssl rand -base64 48
-
-# 3. Pull and start
-docker compose pull
-docker compose up -d
-
-# 4. Watch logs until the setvault container is ready
-docker compose logs -f setvault
+docker run -d --name setvault -p 1970:1970 \
+  -e SECRET_KEY="$(openssl rand -base64 48)" \
+  -e BASE_URL="https://setvault.example.com" \
+  -e POSTGRES_PASSWORD="$(openssl rand -base64 24)" \
+  -v setvault-data:/data \
+  ghcr.io/bardesss/setvault:latest
 ```
 
-Open `http://localhost:1970` (or whatever `BASE_URL` points at behind
-your reverse proxy). On first boot, the container:
+Or with compose: copy `.env.example` to `.env`, fill the three required vars,
+then `docker compose -f infra/docker/compose.aio.yml up -d`.
+
+The `/data` volume holds the database, Redis, and all media/config — **back it
+up**. Put TLS termination on your own reverse proxy in front (Caddy/nginx/Traefik).
+
+> **Caveat (bundled mode):** the bundled Postgres is pinned to **PG 18** and
+> its data dir is tied to that major version. A future major upgrade can't
+> reuse `/data/db` — use external mode for rolling/managed upgrades, or
+> dump/restore via the admin backup endpoint. Bundled mode is homelab grade.
+
+On first boot, the container:
 - auto-generates an internal `TUSD_HOOK_SECRET` (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`)
 - synthesizes `DATABASE_URL` from your `POSTGRES_PASSWORD`
 - runs `alembic upgrade head`
@@ -77,11 +88,24 @@ The first admin is created by enabling `SETVAULT_DEV_SEED=1` for one
 boot, hitting `/api/dev/seed-e2e`, then unsetting it — or by running
 an invite-redeem flow against the API.
 
+### Option B — External datastores (compose)
+
+For a managed/shared Postgres + Redis, or when you want to scale the app
+separately. Provide `DATABASE_URL` and/or `REDIS_URL` and the bundled
+datastores stay off (per-datastore — you can mix).
+
+```bash
+cp .env.example .env   # set SECRET_KEY, BASE_URL, POSTGRES_PASSWORD
+docker compose -f infra/docker/compose.yml up -d
+```
+
+This starts `postgres` + `redis` + `setvault` (tusd is inside the app image).
+
 ### Image reference
 
 | Image | Pull | Arches |
 |---|---|---|
-| SetVault (web + worker + watcher under s6-overlay) | `ghcr.io/bardesss/setvault:0.1.2` | `linux/amd64` + `linux/arm64` |
+| SetVault (web + worker + watcher under s6-overlay) | `ghcr.io/bardesss/setvault:latest` | `linux/amd64` + `linux/arm64` |
 | `:latest` mirrors the most recent tag. | | |
 
 ### Verify signatures (optional but encouraged)
@@ -89,7 +113,7 @@ an invite-redeem flow against the API.
 Every release image is signed with cosign (keyless, via GitHub OIDC).
 
 ```bash
-cosign verify ghcr.io/bardesss/setvault:0.1.2 \
+cosign verify ghcr.io/bardesss/setvault:latest \
   --certificate-identity-regexp "https://github.com/Bardesss/setvault/.github/workflows/docker.yml@.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -109,8 +133,8 @@ synthesized at first boot.
 | `SECRET_KEY` | ✅ | — | Signs session cookies + HMAC URLs. **Rotate ⇒ all sessions invalidated.** |
 | `POSTGRES_PASSWORD` | ✅ | — | Postgres password. Used by both the postgres container and the auto-synthesized `DATABASE_URL`. |
 | `BASE_URL` | ✅ | — | Public URL the app is served from (used in emails, RSS feeds, embed URLs) |
-| `DATABASE_URL` | optional | synthesized from POSTGRES_* | Set directly if pointing at an external postgres |
-| `REDIS_URL` | optional | `redis://redis:6379/0` | RQ queue + rate-limit store |
+| `DATABASE_URL` | optional | synthesized from POSTGRES_* | Set to use an external Postgres; unset = bundled datastore |
+| `REDIS_URL` | optional | `redis://redis:6379/0` | Set to use an external Redis; unset = bundled datastore. RQ queue + rate-limit store |
 | `TUSD_HOOK_SECRET` | optional | auto-generated on first boot | Shared secret tusd uses when calling back into setvault |
 | `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / media / cache / config / watch |
 | `SETVAULT_VERSION` | optional | `latest` | Pin to a specific image tag |
@@ -314,7 +338,8 @@ with conventional commits driving the CHANGELOG.
 | 6A — First impressions + browse | ✅ merged | Landing port, home, library, auth/embed/search design-language (`v0.2.0`) |
 | 6B — Set detail + engagement | ✅ merged | Set-detail 3-column rebuild, engagement SidePanel, tracklist editor (`v0.3.0`) |
 | 6C — Global persistent player | ✅ merged | Persistent audio across navigation, bottom-sheet mini-player, full-screen player, MediaSession lockscreen (`v0.4.0`) |
-| **6D — Admin & management surfaces** | **🚀 this release** | **Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`)** |
+| 6D — Admin & management surfaces | ✅ merged | Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`) |
+| **Bundled + external deploy** | **🚀 this release** | **Single-container (PG+Redis+tusd+Caddy) or external datastores from one image (`v0.6.0`)** |
 | 7 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
 | 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
 | 9 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |

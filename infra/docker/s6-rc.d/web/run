@@ -1,9 +1,10 @@
 #!/usr/bin/with-contenv bash
-# uvicorn — FastAPI + bundled SvelteKit
+# uvicorn — FastAPI + bundled SvelteKit. Port is 1970 (external mode, public)
+# or 8081 (bundled mode, behind Caddy); 00-mode sets SETVAULT_UVICORN_PORT.
 cd /srv/apps/web
 exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
   uvicorn setvault_web.main:app \
     --host 0.0.0.0 \
-    --port 1970 \
+    --port "${SETVAULT_UVICORN_PORT:-1970}" \
     --proxy-headers \
     --forwarded-allow-ips '*'

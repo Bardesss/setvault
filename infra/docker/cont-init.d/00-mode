@@ -1,0 +1,65 @@
+#!/usr/bin/with-contenv bash
+#
+# Decide bundled-vs-external per datastore (see lib/mode-detect.sh), then
+# export the effective config so later cont-init scripts and all longruns
+# inherit it via with-contenv. In bundled (embedded-PG) mode, repoint the
+# data dirs under a single /data volume unless the user set them explicitly.
+set -e
+
+# shellcheck disable=SC1091
+source /etc/setvault/mode-detect.sh
+eval "$(setvault_compute_mode)"
+
+# PostgreSQL's initdb/postmaster call getpwuid()/getgrgid() and refuse to run
+# as an id with no /etc/passwd entry. s6-setuidgid only sets numeric ids, so
+# materialize matching passwd/group entries for the runtime PUID/PGID (handles
+# arbitrary values). The app's Python services don't need this; bundled
+# Postgres does.
+if ! getent group "${PGID:-1000}" >/dev/null 2>&1; then
+  echo "setvault:x:${PGID:-1000}:" >> /etc/group
+fi
+if ! getent passwd "${PUID:-1000}" >/dev/null 2>&1; then
+  echo "setvault:x:${PUID:-1000}:${PGID:-1000}:SetVault:/srv:/usr/sbin/nologin" >> /etc/passwd
+fi
+
+# Bundled (single-container) => one /data volume, unless user overrode paths.
+if [ "${SETVAULT_PG_EMBEDDED}" = "1" ]; then
+  : "${SETVAULT_MEDIA_PATH:=/data/media}"
+  : "${SETVAULT_CACHE_PATH:=/data/cache}"
+  : "${SETVAULT_CONFIG_PATH:=/data/config}"
+  : "${SETVAULT_WATCH_FOLDERS_PATH:=/data/watch}"
+  : "${SETVAULT_PGDATA:=/data/db}"
+  : "${SETVAULT_REDIS_DIR:=/data/redis}"
+else
+  : "${SETVAULT_MEDIA_PATH:=/srv/media}"
+  : "${SETVAULT_CACHE_PATH:=/srv/cache}"
+  : "${SETVAULT_CONFIG_PATH:=/srv/config}"
+  : "${SETVAULT_WATCH_FOLDERS_PATH:=/srv/watch}"
+  : "${SETVAULT_PGDATA:=/data/db}"
+  : "${SETVAULT_REDIS_DIR:=/data/redis}"
+fi
+
+mkdir -p /run/s6/container_environment
+write_env() { printf '%s' "$2" > "/run/s6/container_environment/$1"; export "$1=$2"; }
+
+# The container's default HOME=/root is unreadable by the non-root runtime
+# uid; libpq/asyncpg probe ${HOME}/.postgresql for a client cert and crash on
+# EACCES before falling back to a plain connection. Point HOME somewhere the
+# runtime uid can read.
+write_env HOME                    "/tmp"
+write_env SETVAULT_PG_EMBEDDED    "${SETVAULT_PG_EMBEDDED}"
+write_env SETVAULT_REDIS_EMBEDDED "${SETVAULT_REDIS_EMBEDDED}"
+write_env SETVAULT_CADDY_ENABLED  "${SETVAULT_CADDY_ENABLED}"
+write_env SETVAULT_UVICORN_PORT   "${SETVAULT_UVICORN_PORT}"
+write_env POSTGRES_HOST           "${POSTGRES_HOST}"
+write_env REDIS_URL               "${REDIS_URL}"
+write_env SETVAULT_MEDIA_PATH         "${SETVAULT_MEDIA_PATH}"
+write_env SETVAULT_CACHE_PATH         "${SETVAULT_CACHE_PATH}"
+write_env SETVAULT_CONFIG_PATH        "${SETVAULT_CONFIG_PATH}"
+write_env SETVAULT_WATCH_FOLDERS_PATH "${SETVAULT_WATCH_FOLDERS_PATH}"
+write_env SETVAULT_PGDATA         "${SETVAULT_PGDATA}"
+write_env SETVAULT_REDIS_DIR      "${SETVAULT_REDIS_DIR}"
+
+pg_msg="external"; [ "${SETVAULT_PG_EMBEDDED}" = "1" ] && pg_msg="bundled"
+rd_msg="external"; [ "${SETVAULT_REDIS_EMBEDDED}" = "1" ] && rd_msg="bundled"
+echo "[setvault] datastore mode: postgres=${pg_msg} redis=${rd_msg} caddy=${SETVAULT_CADDY_ENABLED} uvicorn_port=${SETVAULT_UVICORN_PORT}" >&2
