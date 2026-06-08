@@ -177,6 +177,8 @@
 }
 .btn:hover { border-color: var(--border-strong); background: var(--bg-overlay); }
 .btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:hover { border-color: var(--border-default); background: var(--bg-elevated); }
 .btn .kbd { background: var(--bg-base); }
 
 .btn-primary {
