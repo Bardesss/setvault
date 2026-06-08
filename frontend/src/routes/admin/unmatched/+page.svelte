@@ -197,4 +197,6 @@
   .candidate-list button:hover { background: var(--accent-softer, transparent); }
   .candidate-list code { font-family: var(--font-mono); font-size: var(--ts-xs);
                          color: var(--text-faint); }
+  .candidate-list .empty { color: var(--text-faint); font-style: italic;
+                           padding: var(--sp-1) var(--sp-2); }
 </style>
