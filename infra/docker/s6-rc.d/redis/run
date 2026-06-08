@@ -1,0 +1,17 @@
+#!/usr/bin/with-contenv bash
+# Bundled Redis (RQ broker + pub/sub + rate-limit). Loopback only, append-only
+# on the data volume. Idle if the user pointed REDIS_URL at an external server.
+if [ "${SETVAULT_REDIS_EMBEDDED}" != "1" ]; then
+  echo "[setvault] external redis — bundled instance idle" >&2
+  exec sleep infinity
+fi
+REDIS_DIR="${SETVAULT_REDIS_DIR:-/data/redis}"
+mkdir -p "${REDIS_DIR}"
+chown -R "${PUID:-1000}:${PGID:-1000}" "${REDIS_DIR}" 2>/dev/null || true
+exec s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  redis-server \
+    --bind 127.0.0.1 \
+    --port 6379 \
+    --dir "${REDIS_DIR}" \
+    --appendonly yes \
+    --save ''
