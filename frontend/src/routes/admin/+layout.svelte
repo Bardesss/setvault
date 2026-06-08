@@ -76,14 +76,14 @@
 <section class="admin">
   {#if bannerVersion}
     {@const v = bannerVersion}
-    <aside class="banner" role="status">
+    <aside class="admin-banner" role="status">
       <strong>Update available.</strong>
       You're running <code>{v.current}</code>; latest is
       <code>{v.latest_known}</code>.
       {#if v.latest_release_url}
         <a href={v.latest_release_url} target="_blank" rel="noopener">Release notes →</a>
       {/if}
-      <button type="button" on:click={dismiss}>Snooze 24h</button>
+      <button type="button" class="btn btn-sm snooze" on:click={dismiss}>Snooze 24h</button>
     </aside>
   {/if}
 
@@ -109,26 +109,7 @@
     display: grid;
     gap: var(--sp-4);
   }
-  .banner {
-    padding: var(--sp-2) var(--sp-3);
-    background: var(--accent-softer, rgba(0, 255, 178, 0.06));
-    border: 1px solid var(--accent);
-    border-radius: var(--r-md);
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    flex-wrap: wrap;
-  }
-  .banner code { font-family: var(--font-mono); font-size: var(--ts-sm); }
-  .banner button {
-    margin-left: auto;
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
+  .admin-banner .snooze { margin-left: auto; }
   .admin-header { display: grid; gap: var(--sp-3); }
   .tabs {
     display: flex;

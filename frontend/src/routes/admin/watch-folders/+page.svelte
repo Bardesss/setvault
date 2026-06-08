@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import AdminForm from "$lib/components/AdminForm.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
 
   interface WatchFolder {
     id: string;
@@ -141,69 +144,73 @@
     </p>
   </header>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
 
   <button
     type="button"
-    class="add"
+    class="btn add"
     on:click={() => { draft = newDraft(); if (roots[0]) draft.target_media_root_id = roots[0].id; creating = true; }}
   >+ New watch folder</button>
 
   {#if creating}
-    <form class="card" on:submit|preventDefault={save}>
-      <label>
-        Name
+    <AdminForm on:submit={save}>
+      <label class="admin-field">
+        <span>Name</span>
         <input type="text" bind:value={draft.name} required />
       </label>
-      <label>
-        Host path
+      <label class="admin-field">
+        <span>Host path</span>
         <input type="text" bind:value={draft.host_path} required placeholder="/srv/watch/incoming" />
       </label>
-      <label>
-        Target media root
+      <label class="admin-field">
+        <span>Target media root</span>
         <select bind:value={draft.target_media_root_id} required>
           {#each roots as r (r.id)}
             <option value={r.id}>{r.name}</option>
           {/each}
         </select>
       </label>
-      <div class="form-actions">
-        <button type="submit" class="primary">Save</button>
-        <button type="button" on:click={() => { creating = false; }}>Cancel</button>
-      </div>
-    </form>
+      <svelte:fragment slot="actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn" on:click={() => { creating = false; }}>Cancel</button>
+      </svelte:fragment>
+    </AdminForm>
   {/if}
 
   {#if loading}
-    <p>Loading…</p>
+    <p class="loading">Loading…</p>
   {:else if items.length === 0}
-    <p class="empty">No watch folders configured yet.</p>
+    <EmptyState message="No watch folders configured yet." />
   {:else}
-    <table>
-      <thead><tr>
-        <th>Name</th><th>Host path</th><th>Target root</th><th>Enabled</th>
-        <th>Health</th><th>Last event</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        {#each items as wf (wf.id)}
-          <tr class:disabled={!wf.enabled}>
-            <td>{wf.name}</td>
-            <td class="mono">{wf.host_path}</td>
-            <td>{rootName(wf.target_media_root_id)}</td>
-            <td>{wf.enabled ? "✓" : "—"}</td>
-            <td class="mono">{wf.last_health_status}</td>
-            <td class="mono">{fmtDate(wf.last_event_at)}</td>
-            <td class="actions">
-              <button type="button" disabled={busy[wf.id]} on:click={() => healthCheck(wf)}>Probe</button>
-              <button type="button" disabled={busy[wf.id]} on:click={() => toggle(wf)}>
-                {wf.enabled ? "Disable" : "Enable"}
-              </button>
-              <button type="button" class="danger" disabled={busy[wf.id]} on:click={() => remove(wf)}>Delete</button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <AdminTable
+      columns={[
+        "Name",
+        "Host path",
+        "Target root",
+        "Enabled",
+        "Health",
+        "Last event",
+        "Actions",
+      ]}
+    >
+      {#each items as wf (wf.id)}
+        <tr class:is-disabled={!wf.enabled}>
+          <td>{wf.name}</td>
+          <td class="mono">{wf.host_path}</td>
+          <td>{rootName(wf.target_media_root_id)}</td>
+          <td>{wf.enabled ? "✓" : "—"}</td>
+          <td class="mono">{wf.last_health_status}</td>
+          <td class="mono">{fmtDate(wf.last_event_at)}</td>
+          <td class="cell-actions">
+            <button type="button" class="btn btn-sm" disabled={busy[wf.id]} on:click={() => healthCheck(wf)}>Probe</button>
+            <button type="button" class="btn btn-sm" disabled={busy[wf.id]} on:click={() => toggle(wf)}>
+              {wf.enabled ? "Disable" : "Enable"}
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" disabled={busy[wf.id]} on:click={() => remove(wf)}>Delete</button>
+          </td>
+        </tr>
+      {/each}
+    </AdminTable>
   {/if}
 </section>
 
@@ -211,51 +218,6 @@
   .watch-folders { display: grid; gap: var(--sp-3); }
   header { display: grid; gap: var(--sp-1); }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .error { color: #c33; }
-  .empty { color: var(--text-faint); font-style: italic; }
-  .add {
-    justify-self: start;
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px dashed var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  .card {
-    padding: var(--sp-3);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-    background: var(--bg-surface);
-    display: grid;
-    gap: var(--sp-2);
-  }
-  .card label { display: grid; gap: var(--sp-1); font-size: var(--ts-sm); }
-  .card input, .card select {
-    padding: var(--sp-1);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-sm);
-    color: inherit;
-    font: inherit;
-  }
-  .form-actions { display: flex; gap: var(--sp-2); }
-  .primary { background: var(--accent); color: var(--text-on-accent, var(--bg-base)); border: 0; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: var(--sp-1) var(--sp-2);
-           border-bottom: 1px solid var(--border-default); }
-  th { color: var(--text-faint); font-weight: 600; font-size: var(--ts-sm); }
-  .mono { font-family: var(--font-mono); font-size: var(--ts-sm); }
-  .disabled td { opacity: 0.5; }
-  .actions { display: flex; gap: var(--sp-1); }
-  .actions button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .actions button.danger { border-color: #c33; color: #c33; }
+  .loading { color: var(--text-faint); }
+  .add { justify-self: start; }
 </style>

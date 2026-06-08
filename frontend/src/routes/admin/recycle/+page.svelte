@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api/client";
+  import AdminTable from "$lib/components/AdminTable.svelte";
+  import EmptyState from "$lib/components/EmptyState.svelte";
 
   interface RecycledSet {
     id: string;
@@ -82,47 +84,39 @@
     </p>
   </header>
 
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if error}<p class="admin-msg is-error" role="alert">{error}</p>{/if}
 
   {#if loading}
-    <p>Loading…</p>
+    <p class="loading">Loading…</p>
   {:else if items.length === 0}
-    <p class="empty">Nothing in the recycle bin.</p>
+    <EmptyState message="Nothing in the recycle bin." />
   {:else}
-    <table>
-      <thead>
+    <AdminTable
+      columns={["Slug", "Title", "Deleted", "Auto-purge after", "Actions"]}
+    >
+      {#each items as item (item.id)}
         <tr>
-          <th>Slug</th>
-          <th>Title</th>
-          <th>Deleted</th>
-          <th>Auto-purge after</th>
-          <th>Actions</th>
+          <td class="mono">{item.slug}</td>
+          <td>{item.title}</td>
+          <td class="mono">{fmtDate(item.deleted_at)}</td>
+          <td class="mono">{fmtDate(item.purge_after_at)}</td>
+          <td class="cell-actions">
+            <button
+              type="button"
+              class="btn btn-sm"
+              disabled={busy[item.slug]}
+              on:click={() => restore(item.slug)}
+            >Restore</button>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger"
+              disabled={busy[item.slug]}
+              on:click={() => purgeNow(item.slug)}
+            >Purge now</button>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        {#each items as item (item.id)}
-          <tr>
-            <td class="mono">{item.slug}</td>
-            <td>{item.title}</td>
-            <td class="mono">{fmtDate(item.deleted_at)}</td>
-            <td class="mono">{fmtDate(item.purge_after_at)}</td>
-            <td class="actions">
-              <button
-                type="button"
-                disabled={busy[item.slug]}
-                on:click={() => restore(item.slug)}
-              >Restore</button>
-              <button
-                type="button"
-                class="danger"
-                disabled={busy[item.slug]}
-                on:click={() => purgeNow(item.slug)}
-              >Purge now</button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+      {/each}
+    </AdminTable>
   {/if}
 </section>
 
@@ -130,26 +124,5 @@
   .recycle { display: grid; gap: var(--sp-3); }
   header { display: grid; gap: var(--sp-1); }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); margin: 0; }
-  .error { color: #c33; }
-  .empty { color: var(--text-faint); font-style: italic; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td {
-    text-align: left;
-    padding: var(--sp-2);
-    border-bottom: 1px solid var(--border-default);
-  }
-  th { color: var(--text-faint); font-weight: 600; font-size: var(--ts-sm); }
-  .mono { font-family: var(--font-mono); font-size: var(--ts-sm); }
-  .actions { display: flex; gap: var(--sp-1); }
-  button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--border-default);
-    background: transparent;
-    color: inherit;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-  }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.danger { border-color: #c33; color: #c33; }
-  button.danger:hover { background: rgba(204, 51, 51, 0.1); }
+  .loading { color: var(--text-faint); }
 </style>

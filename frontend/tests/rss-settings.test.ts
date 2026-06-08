@@ -6,8 +6,9 @@ test("settings RSS section renders and creates a token", async ({ page, request 
   await page.goto("/settings");
   await page.waitForLoadState("networkidle");
 
-  // RSS section heading present
-  await expect(page.getByText(/^RSS feeds$/)).toBeVisible();
+  // RSS feeds tab present, then open it
+  await expect(page.getByRole("tab", { name: /^RSS feeds$/i })).toBeVisible();
+  await page.getByRole("tab", { name: /^RSS feeds$/i }).click();
 
   // Fill the name and click Create
   await page.locator('input[placeholder="Podcast app"]').fill("e2e token");
