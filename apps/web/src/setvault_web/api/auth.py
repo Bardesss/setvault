@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import secrets as _secrets
 from typing import Annotated
 
@@ -12,20 +11,10 @@ from setvault_core.services.sessions import SESSION_COOKIE, SESSION_TTL, Session
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.cookies import cookie_secure as _cookie_secure
 from setvault_web.deps import current_user, db_session, get_signer
 from setvault_web.middleware.csrf import CSRF_COOKIE
 from setvault_web.rate_limit import enforce_auth_strict
-
-
-def _cookie_secure() -> bool:
-    """Cookie Secure attribute. Defaults to True; opt-out via env var for local
-    HTTP-only development/e2e (Playwright over http://localhost). Never disable
-    in production."""
-    return os.environ.get("SETVAULT_ALLOW_INSECURE_COOKIE", "").lower() not in (
-        "1",
-        "true",
-        "yes",
-    )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

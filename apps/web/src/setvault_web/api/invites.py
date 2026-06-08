@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.api.auth import UserOut
 from setvault_web.config import Settings, get_settings
+from setvault_web.cookies import cookie_secure
 from setvault_web.deps import db_session, get_signer, require_admin
 from setvault_web.middleware.csrf import CSRF_COOKIE
 from setvault_web.rate_limit import enforce_auth_strict
@@ -125,8 +126,9 @@ async def redeem(
     await session.commit()
 
     cookie = signer.issue(str(user.id))
-    response.set_cookie(SESSION_COOKIE, cookie, httponly=True, secure=True, samesite="lax",
+    secure = cookie_secure()
+    response.set_cookie(SESSION_COOKIE, cookie, httponly=True, secure=secure, samesite="lax",
                         max_age=int(SESSION_TTL.total_seconds()), path="/")
-    response.set_cookie(CSRF_COOKIE, _s.token_urlsafe(32), httponly=False, secure=True,
+    response.set_cookie(CSRF_COOKIE, _s.token_urlsafe(32), httponly=False, secure=secure,
                         samesite="lax", path="/")
     return LoginOut(user=UserOut.from_model(user))

@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #
 # Required-env check. Fails fast with a clear human message if the user
-# forgot one of the three things every install needs.
+# forgot one of the three things every install needs, or set a weak SECRET_KEY.
 
 set -e
 
@@ -26,5 +26,16 @@ EOF
      openssl rand -base64 48
 ============================================================
 EOF
+  exit 1
+fi
+
+# SECRET_KEY strength gate. It signs every session cookie and HMAC share URL,
+# so a weak/known key means trivial session + stream-URL forgery.
+if [ "${SECRET_KEY}" = "dev-only-do-not-use-in-prod" ]; then
+  echo "[setvault] FATAL: SECRET_KEY is the public dev default. Set a real one: openssl rand -base64 48" >&2
+  exit 1
+fi
+if [ "${#SECRET_KEY}" -lt 32 ]; then
+  echo "[setvault] FATAL: SECRET_KEY is too short (<32 chars). Use: openssl rand -base64 48" >&2
   exit 1
 fi
