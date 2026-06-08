@@ -60,6 +60,18 @@ write_env SETVAULT_WATCH_FOLDERS_PATH "${SETVAULT_WATCH_FOLDERS_PATH}"
 write_env SETVAULT_PGDATA         "${SETVAULT_PGDATA}"
 write_env SETVAULT_REDIS_DIR      "${SETVAULT_REDIS_DIR}"
 
+# uvicorn's trusted X-Forwarded-* source. Bundled: only the loopback Caddy
+# reaches uvicorn, so trust just 127.0.0.1. External: uvicorn is published, so
+# trust the operator's proxy — default to all (the operator MUST front a proxy
+# that strips client-supplied X-Forwarded-For; port 1970 must never be exposed
+# directly), overridable via SETVAULT_FORWARDED_ALLOW_IPS.
+if [ "${SETVAULT_CADDY_ENABLED}" = "1" ]; then
+  fwd_ips="127.0.0.1"
+else
+  fwd_ips="${SETVAULT_FORWARDED_ALLOW_IPS:-*}"
+fi
+write_env SETVAULT_FORWARDED_ALLOW_IPS "${fwd_ips}"
+
 pg_msg="external"; [ "${SETVAULT_PG_EMBEDDED}" = "1" ] && pg_msg="bundled"
 rd_msg="external"; [ "${SETVAULT_REDIS_EMBEDDED}" = "1" ] && rd_msg="bundled"
 echo "[setvault] datastore mode: postgres=${pg_msg} redis=${rd_msg} caddy=${SETVAULT_CADDY_ENABLED} uvicorn_port=${SETVAULT_UVICORN_PORT}" >&2

@@ -29,9 +29,14 @@ if [ "${SETVAULT_PG_EMBEDDED}" = "1" ]; then
       "${PGBIN}/psql" -h /tmp -U setvault -d postgres -c \
       "CREATE DATABASE ${DB} OWNER setvault"
   fi
+  # Set the password via stdin: psql performs :'pw' substitution on stdin/-f
+  # (but NOT with -c). -v passes the value out-of-band and :'pw' quotes it, so
+  # special characters can't break the statement or inject SQL.
   s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
-    "${PGBIN}/psql" -h /tmp -U setvault -d postgres -c \
-    "ALTER USER setvault PASSWORD '${POSTGRES_PASSWORD:-setvault}'"
+    "${PGBIN}/psql" -h /tmp -U setvault -d postgres \
+    -v pw="${POSTGRES_PASSWORD:-setvault}" <<'PWSQL'
+ALTER USER setvault PASSWORD :'pw';
+PWSQL
 fi
 
 # 3) Migrations (both modes).

@@ -129,6 +129,11 @@ RUN chmod +x /etc/setvault/*.sh
 
 ENV PATH="/srv/.venv/bin:${PATH}"
 
+# Halt the container if any cont-init script (00-mode/01-defaults/02-validate)
+# or s6-rc oneshot (init-db) fails — otherwise s6 continues to the longruns and
+# the required-env / SECRET_KEY gates and migrations would be merely cosmetic.
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
 # Defaults for the noob-friendly compose path. DATABASE_URL is left
 # unset so cont-init can synthesize it from POSTGRES_PASSWORD; override
 # directly if you point at an external postgres.

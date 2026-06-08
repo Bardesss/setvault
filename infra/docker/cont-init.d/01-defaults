@@ -19,29 +19,33 @@ if [ -f "${SECRETS_FILE}" ]; then
   source "${SECRETS_FILE}"
 fi
 
-# TUSD_HOOK_SECRET — internal HMAC between web service and tusd sidecar.
-# Users almost never need to set this; auto-generate if missing.
-if [ -z "${TUSD_HOOK_SECRET}" ]; then
-  TUSD_HOOK_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
-  echo "TUSD_HOOK_SECRET=${TUSD_HOOK_SECRET}" >> "${SECRETS_FILE}"
-  echo "[setvault] generated TUSD_HOOK_SECRET (persisted to ${SECRETS_FILE})" >&2
-fi
-
 # Synthesize DATABASE_URL from POSTGRES_* if the user didn't pass one.
 # Power users with an external postgres pass DATABASE_URL directly.
 if [ -z "${DATABASE_URL}" ]; then
   if [ -z "${POSTGRES_PASSWORD}" ]; then
-    echo "[setvault] neither DATABASE_URL nor POSTGRES_PASSWORD set — falling back to dev default" >&2
-    POSTGRES_PASSWORD="setvault"
+    if [ "${SETVAULT_PG_EMBEDDED}" = "1" ]; then
+      # Bundled postgres + no password given: generate a strong one and persist
+      # it (init-db.sh ALTER USERs the embedded role to match). Loopback-only,
+      # but no reason to ship a weak default.
+      POSTGRES_PASSWORD="$(python -c 'import secrets;print(secrets.token_urlsafe(24))')"
+      echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >> "${SECRETS_FILE}"
+      echo "[setvault] generated embedded POSTGRES_PASSWORD (persisted to ${SECRETS_FILE})" >&2
+    else
+      # External postgres with neither DATABASE_URL nor POSTGRES_PASSWORD — leave
+      # DATABASE_URL unset so 02-validate fails fast with a clear message.
+      echo "[setvault] external mode: set DATABASE_URL or POSTGRES_PASSWORD" >&2
+    fi
   fi
-  DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER:-setvault}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-setvault}"
+  if [ -n "${POSTGRES_PASSWORD}" ]; then
+    DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER:-setvault}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-setvault}"
+  fi
 fi
 
 # Export so s6 longruns inherit via with-contenv.
-export TUSD_HOOK_SECRET DATABASE_URL
+export DATABASE_URL POSTGRES_PASSWORD
 mkdir -p /run/s6/container_environment
-printf '%s' "${TUSD_HOOK_SECRET}" > /run/s6/container_environment/TUSD_HOOK_SECRET
 printf '%s' "${DATABASE_URL}" > /run/s6/container_environment/DATABASE_URL
+printf '%s' "${POSTGRES_PASSWORD}" > /run/s6/container_environment/POSTGRES_PASSWORD
 
 # Default data directories — create on first boot so PUID/PGID bind-mounts
 # don't fail with "directory not found".
