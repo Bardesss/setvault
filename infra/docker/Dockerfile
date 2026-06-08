@@ -48,6 +48,38 @@ RUN case "${TARGETARCH}" in \
     dpkg -i /tmp/audiowaveform.deb && \
     rm /tmp/audiowaveform.deb
 
+# PostgreSQL 18 (PGDG apt repo — bookworm default is older), Redis, tusd, Caddy.
+# gpg/gnupg must be installed first before we can dearmor the PGDG signing key.
+RUN apt-get update && apt-get install -y --no-install-recommends gpg gnupg && \
+    rm -rf /var/lib/apt/lists/* && \
+    install -d /usr/share/postgresql-common/pgdg && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg && \
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      postgresql-18 postgresql-client-18 redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# tusd — pinned release tarball (matches the v2.4 image compose used).
+RUN case "${TARGETARCH}" in \
+      amd64) TUS_ARCH=amd64 ;; arm64) TUS_ARCH=arm64 ;; \
+      *) echo "Unsupported TARGETARCH=${TARGETARCH}" >&2 && exit 1 ;; \
+    esac && \
+    curl -fsSL "https://github.com/tus/tusd/releases/download/v2.4.0/tusd_linux_${TUS_ARCH}.tar.gz" \
+      -o /tmp/tusd.tgz && \
+    tar -C /tmp -xzf /tmp/tusd.tgz && \
+    install -m 0755 "/tmp/tusd_linux_${TUS_ARCH}/tusd" /usr/local/bin/tusd && \
+    rm -rf /tmp/tusd.tgz "/tmp/tusd_linux_${TUS_ARCH}"
+
+# Caddy — latest static binary from the official download endpoint.
+RUN case "${TARGETARCH}" in \
+      amd64) CADDY_ARCH=amd64 ;; arm64) CADDY_ARCH=arm64 ;; \
+    esac && \
+    curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=${CADDY_ARCH}" \
+      -o /usr/local/bin/caddy && \
+    chmod 0755 /usr/local/bin/caddy
+
 # s6-overlay — process supervisor. Standard LinuxServer-style install.
 RUN case "${TARGETARCH}" in \
       amd64) S6_ARCH=x86_64 ;; \
@@ -87,15 +119,17 @@ COPY infra/docker/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY infra/docker/cont-init.d /etc/cont-init.d
 RUN chmod +x /etc/cont-init.d/* /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 
+COPY infra/docker/lib/ /etc/setvault/
+COPY infra/docker/Caddyfile /etc/setvault/Caddyfile
+RUN chmod +x /etc/setvault/*.sh
+
 ENV PATH="/srv/.venv/bin:${PATH}"
 
 # Defaults for the noob-friendly compose path. DATABASE_URL is left
 # unset so cont-init can synthesize it from POSTGRES_PASSWORD; override
 # directly if you point at an external postgres.
-ENV REDIS_URL=redis://redis:6379/0 \
-    POSTGRES_USER=setvault \
+ENV POSTGRES_USER=setvault \
     POSTGRES_DB=setvault \
-    POSTGRES_HOST=postgres \
     POSTGRES_PORT=5432 \
     SETVAULT_MEDIA_PATH=/srv/media \
     SETVAULT_CACHE_PATH=/srv/cache \
