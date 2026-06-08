@@ -338,7 +338,7 @@ with conventional commits driving the CHANGELOG.
 | 6A — First impressions + browse | ✅ merged | Landing port, home, library, auth/embed/search design-language (`v0.2.0`) |
 | 6B — Set detail + engagement | ✅ merged | Set-detail 3-column rebuild, engagement SidePanel, tracklist editor (`v0.3.0`) |
 | 6C — Global persistent player | ✅ merged | Persistent audio across navigation, bottom-sheet mini-player, full-screen player, MediaSession lockscreen (`v0.4.0`) |
-| **6D — Admin & management surfaces** | **🚀 this release** | **Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`)** |
+| 6D — Admin & management surfaces | ✅ merged | Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`) |
 | **Bundled + external deploy** | **🚀 this release** | **Single-container (PG+Redis+tusd+Caddy) or external datastores from one image (`v0.6.0`)** |
 | 7 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
 | 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
