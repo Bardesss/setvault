@@ -55,6 +55,7 @@
   "nav": {
     "home": "Home",
     "library": "Library",
+    "add_set": "Add set",
     "upload": "Upload",
     "search": "Search",
     "settings": "Settings",

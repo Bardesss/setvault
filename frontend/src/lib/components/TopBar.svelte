@@ -1,5 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { _ } from "svelte-i18n";
+  import NotificationBell from "$lib/components/NotificationBell.svelte";
   import type { CurrentUser } from "$lib/api/auth";
 
   export let user: CurrentUser;
@@ -36,6 +38,14 @@
   </button>
 
   <div class="topbar-right">
+    <a class="add-set" href="/sets/new">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <line x1="8" y1="3" x2="8" y2="13" />
+        <line x1="3" y1="8" x2="13" y2="8" />
+      </svg>
+      <span class="add-set-label">{$_("nav.add_set")}</span>
+    </a>
+    <NotificationBell />
     <a class="btn btn-ghost btn-icon" href="/me/bookmarks" aria-label="Bookmarks">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
         <path d="M4 2h8v12l-4-3-4 3V2z" />
@@ -69,4 +79,24 @@
     border-radius: var(--r-sm);
   }
   .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+  .add-set {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    height: 32px;
+    padding: 0 var(--sp-3);
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    background: var(--accent-soft);
+    font-size: var(--ts-sm);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .add-set:hover { background: var(--accent); color: var(--surface-0); }
+  @media (max-width: 600px) {
+    .add-set { padding: 0; width: 32px; justify-content: center; }
+    .add-set-label { display: none; }
+  }
 </style>
