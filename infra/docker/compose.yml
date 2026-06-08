@@ -1,15 +1,13 @@
 name: setvault
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: setvault
-      POSTGRES_PASSWORD: setvault
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-setvault}
       POSTGRES_DB: setvault
     volumes:
       - ${SETVAULT_DB_PATH:-./.data/db}:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U setvault"]
       interval: 5s
@@ -22,8 +20,6 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - ${SETVAULT_REDIS_PATH:-./.data/redis}:/data
-    ports:
-      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -31,33 +27,21 @@ services:
       retries: 20
     security_opt: [no-new-privileges:true]
 
-  tusd:
-    image: tusproject/tusd:v2.4
-    command: >
-      -behind-proxy
-      -base-path /uploads/
-      -hooks-http http://setvault:1970/api/uploads/tusd-hooks
-      -hooks-http-forward-headers Authorization,Cookie
-      -upload-dir /uploads
-    volumes:
-      - ${SETVAULT_CACHE_PATH:-./.data/cache}/tus:/uploads
-    depends_on:
-      setvault:
-        condition: service_started
-    security_opt: [no-new-privileges:true]
-
   setvault:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile
     env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://setvault:${POSTGRES_PASSWORD:-setvault}@postgres:5432/setvault
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "1970:1970"
+      - "${SETVAULT_HTTP_PORT:-1970}:1970"
     volumes:
       - ${SETVAULT_MEDIA_PATH:-./.data/media}:/srv/media
       - ${SETVAULT_CACHE_PATH:-./.data/cache}:/srv/cache

@@ -4,8 +4,8 @@
 # 2. fill in SECRET_KEY, POSTGRES_PASSWORD, BASE_URL in .env
 # 3. docker compose pull && docker compose up -d
 #
-# Four services: setvault + postgres + redis + tusd. The setvault
-# container internally runs uvicorn + RQ worker + watcher under
+# Three services: setvault + postgres + redis (tusd is bundled in the app image).
+# The setvault container internally runs uvicorn + RQ worker + watcher under
 # s6-overlay (one image, three processes).
 #
 # https://github.com/Bardesss/setvault
@@ -16,6 +16,9 @@ services:
   setvault:
     image: ghcr.io/bardesss/setvault:${SETVAULT_VERSION:-latest}
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://setvault:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/setvault
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,7 +37,7 @@ services:
     security_opt: [no-new-privileges:true]
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-setvault}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -59,21 +62,5 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    restart: unless-stopped
-    security_opt: [no-new-privileges:true]
-
-  tusd:
-    image: tusproject/tusd:v2.4
-    command: >
-      -behind-proxy
-      -base-path /uploads/
-      -hooks-http http://setvault:1970/api/uploads/tusd-hooks
-      -hooks-http-forward-headers Authorization,Cookie
-      -upload-dir /uploads
-    volumes:
-      - ${SETVAULT_CACHE_PATH:-./.data/cache}/tus:/uploads
-    depends_on:
-      setvault:
-        condition: service_started
     restart: unless-stopped
     security_opt: [no-new-privileges:true]
