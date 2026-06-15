@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from setvault_core.models.base import Base, TimestampMixin, UuidPkMixin
 
 
-class IngestSourceState(UuidPkMixin, TimestampMixin, Base):
+class IngestSourceState(Base, UuidPkMixin, TimestampMixin):
     """Per-source enable + health state machine. One row per source kind.
 
     state: healthy | degraded | auto_disabled | manually_disabled
