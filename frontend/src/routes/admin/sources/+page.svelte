@@ -36,7 +36,7 @@
   {/if}
 
   {#if sources.length === 0}
-    <EmptyState message="No ingest sources." />
+    <EmptyState message={$_("sources.admin_empty")} />
   {:else}
     <AdminTable
       columns={[

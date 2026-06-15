@@ -131,7 +131,8 @@
     "col_enabled": "Enabled",
     "enable": "Enable",
     "disable": "Disable",
-    "search_failed": "Search failed."
+    "search_failed": "Search failed.",
+    "admin_empty": "No ingest sources."
   },
   "comments": {
     "heading": "Comments",
