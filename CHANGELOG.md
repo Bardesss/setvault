@@ -4,6 +4,19 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2](https://github.com/Bardesss/setvault/compare/v0.8.1...v0.8.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* **security:** fail closed when BASE_URL scheme is unknown ([ef3975c](https://github.com/Bardesss/setvault/commit/ef3975c3aa665d2f3defe0be20eda96968e4f900))
+
+
+### Refactors
+
+* **security:** single canonical origin for emitted URLs ([c3aaea6](https://github.com/Bardesss/setvault/commit/c3aaea6392a28061015323cddfaa229993878328))
+* **security:** single canonical origin for emitted URLs (BASE_URL) ([53f0b3f](https://github.com/Bardesss/setvault/commit/53f0b3f38f133a7fe4656282d38f1e542429d10e))
+
 ## [0.8.1](https://github.com/Bardesss/setvault/compare/v0.8.0...v0.8.1) (2026-06-15)
 
 
