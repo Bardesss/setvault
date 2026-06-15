@@ -1,19 +1,15 @@
-from setvault_ingest_sources.registry import (
-    all_source_kinds,
-    get_source,
-)
-from setvault_ingest_sources.youtube import YouTubeSource
+from setvault_ingest_sources.registry import all_source_kinds, get_source
 
 
-def test_get_source_returns_youtube():
-    src = get_source("youtube")
-    assert isinstance(src, YouTubeSource)
-    assert src.kind == "youtube"
+def test_all_four_sources_registered():
+    assert all_source_kinds() == ["internet_archive", "mixcloud", "soundcloud", "youtube"]
+
+
+def test_get_source_returns_instances():
+    for kind in ("youtube", "soundcloud", "mixcloud", "internet_archive"):
+        src = get_source(kind)
+        assert src is not None and src.kind == kind
 
 
 def test_unknown_kind_returns_none():
     assert get_source("nope") is None
-
-
-def test_all_source_kinds_includes_youtube():
-    assert "youtube" in all_source_kinds()

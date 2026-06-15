@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from setvault_ingest_sources.base import Candidate, SourceError
+import asyncio
+from dataclasses import dataclass
+
+from setvault_ingest_sources.base import Candidate, IngestSource, SourceError
 from setvault_ingest_sources.registry import all_source_kinds, get_source
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +15,28 @@ AUTO_DISABLE_AFTER = 5
 
 class SourceDisabledError(Exception):
     """The requested source is disabled (manually or auto)."""
+
+
+@dataclass
+class SearchAllResult:
+    candidates: list[Candidate]
+    errored_kinds: list[str]
+
+
+def _record_success(st: IngestSourceState) -> None:
+    st.consecutive_failures = 0
+    st.state = "healthy"
+    st.last_error = None
+
+
+def _record_failure(st: IngestSourceState, err: Exception) -> None:
+    st.consecutive_failures += 1
+    st.last_error = str(err)[:500]
+    if st.consecutive_failures >= AUTO_DISABLE_AFTER:
+        st.enabled = False
+        st.state = "auto_disabled"
+    else:
+        st.state = "degraded"
 
 
 async def ensure_seed_states(session: AsyncSession) -> None:
@@ -66,17 +91,42 @@ async def search_source(
     try:
         results = source.search(query, limit=limit)
     except SourceError as e:
-        st.consecutive_failures += 1
-        st.last_error = str(e)[:500]
-        if st.consecutive_failures >= AUTO_DISABLE_AFTER:
-            st.enabled = False
-            st.state = "auto_disabled"
-        else:
-            st.state = "degraded"
+        _record_failure(st, e)
         await session.flush()
         raise
-    st.consecutive_failures = 0
-    st.state = "healthy"
-    st.last_error = None
+    _record_success(st)
     await session.flush()
     return results
+
+
+async def search_all_sources(
+    session: AsyncSession, *, query: str, limit_per_source: int = 10,
+) -> SearchAllResult:
+    states = await list_states(session)  # seeds + returns all, ordered by kind
+    enabled = [
+        (s, src)
+        for s in states
+        if s.enabled and (src := get_source(s.kind)) is not None
+    ]
+
+    async def _run(src: IngestSource) -> list[Candidate]:
+        return await asyncio.to_thread(src.search, query, limit=limit_per_source)
+
+    results = await asyncio.gather(
+        *[_run(src) for _, src in enabled], return_exceptions=True
+    )
+    candidates: list[Candidate] = []
+    errored: list[str] = []
+    for (st, _src), res in zip(enabled, results, strict=True):
+        if isinstance(res, SourceError):
+            _record_failure(st, res)
+            errored.append(st.kind)
+        elif isinstance(res, BaseException):
+            # A non-SourceError escaping search() is a bug (or cancellation),
+            # not a flaky source — surface it rather than masking + auto-disabling.
+            raise res
+        else:
+            _record_success(st)
+            candidates.extend(res)
+    await session.flush()
+    return SearchAllResult(candidates=candidates, errored_kinds=errored)

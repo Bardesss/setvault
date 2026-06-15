@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -29,6 +30,25 @@ async def seeded_youtube_ripjob():
     yield
 
 
+@pytest.fixture
+async def seeded_soundcloud_ripjob():
+    """Insert a non-failed soundcloud RipJob with no external id (matched by url),
+    committed so the search endpoint's already-in-library query sees it."""
+    init_engine(__import__("os").environ["TEST_DATABASE_URL"])
+    async with session_factory()() as s:
+        job = RipJob(
+            source_url="https://soundcloud.com/dj-s/known-sc",
+            source_platform="soundcloud",
+            source_external_id=None,
+            status="ready",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        s.add(job)
+        await s.commit()
+    yield
+
+
 @pytest.mark.asyncio
 async def test_search_requires_auth(client):
     r = await client.post("/api/ingest-sources/search", json={"q": "x"})
@@ -36,29 +56,36 @@ async def test_search_requires_auth(client):
 
 
 @pytest.mark.asyncio
-async def test_search_returns_candidates_with_library_flag(
-    authed_admin_client, seeded_youtube_ripjob
+async def test_search_merges_and_flags_in_library(
+    authed_admin_client, seeded_youtube_ripjob, seeded_soundcloud_ripjob
 ):
     cands = [
-        Candidate("youtube", "known1", "Already", "U", 60, None, "https://youtu.be/known1"),
-        Candidate("youtube", "new2", "Fresh", "U", 60, None, "https://youtu.be/new2"),
+        Candidate("youtube", "known1", "YT known", "U", 60, None, "https://youtu.be/known1"),
+        Candidate("youtube", "new2", "YT new", "U", 60, None, "https://youtu.be/new2"),
+        Candidate("soundcloud", "dj-s/known-sc", "SC known", "U", 60, None,
+                  "https://soundcloud.com/dj-s/known-sc"),
+        Candidate("mixcloud", "dj-m/fresh", "MC fresh", "U", 60, None,
+                  "https://www.mixcloud.com/dj-m/fresh/"),
     ]
-    with patch("setvault_web.api.ingest_sources.search_source", return_value=cands):
-        r = await authed_admin_client.post(
-            "/api/ingest-sources/search",
-            json={"q": "best set", "source": "youtube"},
-        )
-    assert r.status_code == 200, r.text
-    items = {c["external_id"]: c for c in r.json()["items"]}
-    assert items["known1"]["already_in_library"] is True
+    result = SimpleNamespace(candidates=cands, errored_kinds=["internet_archive"])
+    with patch("setvault_web.api.ingest_sources.search_all_sources", return_value=result):
+        r = await authed_admin_client.post("/api/ingest-sources/search", json={"q": "set"})
+    assert r.status_code == 200
+    body = r.json()
+    items = {c["external_id"]: c for c in body["items"]}
+    assert items["known1"]["already_in_library"] is True          # youtube id match
     assert items["new2"]["already_in_library"] is False
+    assert items["dj-s/known-sc"]["already_in_library"] is True    # soundcloud url match
+    assert items["dj-m/fresh"]["already_in_library"] is False
+    assert body["errored_sources"] == ["internet_archive"]
 
 
 @pytest.mark.asyncio
 async def test_admin_can_list_and_toggle_sources(authed_admin_client):
     r = await authed_admin_client.get("/api/admin/ingest-sources")
-    assert r.status_code == 200, r.text
-    assert any(s["kind"] == "youtube" for s in r.json()["items"])
+    assert r.status_code == 200
+    kinds = {s["kind"] for s in r.json()["items"]}
+    assert {"youtube", "soundcloud", "mixcloud", "internet_archive"} <= kinds
     r2 = await authed_admin_client.put(
         "/api/admin/ingest-sources/youtube", json={"enabled": False}
     )

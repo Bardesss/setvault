@@ -76,3 +76,99 @@ async def test_search_seeds_states_on_first_run(session, monkeypatch):
     assert cands[0].external_id == "v1"
     st = await svc.get_state(session, "youtube")
     assert st is not None and st.enabled is True
+
+
+@pytest.mark.asyncio
+async def test_search_all_merges_enabled_sources(session, monkeypatch):
+    await svc.ensure_seed_states(session)
+    from setvault_ingest_sources.base import Candidate
+
+    def fake_get_source(kind):
+        class _S:
+            def __init__(self, k):
+                self.kind = k
+                self.name = k
+
+            def search(self, q, *, limit=20):
+                return [Candidate(self.kind, f"{self.kind}1", "T", "U", 60, None, f"https://x/{self.kind}1")]
+        return _S(kind)
+    monkeypatch.setattr(svc, "get_source", fake_get_source)
+
+    result = await svc.search_all_sources(session, query="x", limit_per_source=5)
+    kinds = {c.source_kind for c in result.candidates}
+    assert {"youtube", "soundcloud", "mixcloud", "internet_archive"} <= kinds
+    assert result.errored_kinds == []
+
+
+@pytest.mark.asyncio
+async def test_search_all_isolates_a_failing_source(session, monkeypatch):
+    await svc.ensure_seed_states(session)
+    from setvault_ingest_sources.base import Candidate, SourceError
+
+    def fake_get_source(kind):
+        class _Bad:
+            kind = "mixcloud"
+            name = "Mixcloud"
+
+            def search(self, q, *, limit=20):
+                raise SourceError("down")
+        class _Ok:
+            def __init__(self, k):
+                self.kind = k
+                self.name = k
+
+            def search(self, q, *, limit=20):
+                return [Candidate(self.kind, f"{self.kind}1", "T", "U", 60, None, "https://x")]
+        return _Bad() if kind == "mixcloud" else _Ok(kind)
+    monkeypatch.setattr(svc, "get_source", fake_get_source)
+
+    result = await svc.search_all_sources(session, query="x")
+    assert "mixcloud" in result.errored_kinds
+    assert all(c.source_kind != "mixcloud" for c in result.candidates)
+    assert any(c.source_kind == "youtube" for c in result.candidates)
+    mix = await svc.get_state(session, "mixcloud")
+    assert mix.state == "degraded" and mix.consecutive_failures == 1
+    yt = await svc.get_state(session, "youtube")
+    assert yt.state == "healthy"
+
+
+@pytest.mark.asyncio
+async def test_search_all_skips_disabled_sources(session, monkeypatch):
+    await svc.ensure_seed_states(session)
+    await svc.set_enabled(session, "soundcloud", False)
+    from setvault_ingest_sources.base import Candidate
+
+    def fake_get_source(kind):
+        class _S:
+            def __init__(self, k):
+                self.kind = k
+                self.name = k
+
+            def search(self, q, *, limit=20):
+                return [Candidate(self.kind, f"{self.kind}1", "T", "U", 60, None, "https://x")]
+        return _S(kind)
+    monkeypatch.setattr(svc, "get_source", fake_get_source)
+
+    result = await svc.search_all_sources(session, query="x")
+    assert all(c.source_kind != "soundcloud" for c in result.candidates)
+
+
+@pytest.mark.asyncio
+async def test_search_all_propagates_non_sourceerror_bugs(session, monkeypatch):
+    # A raw (non-SourceError) exception escaping a source's search() is a bug,
+    # not a flaky source — it must surface, not be masked + auto-disabled.
+    await svc.ensure_seed_states(session)
+
+    def fake_get_source(kind):
+        class _Buggy:
+            def __init__(self, k):
+                self.kind = k
+                self.name = k
+
+            def search(self, q, *, limit=20):
+                raise ValueError("programming bug")
+        return _Buggy(kind)
+    monkeypatch.setattr(svc, "get_source", fake_get_source)
+
+    with pytest.raises(ValueError):
+        await svc.search_all_sources(session, query="x")

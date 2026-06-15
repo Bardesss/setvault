@@ -17,7 +17,7 @@ per-user RSS feeds, an embeddable player, and an installable PWA.
 
 ---
 
-## ✨ What's in the box (v0.6.0)
+## ✨ What's in the box (v0.9.0)
 
 | Area | What you get |
 |---|---|
@@ -458,8 +458,9 @@ with conventional commits driving the CHANGELOG.
 | 6D — Admin & management surfaces | ✅ merged | Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`) |
 | Bundled + external deploy | ✅ merged | Single-container (PG+Redis+tusd+Caddy) or external datastores from one image (`v0.6.0`) |
 | Pre-launch hardening | ✅ merged | SECRET_KEY/cookie/CSRF gates, `create-admin` + `restore` CLIs, `pg_dump --clean` restore, SSRF/TLS docs (`v0.7.0`) |
-| **7A — Ingest sources** | **🚀 this release** | **`IngestSource` plugin protocol + YouTube `ytsearch` search, admin Sources tab, `/search` Sources mode + Ingest (`v0.8.0`)** |
-| 7B–7D — Ingest power tools | ⏳ planned | More sources (SoundCloud/Mixcloud/Internet Archive), monitored entities + Discoveries, quality rules + source-upgrade |
+| 7A — Ingest sources | ✅ merged | `IngestSource` plugin protocol + YouTube `ytsearch` search, admin Sources tab, `/search` Sources mode + Ingest (`v0.8.0`) |
+| **7B — More sources + multi-source search** | **🚀 this release** | **SoundCloud + Mixcloud + Internet Archive sources; `/search` searches all enabled sources at once, merged + labelled, with per-source health isolation (`v0.9.0`)** |
+| 7C–7D — Ingest power tools | ⏳ planned | Monitored entities + Discoveries inbox, per-source rate limits, quality rules + source-upgrade |
 | 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
 | 9 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
 | 10 — Sonos | ⏳ planned | SMAPI sidecar |
