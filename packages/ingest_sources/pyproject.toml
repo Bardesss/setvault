@@ -3,7 +3,7 @@ name = "setvault-ingest-sources"
 version = "0.1.0"
 description = "SetVault ingest source plugins (search across external audio platforms)"
 requires-python = ">=3.12"
-dependencies = ["yt-dlp"]
+dependencies = ["yt-dlp", "httpx"]
 
 [build-system]
 requires = ["hatchling"]

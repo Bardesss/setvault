@@ -1154,7 +1154,7 @@ wheels = [
 
 [[package]]
 name = "setvault-core"
-version = "0.7.0"
+version = "0.8.2"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "alembic" },
@@ -1223,6 +1223,7 @@ name = "setvault-ingest-sources"
 version = "0.1.0"
 source = { editable = "packages/ingest_sources" }
 dependencies = [
+    { name = "httpx" },
     { name = "yt-dlp" },
 ]
 
@@ -1234,7 +1235,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "yt-dlp" }]
+requires-dist = [
+    { name = "httpx" },
+    { name = "yt-dlp" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1245,7 +1249,7 @@ dev = [
 
 [[package]]
 name = "setvault-providers"
-version = "0.7.0"
+version = "0.8.2"
 source = { editable = "packages/providers" }
 dependencies = [
     { name = "httpx" },
@@ -1274,7 +1278,7 @@ dev = [
 
 [[package]]
 name = "setvault-web"
-version = "0.7.0"
+version = "0.8.2"
 source = { editable = "apps/web" }
 dependencies = [
     { name = "email-validator" },
@@ -1324,7 +1328,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "setvault-worker"
-version = "0.7.0"
+version = "0.8.2"
 source = { editable = "apps/worker" }
 dependencies = [
     { name = "setvault-core" },
