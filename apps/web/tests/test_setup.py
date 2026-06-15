@@ -50,7 +50,7 @@ async def test_post_creates_admin_and_autologs_in(client, fresh_db):
     body = res.json()
     assert body["email"] == SETUP_EMAIL
     assert body["role"] == "admin"
-    assert "session" in res.cookies
+    assert res.cookies.get("session")  # non-empty session cookie = logged in
     assert "csrf_token" in res.cookies
 
 
@@ -75,18 +75,23 @@ async def test_post_short_password_rejected(client, fresh_db):
     assert res.status_code == 422
 
 
-async def test_concurrent_submits_create_exactly_one_admin(client, fresh_db):
+async def test_concurrent_submits_create_exactly_one_admin(client, fresh_db, monkeypatch):
     import asyncio
 
+    # Decouple from the auth rate limit: this test asserts the advisory-lock
+    # race, not rate limiting. Without this, firing N requests at the default
+    # ceiling (5) makes the test silently fragile to that constant.
+    monkeypatch.setattr("setvault_web.rate_limit._AUTH_LIMIT", 1000)
+
     payloads = [
-        {"email": f"race{i}@example.test", "password": STRONG} for i in range(5)
+        {"email": f"race{i}@example.test", "password": STRONG} for i in range(8)
     ]
     results = await asyncio.gather(
         *[client.post("/api/setup", json=p) for p in payloads]
     )
     statuses = sorted(r.status_code for r in results)
     assert statuses.count(200) == 1
-    assert statuses.count(409) == 4
+    assert statuses.count(409) == 7
 
     from sqlalchemy import func, select
 
