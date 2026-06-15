@@ -5,7 +5,8 @@ from setvault_ingest_sources.youtube import YouTubeSource
 
 # 7A ships one source. 7B adds SoundCloud/Mixcloud/Internet Archive and may
 # switch this to entry-point discovery; the get_source() contract stays.
-_SOURCES: dict[str, IngestSource] = {YouTubeSource().kind: YouTubeSource()}
+_youtube = YouTubeSource()
+_SOURCES: dict[str, IngestSource] = {_youtube.kind: _youtube}
 
 
 def all_source_kinds() -> list[str]:
