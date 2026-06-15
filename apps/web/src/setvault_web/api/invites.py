@@ -4,7 +4,7 @@ import secrets as _s
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.services.audit import log as audit_log
@@ -42,7 +42,6 @@ class InviteOut(BaseModel):
 @router.post("", response_model=InviteOut, status_code=201)
 async def create_invite(
     body: InviteCreateIn,
-    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[AsyncSession, Depends(db_session)],
     admin: Annotated[User, Depends(require_admin)],
@@ -64,8 +63,10 @@ async def create_invite(
     )
     await session.commit()
     smtp_sent = await _try_send_invite_email(session, body.email, plaintext, settings)
-    # Derive base URL from the incoming request so tests and local dev use the correct origin.
-    base = str(request.base_url).rstrip("/")
+    # Use the configured BASE_URL (not request.base_url) so the link returned to
+    # the admin matches the emailed link and can't be shaped by a spoofed Host
+    # header. Single canonical origin — same source the email path uses.
+    base = settings.base_url.rstrip("/")
     return InviteOut(
         id=str(token.id), email=body.email, role=body.role,
         expires_at=token.expires_at, smtp_sent=smtp_sent,

@@ -10,7 +10,13 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="dev-only-do-not-use-in-prod", min_length=16)
     database_url: str = "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault"
     redis_url: str = "redis://localhost:6379/0"
-    base_url: str = "http://localhost:1970"
+    # No default on purpose: BASE_URL is required, and the session-cookie
+    # ``Secure`` flag is derived from its scheme (see cookies.cookie_secure).
+    # A silent ``http://`` default would fail *open* — a public deployment that
+    # forgot to set BASE_URL would silently serve a non-Secure cookie. Empty
+    # means "unconfigured", which cookie_secure() treats as fail-closed (Secure
+    # on). An explicit ``http://`` value is a deliberate VPN/LAN choice.
+    base_url: str = ""
     allow_1001tl_scrape: bool = Field(default=False, alias="SETVAULT_ALLOW_1001TL_SCRAPE")
 
 

@@ -1,4 +1,9 @@
+import os
 import uuid
+
+# Settings.base_url has no default (fail-closed for the Secure-cookie logic), so
+# tests must supply a canonical origin before get_settings() is first cached.
+os.environ.setdefault("BASE_URL", "http://localhost:1970")
 
 import pytest
 from httpx import ASGITransport, AsyncClient
