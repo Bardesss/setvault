@@ -70,14 +70,18 @@ test("multi-source search lists candidates with chips, an unavailable notice, an
   await page.goto("/search");
   await page.waitForLoadState("networkidle");
 
-  // Switch to the Sources tab (wait for hydration so the click registers).
+  // Switch to the Sources tab. On a cold dev server the first click can land
+  // before Svelte hydration attaches the handler (a no-op), so retry the click
+  // until the sources panel actually renders.
   const sourcesTab = page.getByRole("tab", { name: /^Sources$/i });
+  const sourceInput = page.getByPlaceholder(/Search all sources/i);
   await expect(sourcesTab).toBeVisible();
-  await sourcesTab.click();
+  await expect(async () => {
+    await sourcesTab.click();
+    await expect(sourceInput).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
 
   // Fill the source-search box and submit (submit button is "Search").
-  const sourceInput = page.getByPlaceholder(/Search all sources/i);
-  await expect(sourceInput).toBeVisible({ timeout: 5_000 });
   await sourceInput.fill("best set");
   await page.getByRole("button", { name: /^Search$/i }).click();
 
