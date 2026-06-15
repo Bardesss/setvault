@@ -4,6 +4,14 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1](https://github.com/Bardesss/setvault/compare/v0.8.0...v0.8.1) (2026-06-15)
+
+
+### Documentation
+
+* **readme:** reframe HTTPS requirement as three deployment modes ([2add694](https://github.com/Bardesss/setvault/commit/2add694733b925156d15bc1def0dd35e190f0686))
+* reframe HTTPS requirement as three deployment modes ([a7190a9](https://github.com/Bardesss/setvault/commit/a7190a9c77857cff471efd5c1e8e1045a88951f6))
+
 ## [0.8.0](https://github.com/Bardesss/setvault/compare/v0.7.0...v0.8.0) (2026-06-15)
 
 
