@@ -4,6 +4,39 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0](https://github.com/Bardesss/setvault/compare/v0.7.0...v0.8.0) (2026-06-15)
+
+
+### Features
+
+* **7a:** /search Sources mode — YouTube search + Ingest ([bd4e144](https://github.com/Bardesss/setvault/commit/bd4e144ea893e18edd769eff7e2ad9fd748afcba))
+* **7a:** admin Sources tab (enable/disable + state) ([5abbf5a](https://github.com/Bardesss/setvault/commit/5abbf5a98814463b57d629f076b6bc8a4b7b33e6))
+* **7a:** frontend ingest-sources api client + i18n keys ([42cf3d0](https://github.com/Bardesss/setvault/commit/42cf3d0c181400a5a51be4d17fec1b92a619dc9c))
+* **7a:** ingest_source_state model + migration ([0bdff69](https://github.com/Bardesss/setvault/commit/0bdff6900842b75c36a765a941382e7c6abe0f8c))
+* **7a:** ingest_sources package — IngestSource protocol + Candidate ([bcb7da2](https://github.com/Bardesss/setvault/commit/bcb7da2320cc48bfafb4fec62079fba3a5edfb5a))
+* **7a:** ingest-source service — search + auto-disable state machine ([83c7254](https://github.com/Bardesss/setvault/commit/83c7254f36724f7c280cea3c7f7b40a5ebabf9c4))
+* **7a:** ingest-sources API — search (+in-library flag) + admin toggle ([69e9af8](https://github.com/Bardesss/setvault/commit/69e9af87be36f31de14f9fc326879faa7fff4a11))
+* **7a:** YouTube ingest source via yt-dlp ytsearch + registry ([11fdf34](https://github.com/Bardesss/setvault/commit/11fdf3418203c9ec3e23a23f6f8b40745e58b81a))
+* **phase-7a:** ingest sources — IngestSource protocol + YouTube search + Sources tab ([b868007](https://github.com/Bardesss/setvault/commit/b8680070549fdaa7cb667c0ffa450c4a1d62a402))
+
+
+### Bug Fixes
+
+* **7a:** COPY packages/ingest_sources in bundled Dockerfile ([e9b844b](https://github.com/Bardesss/setvault/commit/e9b844b5b36bd271a20060e7af45c888306088de))
+* **7a:** distinct search-submit aria-label + i18n ingest-failed string ([8b1382c](https://github.com/Bardesss/setvault/commit/8b1382c47461ad460411a55cce445c769e934a8e))
+* **7a:** seed source states before search so first run works ([f6c1aa4](https://github.com/Bardesss/setvault/commit/f6c1aa42d9c56d7e01933bf1126528e7b40dc6c9))
+
+
+### Refactors
+
+* **7a:** log+narrow 502 path, dedupe state-out helper, bound search limit, real test status ([b453cc6](https://github.com/Bardesss/setvault/commit/b453cc6a0ed96592f7df0bb31a5e9a87ea8ab12f))
+* **7a:** registry — bind single YouTubeSource instance ([3d76644](https://github.com/Bardesss/setvault/commit/3d76644901f279a64e89f33446eb342a997d223f))
+
+
+### Documentation
+
+* **readme:** mark bundled+hardening merged; 7A ingest-sources this release (v0.8.0) ([c1d79e0](https://github.com/Bardesss/setvault/commit/c1d79e01a1e249d97f69b629ad726c49d72b1d93))
+
 ## [0.7.0](https://github.com/Bardesss/setvault/compare/v0.6.0...v0.7.0) (2026-06-08)
 
 
