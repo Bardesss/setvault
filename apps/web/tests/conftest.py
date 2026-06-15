@@ -15,6 +15,7 @@ from setvault_core.models.catalog import (
 )
 from setvault_core.models.enrichment import ProviderConfig, ProviderResponse, ResolveJob
 from setvault_core.models.identity import EmailToken, User
+from setvault_core.models.ingest_sources import IngestSourceState
 from setvault_core.models.library_webhook import LibraryWebhook
 from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.models.tracklist import (
@@ -246,6 +247,28 @@ async def _cleanup_rip_jobs():
     yield
     async with session_factory()() as s:
         await s.execute(delete(RipJob))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_ingest_source_state():
+    """Delete IngestSourceState rows so admin source-toggle tests can rerun.
+
+    The admin PUT that toggles a source to disabled COMMITS the row; without
+    this cleanup the stale (e.g. youtube, enabled=False, manually_disabled)
+    row persists in the shared test DB and breaks the core ingest-source
+    service tests (and reruns of these tests). Cleans both before and after
+    to clear leftovers from prior sessions."""
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(IngestSourceState))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(IngestSourceState))
         await s.commit()
 
 

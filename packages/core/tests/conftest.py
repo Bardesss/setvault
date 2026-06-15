@@ -5,6 +5,7 @@ import pytest
 from setvault_core.db import init_engine, session_factory
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.identity import User
+from setvault_core.models.ingest_sources import IngestSourceState
 from setvault_core.models.tracklist import TracklistEntry
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete
@@ -96,4 +97,28 @@ async def _cleanup_catalog_rows():
         await s.execute(delete(LiveSet))
         await s.execute(delete(MediaRoot))
         await s.execute(delete(User).where(User.email.like("%@x.test")))
+        await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_ingest_source_state():
+    """Delete ingest_source_state rows BEFORE each test so a committed row left
+    behind by a prior web admin source-toggle test (or a prior run) can't make
+    the ingest-source service tests non-deterministic.
+
+    Uses its own committing session (NOT the rollback ``session`` fixture) so a
+    stale committed row is actually removed. Cleans before and after to keep
+    reruns idempotent. Decoupled from apps/web — core tests must not depend on
+    web fixtures.
+    """
+    init_engine(os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        await s.execute(delete(IngestSourceState))
+        await s.commit()
+    yield
+    async with session_factory()() as s:
+        await s.execute(delete(IngestSourceState))
         await s.commit()
