@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet
 from setvault_core.models.engagement import Favorite
@@ -111,7 +111,6 @@ async def _items_for(
 async def feed(
     kind: FeedKind,
     token: str,
-    request: Request,
     session: Annotated[AsyncSession, Depends(db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     page: int = 1,
@@ -125,7 +124,10 @@ async def feed(
         session, user=user, kind=kind, limit=page_size, offset=offset,
     )
 
-    base_url = str(request.base_url).rstrip("/")
+    # Configured BASE_URL is the canonical origin for the self-link and the
+    # signed enclosure URLs — request.base_url is Host-header-derived and could
+    # be spoofed into the feed.
+    base_url = settings.base_url.rstrip("/")
     title_for_kind = {
         "favorites": f"SetVault favorites - {user.display_name}",
         "recent": "SetVault recent sets",

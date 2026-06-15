@@ -6,7 +6,6 @@ drift from the origin the app is actually served on, with
 """
 
 import pytest
-
 from setvault_web import cookies
 from setvault_web.config import get_settings
 

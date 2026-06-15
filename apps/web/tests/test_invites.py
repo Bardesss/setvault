@@ -8,7 +8,8 @@ async def test_admin_can_create_invite_and_link_is_returned(authed_admin_client)
     assert response.status_code == 201
     body = response.json()
     assert body["email"] == "new@example.test"
-    assert body["invite_link"].startswith("https://test/invite/")
+    # Link now uses the configured BASE_URL (canonical origin), not the request host.
+    assert body["invite_link"].startswith("http://localhost:1970/invite/")
     assert body["smtp_sent"] is False
 
 
