@@ -4,6 +4,32 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/Bardesss/setvault/compare/v0.9.0...v0.10.0) (2026-06-15)
+
+
+### Features
+
+* **deploy:** auto-generate SECRET_KEY + default BASE_URL in bundled mode ([f83d430](https://github.com/Bardesss/setvault/commit/f83d43064b40364f1dec9125aa0d3a190c1e5234))
+* **deploy:** require BASE_URL only in external mode; SECRET_KEY now always set ([1cec7d7](https://github.com/Bardesss/setvault/commit/1cec7d731f1f9f67fa2dcc8b9854b25a9dc90e1b))
+* **setup:** first-run admin wizard endpoint (status + self-locking create + auto-login) ([6957de0](https://github.com/Bardesss/setvault/commit/6957de050d4d407fb367c7a75434a1b9afe841f9))
+* **setup:** first-run admin wizard page + redirect gate ([37e02b6](https://github.com/Bardesss/setvault/commit/37e02b6550864f99b1aa1a98aecc261fd50ff08a))
+
+
+### Bug Fixes
+
+* **deploy:** make AIO compose secrets optional so bundled mode is truly zero-config ([1538770](https://github.com/Bardesss/setvault/commit/15387702ec2c9ca78a7a1c26350f03a17c4c2964))
+* **deploy:** restrict perms on persisted + tmpfs secret files (0600) ([95d063e](https://github.com/Bardesss/setvault/commit/95d063ec1b8728674a6ccab1c67e1ced281802e4))
+
+
+### Performance
+
+* **setup:** skip first-run gate on public routes; trim wizard email ([082cb9a](https://github.com/Bardesss/setvault/commit/082cb9a07839062daae1c8d8202fc27d4037e89d))
+
+
+### Documentation
+
+* **deploy:** wizard-first first-run; bundled mode needs zero env vars ([fb42daf](https://github.com/Bardesss/setvault/commit/fb42daf87f8a2994f093212eed63d096ab9e694f))
+
 ## [0.9.0](https://github.com/Bardesss/setvault/compare/v0.8.2...v0.9.0) (2026-06-15)
 
 
