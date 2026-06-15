@@ -50,7 +50,7 @@
         x.external_id === c.external_id ? { ...x, already_in_library: true } : x,
       );
     } catch (e) {
-      sourceError = e instanceof Error ? e.message : "ingest failed";
+      sourceError = e instanceof Error ? e.message : $_("sources.ingest_failed");
     } finally {
       ingesting[c.external_id] = false;
       ingesting = ingesting;
@@ -141,7 +141,7 @@
         type="submit"
         class="btn"
         disabled={searching}
-        aria-label={$_("sources.tab_sources")}>{$_("sources.tab_sources")}</button
+        aria-label={$_("sources.search_submit")}>{$_("sources.search_submit")}</button
       >
     </form>
     {#if sourceError}<p class="admin-msg is-error" role="alert">{sourceError}</p>{/if}

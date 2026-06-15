@@ -132,6 +132,8 @@
     "enable": "Enable",
     "disable": "Disable",
     "search_failed": "Search failed.",
+    "search_submit": "Search",
+    "ingest_failed": "Ingest failed.",
     "admin_empty": "No ingest sources."
   },
   "comments": {
