@@ -31,6 +31,7 @@ from setvault_web.api import recycle as recycle_api
 from setvault_web.api import scheduled_tasks as scheduled_tasks_api
 from setvault_web.api import search as search_api
 from setvault_web.api import sets as sets_api
+from setvault_web.api import setup as setup_api
 from setvault_web.api import tracklist as tracklist_api
 from setvault_web.api import uploads as uploads_api
 from setvault_web.api import url_rip as url_rip_api
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": __version__, "base_url": settings.base_url}
 
     app.include_router(auth_api.router)
+    app.include_router(setup_api.router)
     app.include_router(invites_api.router)
     app.include_router(password_reset_api.router)
     app.include_router(connectors_api.router)
