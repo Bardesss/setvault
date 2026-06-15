@@ -4,6 +4,41 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0](https://github.com/Bardesss/setvault/compare/v0.8.2...v0.9.0) (2026-06-15)
+
+
+### Features
+
+* **7b:** /search shows merged multi-source results with source chips + unavailable notice ([2c10fc8](https://github.com/Bardesss/setvault/commit/2c10fc8e98fe8988671e1659c3d534350814284f))
+* **7b:** frontend client searches all sources (+partial-unavailable i18n) ([4618050](https://github.com/Bardesss/setvault/commit/4618050b025057251eba309c14206cf8b8aa5e48))
+* **7b:** ingest-sources API searches all sources + cross-source in-library flag ([61340b6](https://github.com/Bardesss/setvault/commit/61340b6dd25595078168dbc0ec36be10e5ea65d4))
+* **7b:** Internet Archive source + register all four sources ([c1e4306](https://github.com/Bardesss/setvault/commit/c1e4306fb8067a5f0846430beea484156b9ef186))
+* **7b:** Mixcloud ingest source via public search API ([2baa974](https://github.com/Bardesss/setvault/commit/2baa9749820d562197221e3f42ca8dd87d537497))
+* **7b:** search_all_sources — concurrent multi-source search + shared state helpers ([c4119c8](https://github.com/Bardesss/setvault/commit/c4119c803a589916f5659cf97b74d9fad98f1199))
+* **7b:** SoundCloud ingest source via yt-dlp scsearch ([f045e82](https://github.com/Bardesss/setvault/commit/f045e82c619d5afb65f6363a19e347b7b86a5fea))
+* **phase-7b:** more sources + multi-source search ([63656e9](https://github.com/Bardesss/setvault/commit/63656e90efb6b546ea66bbd258c49d6376cb757a))
+
+
+### Bug Fixes
+
+* **7b:** narrow search_all exception handling — propagate bugs/cancellation, bind source once ([bc3a8f3](https://github.com/Bardesss/setvault/commit/bc3a8f3ee1e6696239ebe14b77e4651524da1aae))
+
+
+### Performance
+
+* **7b:** scope in-library query to candidate keys (avoid full rip_jobs scan) ([ae2ea53](https://github.com/Bardesss/setvault/commit/ae2ea538b828446b0d9a39b1089c405da4b3588f))
+
+
+### Refactors
+
+* **7b:** extract _YtDlpSearchSource base from youtube source ([e10f6e7](https://github.com/Bardesss/setvault/commit/e10f6e734a3e9853d3e0307c6632ba4db97a4337))
+
+
+### Documentation
+
+* **landing:** 7B multi-source search shipped (v0.9.0); monitoring still roadmap (7C) ([51cd631](https://github.com/Bardesss/setvault/commit/51cd631dad6e62cd7777f827a3e47809bcd4b8bf))
+* **readme:** bump what's-in-the-box to v0.9.0; 7B this release, 7A merged ([5e0e3f9](https://github.com/Bardesss/setvault/commit/5e0e3f96b6cd1e3f8a642c3b8300ee1cae42c539))
+
 ## [0.8.2](https://github.com/Bardesss/setvault/compare/v0.8.1...v0.8.2) (2026-06-15)
 
 
