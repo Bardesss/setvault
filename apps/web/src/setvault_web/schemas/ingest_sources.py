@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class SourceSearchIn(BaseModel):
+    q: str
+    source: str = "youtube"
+    limit: int = Field(20, ge=1, le=50)
 
 
 class CandidateOut(BaseModel):

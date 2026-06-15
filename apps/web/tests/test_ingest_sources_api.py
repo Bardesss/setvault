@@ -20,7 +20,7 @@ async def seeded_youtube_ripjob():
             source_url="https://youtu.be/known1",
             source_platform="youtube",
             source_external_id="known1",
-            status="completed",
+            status="ready",
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
