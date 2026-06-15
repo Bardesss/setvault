@@ -14,4 +14,4 @@ dev = ["ruff>=0.6"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-ra --import-mode=importlib"
-testpaths = ["apps/web/tests", "apps/worker/tests", "packages/core/tests", "packages/providers/tests"]
+testpaths = ["apps/web/tests", "apps/worker/tests", "packages/core/tests", "packages/providers/tests", "packages/ingest_sources/tests"]
