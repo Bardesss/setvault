@@ -103,6 +103,7 @@ WORKDIR /srv
 COPY pyproject.toml uv.lock ./
 COPY packages/core/pyproject.toml packages/core/pyproject.toml
 COPY packages/providers/pyproject.toml packages/providers/pyproject.toml
+COPY packages/ingest_sources/pyproject.toml packages/ingest_sources/pyproject.toml
 COPY apps/web/pyproject.toml apps/web/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
 RUN uv sync --frozen --no-install-project || uv sync --no-install-project
@@ -111,6 +112,7 @@ RUN uv sync --frozen --no-install-project || uv sync --no-install-project
 FROM deps AS runtime
 COPY packages/core packages/core
 COPY packages/providers packages/providers
+COPY packages/ingest_sources packages/ingest_sources
 COPY apps/web apps/web
 COPY apps/worker apps/worker
 COPY alembic.ini ./
