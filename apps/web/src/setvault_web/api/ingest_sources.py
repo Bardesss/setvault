@@ -6,12 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from setvault_core.models.url_rip import RipJob
 from setvault_core.services.ingest_sources import (
-    SourceDisabledError,
     list_states,
-    search_source,
+    search_all_sources,
     set_enabled,
 )
-from setvault_ingest_sources.base import SourceError
 from setvault_ingest_sources.registry import get_source
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,33 +46,42 @@ async def search(
     user: Annotated[object, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ) -> SourceSearchOut:
-    try:
-        cands = await search_source(session, kind=body.source, query=body.q, limit=body.limit)
-    except SourceDisabledError as exc:
-        raise HTTPException(status_code=409, detail="source is disabled") from exc
-    except SourceError as exc:
-        logger.warning("ingest-source search failed for source %s", body.source)
-        raise HTTPException(status_code=502, detail="source search failed") from exc
+    result = await search_all_sources(
+        session, query=body.q, limit_per_source=body.limit_per_source
+    )
+    cands = result.candidates
 
-    ext_ids = [c.external_id for c in cands]
-    in_lib: set[str] = set()
-    if ext_ids:
+    id_keys: set[tuple[str, str]] = set()
+    urls: set[str] = set()
+    if cands:
+        platforms = {c.source_kind for c in cands}
         rows = (await session.execute(
-            select(RipJob.source_external_id).where(
-                RipJob.source_platform == body.source,
-                RipJob.source_external_id.in_(ext_ids),
+            select(RipJob.source_platform, RipJob.source_external_id, RipJob.source_url).where(
+                RipJob.source_platform.in_(platforms),
                 RipJob.status != "failed",
             )
-        )).scalars()
-        in_lib = {r for r in rows if r}
-    return SourceSearchOut(items=[
-        CandidateOut(
-            source_kind=c.source_kind, external_id=c.external_id, title=c.title,
-            uploader=c.uploader, duration_seconds=c.duration_seconds,
-            thumbnail_url=c.thumbnail_url, webpage_url=c.webpage_url,
-            already_in_library=c.external_id in in_lib,
-        ) for c in cands
-    ])
+        )).all()
+        for platform, ext_id, src_url in rows:
+            if ext_id:
+                id_keys.add((platform, ext_id))
+            if src_url:
+                urls.add(src_url)
+
+    def _in_lib(c) -> bool:
+        return (c.source_kind, c.external_id) in id_keys or c.webpage_url in urls
+
+    return SourceSearchOut(
+        items=[
+            CandidateOut(
+                source_kind=c.source_kind, external_id=c.external_id, title=c.title,
+                uploader=c.uploader, duration_seconds=c.duration_seconds,
+                thumbnail_url=c.thumbnail_url, webpage_url=c.webpage_url,
+                already_in_library=_in_lib(c),
+            )
+            for c in cands
+        ],
+        errored_sources=result.errored_kinds,
+    )
 
 
 @router.get("/api/admin/ingest-sources", response_model=SourceStatesOut)

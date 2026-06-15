@@ -5,8 +5,7 @@ from pydantic import BaseModel, Field
 
 class SourceSearchIn(BaseModel):
     q: str
-    source: str = "youtube"
-    limit: int = Field(20, ge=1, le=50)
+    limit_per_source: int = Field(10, ge=1, le=50)
 
 
 class CandidateOut(BaseModel):
@@ -22,6 +21,7 @@ class CandidateOut(BaseModel):
 
 class SourceSearchOut(BaseModel):
     items: list[CandidateOut]
+    errored_sources: list[str]
 
 
 class SourceStateOut(BaseModel):
