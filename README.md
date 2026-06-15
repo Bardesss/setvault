@@ -60,15 +60,21 @@ One data volume.
 
 ```bash
 docker run -d --name setvault -p 1970:1970 \
-  -e SECRET_KEY="$(openssl rand -base64 48)" \
-  -e BASE_URL="https://setvault.example.com" \
-  -e POSTGRES_PASSWORD="$(openssl rand -base64 24)" \
   -v setvault-data:/data \
   ghcr.io/bardesss/setvault:latest
 ```
 
-Or with compose: copy `.env.example` to `.env`, fill the three required vars,
-then `docker compose -f infra/docker/compose.aio.yml up -d`.
+That's it — no secrets to set. On first boot SetVault generates and persists
+`SECRET_KEY` and the internal `POSTGRES_PASSWORD`, and defaults `BASE_URL` to
+`http://localhost:1970`. Open the app in a browser and the **first-run wizard**
+walks you through creating your admin account.
+
+> **Exposing it to the internet?** Set `BASE_URL=https://your-host` (and front a
+> TLS proxy) so the session cookie is marked `Secure`. See the deployment-mode
+> box below.
+
+Or with compose: copy `.env.example` to `.env` (no vars required in bundled
+mode), then `docker compose -f infra/docker/compose.aio.yml up -d`.
 
 The `/data` volume holds the database, Redis, and all media/config — **back it
 up**. How you put TLS in front (or whether you need to at all) depends on your
@@ -107,16 +113,20 @@ deployment mode — see below.
 > dump/restore via the admin backup endpoint. Bundled mode is homelab grade.
 
 On first boot, the container:
-- auto-generates an internal `TUSD_HOOK_SECRET` (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`)
-- synthesizes `DATABASE_URL` from your `POSTGRES_PASSWORD`
+- auto-generates `SECRET_KEY`, the internal `POSTGRES_PASSWORD`, and `TUSD_HOOK_SECRET` if unset (persisted to `${SETVAULT_CONFIG_PATH}/.secrets`)
+- defaults `BASE_URL` to `http://localhost:1970` if unset
+- synthesizes `DATABASE_URL` from the `POSTGRES_PASSWORD`
 - runs `alembic upgrade head`
 - starts uvicorn + RQ worker + watchdog under s6-overlay
 
 ### Create the first admin
 
-Create (or promote) the first admin with the bundled CLI. It reads the
-credentials from the environment so the password never lands on the command
-line or in the container logs:
+Open SetVault in your browser; on a fresh install you'll be redirected to a
+first-run wizard that creates your admin account. Nothing else to run.
+
+**Headless / automation alternative.** To bootstrap the admin without the UI
+(e.g. scripted provisioning), use the bundled CLI — it reads credentials from
+the environment so the password never lands on the command line or in logs:
 
 ```bash
 docker exec \
@@ -143,7 +153,7 @@ separately. Provide `DATABASE_URL` and/or `REDIS_URL` and the bundled
 datastores stay off (per-datastore — you can mix).
 
 ```bash
-cp .env.example .env   # set SECRET_KEY, BASE_URL, POSTGRES_PASSWORD
+cp .env.example .env   # set BASE_URL + your DATABASE_URL/REDIS_URL (or POSTGRES_PASSWORD)
 docker compose -f infra/docker/compose.yml up -d
 ```
 
@@ -172,22 +182,26 @@ SBOMs (CycloneDX JSON) are attached to each GitHub Release.
 
 ## ⚙️ Configuration
 
-All configuration is via environment variables loaded from `.env`. Only
-three are required — everything else is defaulted inside the image or
-synthesized at first boot.
+All configuration is via environment variables loaded from `.env`.
+**Bundled (single-container) mode needs zero required vars** — `SECRET_KEY`
+and the internal `POSTGRES_PASSWORD` are generated on first boot and `BASE_URL`
+defaults to `http://localhost:1970`. External-datastore mode still needs
+`BASE_URL` plus a `DATABASE_URL`/`REDIS_URL` (or a `POSTGRES_PASSWORD` for the
+bundled datastore it replaces). Everything else is defaulted inside the image
+or synthesized at first boot.
 
 | Variable | Required | Default | What it does |
 |---|---|---|---|
-| `SECRET_KEY` | ✅ | — | Signs session cookies + HMAC URLs. **Rotate ⇒ all sessions invalidated.** |
-| `POSTGRES_PASSWORD` | ✅ | — | Postgres password. Used by both the postgres container and the auto-synthesized `DATABASE_URL`. |
-| `BASE_URL` | ✅ | — | Public URL the app is served from (used in emails, RSS feeds, embed URLs) |
+| `SECRET_KEY` | `auto` (generated on first boot if unset) | generated | Signs session cookies + HMAC URLs. **Rotate ⇒ all sessions invalidated.** |
+| `POSTGRES_PASSWORD` | `auto` (bundled; generated if unset) | generated | Postgres password. Used by both the postgres container and the auto-synthesized `DATABASE_URL`. |
+| `BASE_URL` | `bundled: auto · external: ✅` | `http://localhost:1970` (bundled) | Public URL the app is served from (used in emails, RSS feeds, embed URLs). Set your `https://` URL when internet-facing. |
 | `DATABASE_URL` | optional | synthesized from POSTGRES_* | Set to use an external Postgres; unset = bundled datastore |
 | `REDIS_URL` | optional | `redis://redis:6379/0` | Set to use an external Redis; unset = bundled datastore. RQ queue + rate-limit store |
 | `TUSD_HOOK_SECRET` | optional | auto-generated on first boot | Shared secret tusd uses when calling back into setvault |
 | `SETVAULT_*_PATH` | optional | `./.data/*` | Host paths for db / redis / media / cache / config / watch |
 | `SETVAULT_VERSION` | optional | `latest` | Image tag. **Pin to an explicit version in production** (e.g. `0.6.0`) — the default floats on `latest` and an unattended pull can ship a breaking change. |
 | `SETVAULT_HTTP_PORT` | optional | `1970` | Host port the setvault service binds (1970 — year of the first DJ live set) |
-| `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
+| `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables the `/api/dev/seed-e2e` test endpoint. Dev/e2e only — for real installs use the first-run wizard. Unset in production. |
 | `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | Force-off override for the session-cookie `Secure` flag. Normally unnecessary — `Secure` is derived from your `BASE_URL` scheme (mode B above). Only for unusual proxy setups; can relax the flag, never tighten it. Never set on an internet-exposed `https://` instance. |
 | `SETVAULT_FORWARDED_ALLOW_IPS` | optional | — | Upstream IPs trusted to set `X-Forwarded-*` headers (e.g. just your reverse proxy's address). See the forwarded-headers warning below. |
 | `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |

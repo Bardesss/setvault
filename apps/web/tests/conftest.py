@@ -5,6 +5,13 @@ import uuid
 # tests must supply a canonical origin before get_settings() is first cached.
 os.environ.setdefault("BASE_URL", "http://localhost:1970")
 
+# Use NullPool for the shared engine in this suite: ~17 autouse fixtures each
+# call init_engine() per test, and a real pool leaves idle asyncpg connections
+# lingering until GC — enough to exhaust CI Postgres's default max_connections
+# (100). NullPool releases connections immediately. Must be set before the first
+# create_async_engine() call. Production never sets this, keeping its real pool.
+os.environ.setdefault("SETVAULT_DB_NULLPOOL", "1")
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from setvault_core.db import init_engine, session_factory

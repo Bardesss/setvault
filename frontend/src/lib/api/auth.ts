@@ -22,3 +22,18 @@ export function logout() {
 export function me() {
   return api<CurrentUser>("/api/auth/me");
 }
+
+export function setupStatus() {
+  return api<{ needs_setup: boolean }>("/api/setup/status");
+}
+
+export function setupFirstAdmin(
+  email: string,
+  password: string,
+  display_name?: string,
+) {
+  return api<CurrentUser>("/api/setup", {
+    method: "POST",
+    body: JSON.stringify({ email, password, display_name }),
+  });
+}

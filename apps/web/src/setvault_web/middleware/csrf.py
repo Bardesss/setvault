@@ -21,6 +21,7 @@ CSRF_HEADER = "x-csrf-token"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 EXEMPT_PATHS = frozenset({
     "/api/auth/login",
+    "/api/setup",  # first-run anonymous POST has no CSRF cookie yet; self-locks once a user exists
     "/api/health",
     "/api/uploads/tusd-hooks",
     "/api/dev/seed-e2e",  # gated by SETVAULT_DEV_SEED; router not registered otherwise
