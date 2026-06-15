@@ -120,7 +120,8 @@
   "sources": {
     "tab_library": "Library",
     "tab_sources": "Sources",
-    "search_placeholder": "Search YouTube for sets…",
+    "search_placeholder": "Search all sources for sets…",
+    "partial_unavailable": "Some sources are unavailable: {sources}",
     "ingest": "Ingest",
     "in_library": "In library",
     "ingesting": "Ingesting…",

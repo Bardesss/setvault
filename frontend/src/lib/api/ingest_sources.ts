@@ -20,18 +20,16 @@ export interface SourceState {
   last_error: string | null;
 }
 
-export async function searchSources(
-  q: string,
-  source = "youtube",
-): Promise<SourceCandidate[]> {
-  const { items } = await api<{ items: SourceCandidate[] }>(
-    "/api/ingest-sources/search",
-    {
-      method: "POST",
-      body: JSON.stringify({ q, source }),
-    },
-  );
-  return items;
+export interface SourceSearchResult {
+  items: SourceCandidate[];
+  errored_sources: string[];
+}
+
+export async function searchSources(q: string): Promise<SourceSearchResult> {
+  return api<SourceSearchResult>("/api/ingest-sources/search", {
+    method: "POST",
+    body: JSON.stringify({ q }),
+  });
 }
 
 export async function listSources(): Promise<SourceState[]> {
