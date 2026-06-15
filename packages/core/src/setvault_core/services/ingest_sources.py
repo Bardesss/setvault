@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from setvault_ingest_sources.base import Candidate, SourceError
+from setvault_ingest_sources.registry import all_source_kinds, get_source
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_core.models.ingest_sources import IngestSourceState
-from setvault_ingest_sources.base import Candidate, SourceError
-from setvault_ingest_sources.registry import all_source_kinds, get_source
 
 AUTO_DISABLE_AFTER = 5
 

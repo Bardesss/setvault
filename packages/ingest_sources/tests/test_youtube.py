@@ -1,8 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-
-from setvault_ingest_sources.base import Candidate, IngestSource, SourceError
+from setvault_ingest_sources.base import IngestSource, SourceError
 from setvault_ingest_sources.youtube import YouTubeSource
 
 

@@ -27,7 +27,7 @@ class YouTubeSource:
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
-        except Exception as e:  # noqa: BLE001 — surface as a domain error
+        except Exception as e:
             raise SourceError(f"youtube search failed: {e}") from e
         out: list[Candidate] = []
         for e in (info or {}).get("entries", []) or []:
