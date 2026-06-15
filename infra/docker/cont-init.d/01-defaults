@@ -19,6 +19,22 @@ if [ -f "${SECRETS_FILE}" ]; then
   source "${SECRETS_FILE}"
 fi
 
+# Auto-generate SECRET_KEY if unset. It signs every session cookie + HMAC
+# share URL, so it MUST be stable across restarts — persist to .secrets.
+if [ -z "${SECRET_KEY}" ]; then
+  SECRET_KEY="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')"
+  echo "SECRET_KEY=${SECRET_KEY}" >> "${SECRETS_FILE}"
+  echo "[setvault] generated SECRET_KEY (persisted to ${SECRETS_FILE})" >&2
+fi
+
+# Bundled mode: default the public URL so first boot needs zero config. The
+# http:// scheme keeps the session cookie non-Secure (correct for LAN/VPN); an
+# internet deployment must set BASE_URL=https://… behind a TLS proxy.
+if [ -z "${BASE_URL}" ] && [ "${SETVAULT_PG_EMBEDDED}" = "1" ]; then
+  BASE_URL="http://localhost:1970"
+  echo "[setvault] BASE_URL unset; defaulting to ${BASE_URL} (bundled mode)" >&2
+fi
+
 # Synthesize DATABASE_URL from POSTGRES_* if the user didn't pass one.
 # Power users with an external postgres pass DATABASE_URL directly.
 if [ -z "${DATABASE_URL}" ]; then
@@ -42,10 +58,12 @@ if [ -z "${DATABASE_URL}" ]; then
 fi
 
 # Export so s6 longruns inherit via with-contenv.
-export DATABASE_URL POSTGRES_PASSWORD
+export DATABASE_URL POSTGRES_PASSWORD SECRET_KEY BASE_URL
 mkdir -p /run/s6/container_environment
 printf '%s' "${DATABASE_URL}" > /run/s6/container_environment/DATABASE_URL
 printf '%s' "${POSTGRES_PASSWORD}" > /run/s6/container_environment/POSTGRES_PASSWORD
+printf '%s' "${SECRET_KEY}" > /run/s6/container_environment/SECRET_KEY
+printf '%s' "${BASE_URL}" > /run/s6/container_environment/BASE_URL
 
 # Default data directories — create on first boot so PUID/PGID bind-mounts
 # don't fail with "directory not found".
