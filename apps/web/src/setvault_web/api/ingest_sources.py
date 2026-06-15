@@ -10,8 +10,9 @@ from setvault_core.services.ingest_sources import (
     search_all_sources,
     set_enabled,
 )
+from setvault_ingest_sources.base import Candidate
 from setvault_ingest_sources.registry import get_source
-from sqlalchemy import select
+from sqlalchemy import false, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session, require_admin
@@ -55,10 +56,18 @@ async def search(
     urls: set[str] = set()
     if cands:
         platforms = {c.source_kind for c in cands}
+        ext_ids = [c.external_id for c in cands if c.external_id]
+        webpage_urls = [c.webpage_url for c in cands if c.webpage_url]
+        # Scope to the candidate keys so this stays cheap on a large library
+        # rather than scanning every non-failed rip for the searched platforms.
         rows = (await session.execute(
             select(RipJob.source_platform, RipJob.source_external_id, RipJob.source_url).where(
                 RipJob.source_platform.in_(platforms),
                 RipJob.status != "failed",
+                or_(
+                    RipJob.source_external_id.in_(ext_ids) if ext_ids else false(),
+                    RipJob.source_url.in_(webpage_urls) if webpage_urls else false(),
+                ),
             )
         )).all()
         for platform, ext_id, src_url in rows:
@@ -67,7 +76,9 @@ async def search(
             if src_url:
                 urls.add(src_url)
 
-    def _in_lib(c) -> bool:
+    def _in_lib(c: Candidate) -> bool:
+        # URL fallback (for sources with no stable external_id) is an exact-string
+        # match, so trailing-slash/query drift can miss — chromaprint is the real dedup.
         return (c.source_kind, c.external_id) in id_keys or c.webpage_url in urls
 
     return SourceSearchOut(
