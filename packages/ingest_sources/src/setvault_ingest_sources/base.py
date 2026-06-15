@@ -1,3 +1,4 @@
+"""Ingest-source plugin contract — search across external audio platforms."""
 from __future__ import annotations
 
 from dataclasses import dataclass
