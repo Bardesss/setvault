@@ -18,6 +18,10 @@ def cookie_secure() -> bool:
     for unusual setups (e.g. a TLS-terminating proxy that the app only ever
     sees over HTTP). It can only relax the flag, never tighten it.
 
+    Fail-closed: anything that isn't an explicit ``http://`` origin — an unset
+    or malformed ``BASE_URL`` — keeps ``Secure`` on, so a forgotten config
+    never silently downgrades the cookie on a public deployment.
+
     Single source of truth shared by the auth, invites, and CSRF code paths so
     they can't drift out of sync.
     """
@@ -27,4 +31,10 @@ def cookie_secure() -> bool:
         "yes",
     ):
         return False
-    return get_settings().base_url.lower().startswith("https://")
+    base = get_settings().base_url.strip().lower()
+    if base.startswith("https://"):
+        return True
+    if base.startswith("http://"):
+        return False
+    # Unset / unknown scheme → fail closed.
+    return True

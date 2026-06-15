@@ -56,3 +56,11 @@ def test_flag_off_value_does_not_force(monkeypatch):
     # An explicit falsey/other value must not override scheme detection.
     _env(monkeypatch, "https://setvault.example.com", flag="0")
     assert cookies.cookie_secure() is True
+
+
+@pytest.mark.parametrize("base_url", ["", "   ", "ftp://nope", "setvault.example.com"])
+def test_unset_or_malformed_base_url_fails_closed(monkeypatch, base_url):
+    # A forgotten/garbage BASE_URL must keep Secure on so a public deployment
+    # never silently downgrades the cookie.
+    _env(monkeypatch, base_url)
+    assert cookies.cookie_secure() is True
