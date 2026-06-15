@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
-from setvault_ingest_sources.base import Candidate, SourceError
+from setvault_ingest_sources.base import Candidate, IngestSource, SourceError
 from setvault_ingest_sources.registry import all_source_kinds, get_source
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,21 +103,28 @@ async def search_all_sources(
     session: AsyncSession, *, query: str, limit_per_source: int = 10,
 ) -> SearchAllResult:
     states = await list_states(session)  # seeds + returns all, ordered by kind
-    enabled = [s for s in states if s.enabled and get_source(s.kind) is not None]
+    enabled = [
+        (s, src)
+        for s in states
+        if s.enabled and (src := get_source(s.kind)) is not None
+    ]
 
-    async def _run(kind: str):
-        src = get_source(kind)
+    async def _run(src: IngestSource) -> list[Candidate]:
         return await asyncio.to_thread(src.search, query, limit=limit_per_source)
 
     results = await asyncio.gather(
-        *[_run(s.kind) for s in enabled], return_exceptions=True
+        *[_run(src) for _, src in enabled], return_exceptions=True
     )
     candidates: list[Candidate] = []
     errored: list[str] = []
-    for st, res in zip(enabled, results, strict=True):
-        if isinstance(res, Exception):
+    for (st, _src), res in zip(enabled, results, strict=True):
+        if isinstance(res, SourceError):
             _record_failure(st, res)
             errored.append(st.kind)
+        elif isinstance(res, BaseException):
+            # A non-SourceError escaping search() is a bug (or cancellation),
+            # not a flaky source — surface it rather than masking + auto-disabling.
+            raise res
         else:
             _record_success(st)
             candidates.extend(res)
