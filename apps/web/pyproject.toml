@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
   "setvault-core",
   "setvault-providers",
+  "setvault-ingest-sources",
   "fastapi>=0.111",
   "uvicorn[standard]>=0.30",
   "itsdangerous>=2.2",

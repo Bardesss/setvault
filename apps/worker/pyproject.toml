@@ -4,6 +4,7 @@ version = "0.7.0"
 requires-python = ">=3.12"
 dependencies = [
   "setvault-core",
+  "setvault-ingest-sources",
 ]
 
 [project.optional-dependencies]
