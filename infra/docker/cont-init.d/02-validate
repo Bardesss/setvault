@@ -6,8 +6,11 @@
 set -e
 
 missing=()
-[ -z "${SECRET_KEY}" ]  && missing+=("SECRET_KEY")
-[ -z "${BASE_URL}" ]    && missing+=("BASE_URL")
+# SECRET_KEY is always set by 01-defaults (generated if absent), so it is no
+# longer listed here — but the strength gate below still applies.
+# BASE_URL is defaulted in bundled mode by 01-defaults; only external mode,
+# where the operator chooses the public origin, still requires it.
+[ -z "${BASE_URL}" ] && [ "${SETVAULT_PG_EMBEDDED}" != "1" ] && missing+=("BASE_URL")
 [ -z "${DATABASE_URL}" ] && missing+=("DATABASE_URL (or POSTGRES_PASSWORD if using the bundled postgres)")
 
 if [ ${#missing[@]} -gt 0 ]; then
