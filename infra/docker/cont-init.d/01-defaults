@@ -13,6 +13,14 @@ CONFIG_DIR="${SETVAULT_CONFIG_PATH:-/srv/config}"
 SECRETS_FILE="${CONFIG_DIR}/.secrets"
 mkdir -p "${CONFIG_DIR}"
 
+# Keep the persisted secret store owner-only (it holds SECRET_KEY + the embedded
+# POSTGRES_PASSWORD appended below). Create it 0600 if absent — WITHOUT
+# truncating an existing file, which would wipe the persisted SECRET_KEY and
+# invalidate every session on restart — then tighten perms on any pre-existing
+# file from an older boot.
+[ -f "${SECRETS_FILE}" ] || (umask 077; : > "${SECRETS_FILE}")
+chmod 600 "${SECRETS_FILE}"
+
 # Load any previously persisted secrets first.
 if [ -f "${SECRETS_FILE}" ]; then
   # shellcheck disable=SC1090
@@ -57,13 +65,18 @@ if [ -z "${DATABASE_URL}" ]; then
   fi
 fi
 
-# Export so s6 longruns inherit via with-contenv.
+# Export so s6 longruns inherit via with-contenv. Write the secret-bearing
+# files owner-only (umask 077) so they aren't group/world-readable on the
+# /run tmpfs.
 export DATABASE_URL POSTGRES_PASSWORD SECRET_KEY BASE_URL
 mkdir -p /run/s6/container_environment
-printf '%s' "${DATABASE_URL}" > /run/s6/container_environment/DATABASE_URL
-printf '%s' "${POSTGRES_PASSWORD}" > /run/s6/container_environment/POSTGRES_PASSWORD
-printf '%s' "${SECRET_KEY}" > /run/s6/container_environment/SECRET_KEY
-printf '%s' "${BASE_URL}" > /run/s6/container_environment/BASE_URL
+(
+  umask 077
+  printf '%s' "${DATABASE_URL}" > /run/s6/container_environment/DATABASE_URL
+  printf '%s' "${POSTGRES_PASSWORD}" > /run/s6/container_environment/POSTGRES_PASSWORD
+  printf '%s' "${SECRET_KEY}" > /run/s6/container_environment/SECRET_KEY
+  printf '%s' "${BASE_URL}" > /run/s6/container_environment/BASE_URL
+)
 
 # Default data directories — create on first boot so PUID/PGID bind-mounts
 # don't fail with "directory not found".
