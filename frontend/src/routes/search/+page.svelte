@@ -21,19 +21,31 @@
   let mode: "library" | "sources" = "library";
   let sourceQuery = "";
   let candidates: SourceCandidate[] = [];
+  let erroredSources: string[] = [];
   let searching = false;
   let sourceError: string | null = null;
   let ingesting: Record<string, boolean> = {};
 
+  const SOURCE_LABELS: Record<string, string> = {
+    youtube: "YouTube",
+    soundcloud: "SoundCloud",
+    mixcloud: "Mixcloud",
+    internet_archive: "Internet Archive",
+  };
+  const sourceLabel = (kind: string) => SOURCE_LABELS[kind] ?? kind;
+
   async function runSourceSearch() {
     if (!sourceQuery.trim()) {
       candidates = [];
+      erroredSources = [];
       return;
     }
     searching = true;
     sourceError = null;
     try {
-      candidates = await searchSources(sourceQuery.trim(), "youtube");
+      const result = await searchSources(sourceQuery.trim());
+      candidates = result.items;
+      erroredSources = result.errored_sources;
     } catch (e) {
       sourceError = $_("sources.search_failed");
     } finally {
@@ -145,6 +157,13 @@
       >
     </form>
     {#if sourceError}<p class="admin-msg is-error" role="alert">{sourceError}</p>{/if}
+    {#if erroredSources.length > 0}
+      <p class="admin-msg is-warn" role="status">
+        {$_("sources.partial_unavailable", {
+          values: { sources: erroredSources.map(sourceLabel).join(", ") },
+        })}
+      </p>
+    {/if}
     {#if !searching && candidates.length === 0 && sourceQuery}
       <EmptyState message={$_("sources.no_results")} />
     {:else}
@@ -155,6 +174,7 @@
             <div class="meta">
               <strong>{c.title}</strong>
               <span class="muted">{c.uploader ?? ""}</span>
+              <span class="source-chip">{sourceLabel(c.source_kind)}</span>
             </div>
             {#if c.already_in_library}
               <span class="badge">{$_("sources.in_library")}</span>
@@ -279,6 +299,15 @@
   }
   .muted { color: var(--text-faint); font-size: var(--ts-sm); }
   .badge { color: var(--accent); font-size: var(--ts-sm); }
+  .source-chip {
+    align-self: start;
+    font-size: var(--ts-sm);
+    color: var(--text-faint);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-sm);
+    padding: 0 var(--sp-2);
+  }
+  .admin-msg.is-warn { color: var(--text-faint); }
   @media (max-width: 600px) {
     .candidate { grid-template-columns: 64px 1fr; }
     .candidate img { width: 64px; height: 36px; }
