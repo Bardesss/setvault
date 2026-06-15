@@ -32,7 +32,7 @@ def test_youtube_search_maps_entries_to_candidates():
          "webpage_url": "https://youtu.be/vid2"},
     ]}
     src = YouTubeSource()
-    with patch("setvault_ingest_sources.youtube.yt_dlp.YoutubeDL",
+    with patch("setvault_ingest_sources.ytdlp_source.yt_dlp.YoutubeDL",
                return_value=_FakeYDL(info)):
         out = src.search("best dj set", limit=2)
     assert [c.external_id for c in out] == ["vid1", "vid2"]
@@ -46,7 +46,7 @@ def test_youtube_search_maps_entries_to_candidates():
 
 def test_youtube_search_raises_sourceerror_on_ydl_failure():
     src = YouTubeSource()
-    with patch("setvault_ingest_sources.youtube.yt_dlp.YoutubeDL",
+    with patch("setvault_ingest_sources.ytdlp_source.yt_dlp.YoutubeDL",
                side_effect=RuntimeError("boom")):
         with pytest.raises(SourceError):
             src.search("x")
