@@ -117,6 +117,25 @@
       "save": "Save"
     }
   },
+  "sources": {
+    "tab_library": "Library",
+    "tab_sources": "Sources",
+    "search_placeholder": "Search YouTube for sets…",
+    "ingest": "Ingest",
+    "in_library": "In library",
+    "ingesting": "Ingesting…",
+    "no_results": "No results.",
+    "admin_title": "Ingest sources",
+    "col_source": "Source",
+    "col_state": "State",
+    "col_enabled": "Enabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "search_failed": "Search failed.",
+    "search_submit": "Search",
+    "ingest_failed": "Ingest failed.",
+    "admin_empty": "No ingest sources."
+  },
   "comments": {
     "heading": "Comments",
     "composer_placeholder": "Write a comment — supports Markdown and @mentions",

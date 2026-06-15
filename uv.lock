@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "setvault-core",
+    "setvault-ingest-sources",
     "setvault-providers",
     "setvault-web",
     "setvault-worker",
@@ -1153,7 +1154,7 @@ wheels = [
 
 [[package]]
 name = "setvault-core"
-version = "0.1.0"
+version = "0.7.0"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "alembic" },
@@ -1213,13 +1214,38 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.30" },
     { name = "structlog", specifier = ">=24.1" },
     { name = "watchdog", specifier = ">=4.0" },
-    { name = "yt-dlp", specifier = ">=2026.1.0" },
+    { name = "yt-dlp", specifier = "==2026.3.17" },
 ]
 provides-extras = ["dev"]
 
 [[package]]
-name = "setvault-providers"
+name = "setvault-ingest-sources"
 version = "0.1.0"
+source = { editable = "packages/ingest_sources" }
+dependencies = [
+    { name = "yt-dlp" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "respx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "yt-dlp" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=0.23" },
+    { name = "respx", specifier = ">=0.21" },
+]
+
+[[package]]
+name = "setvault-providers"
+version = "0.7.0"
 source = { editable = "packages/providers" }
 dependencies = [
     { name = "httpx" },
@@ -1248,7 +1274,7 @@ dev = [
 
 [[package]]
 name = "setvault-web"
-version = "0.1.0"
+version = "0.7.0"
 source = { editable = "apps/web" }
 dependencies = [
     { name = "email-validator" },
@@ -1261,6 +1287,7 @@ dependencies = [
     { name = "redis" },
     { name = "rq" },
     { name = "setvault-core" },
+    { name = "setvault-ingest-sources" },
     { name = "setvault-providers" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1289,6 +1316,7 @@ requires-dist = [
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "rq", specifier = ">=1.16" },
     { name = "setvault-core", editable = "packages/core" },
+    { name = "setvault-ingest-sources", editable = "packages/ingest_sources" },
     { name = "setvault-providers", editable = "packages/providers" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
@@ -1296,10 +1324,11 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "setvault-worker"
-version = "0.1.0"
+version = "0.7.0"
 source = { editable = "apps/worker" }
 dependencies = [
     { name = "setvault-core" },
+    { name = "setvault-ingest-sources" },
 ]
 
 [package.optional-dependencies]
@@ -1313,6 +1342,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
     { name = "setvault-core", editable = "packages/core" },
+    { name = "setvault-ingest-sources", editable = "packages/ingest_sources" },
 ]
 provides-extras = ["dev"]
 

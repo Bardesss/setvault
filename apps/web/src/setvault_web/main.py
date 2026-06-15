@@ -18,6 +18,7 @@ from setvault_web.api import dev_seed as dev_seed_api
 from setvault_web.api import embed as embed_api
 from setvault_web.api import enrichment as enrichment_api
 from setvault_web.api import feeds as feeds_api
+from setvault_web.api import ingest_sources as ingest_sources_api
 from setvault_web.api import invites as invites_api
 from setvault_web.api import jobs as jobs_api
 from setvault_web.api import me as me_api
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications_api.router)
     app.include_router(url_rip_api.router)
     app.include_router(feeds_api.router)
+    app.include_router(ingest_sources_api.router)
     app.include_router(embed_api.router)
     app.include_router(watch_folders_api.router)
     app.include_router(recycle_api.router)

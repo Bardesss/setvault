@@ -438,8 +438,10 @@ with conventional commits driving the CHANGELOG.
 | 6B — Set detail + engagement | ✅ merged | Set-detail 3-column rebuild, engagement SidePanel, tracklist editor (`v0.3.0`) |
 | 6C — Global persistent player | ✅ merged | Persistent audio across navigation, bottom-sheet mini-player, full-screen player, MediaSession lockscreen (`v0.4.0`) |
 | 6D — Admin & management surfaces | ✅ merged | Shared AdminTable/AdminForm/StatusBlock/EmptyState across 12 admin tabs, Settings, Sets/new (`v0.5.0`) |
-| **Bundled + external deploy** | **🚀 this release** | **Single-container (PG+Redis+tusd+Caddy) or external datastores from one image (`v0.6.0`)** |
-| 7 — Ingest power tools | ⏳ planned | Interactive search, monitored entities, upgrade-available |
+| Bundled + external deploy | ✅ merged | Single-container (PG+Redis+tusd+Caddy) or external datastores from one image (`v0.6.0`) |
+| Pre-launch hardening | ✅ merged | SECRET_KEY/cookie/CSRF gates, `create-admin` + `restore` CLIs, `pg_dump --clean` restore, SSRF/TLS docs (`v0.7.0`) |
+| **7A — Ingest sources** | **🚀 this release** | **`IngestSource` plugin protocol + YouTube `ytsearch` search, admin Sources tab, `/search` Sources mode + Ingest (`v0.8.0`)** |
+| 7B–7D — Ingest power tools | ⏳ planned | More sources (SoundCloud/Mixcloud/Internet Archive), monitored entities + Discoveries, quality rules + source-upgrade |
 | 8 — Subsonic API + scrobbling | ⏳ planned | Compatibility |
 | 9 — Casting | ⏳ planned | DLNA, Chromecast, listen-together rooms |
 | 10 — Sonos | ⏳ planned | SMAPI sidecar |
