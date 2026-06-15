@@ -74,32 +74,32 @@ The `/data` volume holds the database, Redis, and all media/config — **back it
 up**. How you put TLS in front (or whether you need to at all) depends on your
 deployment mode — see below.
 
-> ### 🔒 Pick your deployment mode — it decides the session-cookie setting
+> ### 🔒 Pick your deployment mode — just set `BASE_URL` correctly
 >
-> The bundled Caddy serves **plain HTTP on `:1970`** (`auto_https off`), and
-> session cookies are flagged `Secure` by default. `Secure` means the browser
-> only sends the cookie over a secure-context (HTTPS) origin — so *how you reach
-> SetVault* decides what you need:
+> The bundled Caddy serves **plain HTTP on `:1970`** (`auto_https off`). The
+> session cookie's `Secure` flag is derived automatically from your `BASE_URL`
+> scheme, so the common modes work with no extra configuration:
 >
 > **A — Exposed to the internet.** Terminate TLS at a reverse proxy (Caddy /
-> nginx / Traefik) in front and set `BASE_URL` to the `https://` URL. Keep the
-> `Secure` flag on. This is the only safe mode for a public origin.
+> nginx / Traefik) in front and set `BASE_URL=https://your-host`. SetVault sees
+> the `https://` scheme and serves a `Secure` cookie. This is the only safe mode
+> for a public origin.
 >
 > **B — VPN or LAN-only (no reverse proxy).** Your WireGuard/Tailscale tunnel or
-> local network already isolates the traffic, so app-layer TLS is redundant. But
-> the browser still sees a plain-HTTP origin like `http://10.x.x.x:1970` and
-> **silently drops the `Secure` cookie** — login returns `200`, then you're
-> logged out on the next request. Set `SETVAULT_ALLOW_INSECURE_COOKIE=1` to drop
-> the `Secure` flag. Fine on a trusted network — just never pair it with a port
-> `1970` that's reachable from the internet.
+> local network already isolates the traffic, so app-layer TLS is redundant.
+> Set `BASE_URL` to your plain-HTTP address (e.g. `http://10.x.x.x:1970`) — the
+> `http://` scheme tells SetVault to drop the `Secure` flag so login persists. No
+> extra flag needed. Just never expose port `1970` to the internet on an
+> `http://` `BASE_URL`.
 >
 > **C — Tailscale serve.** `tailscale serve` issues a real Let's Encrypt cert
-> over your tailnet with no reverse proxy; keep `Secure` on and point `BASE_URL`
-> at the `https://…ts.net` name.
+> over your tailnet with no reverse proxy; point `BASE_URL` at the
+> `https://…ts.net` name and the cookie is `Secure` automatically.
 >
-> Note: browsers treat `http://localhost:1970` as a secure context (cookie
-> sticks without the flag) — but a LAN IP or hostname is **not**, which is the
-> usual cause of "logged in, then immediately logged out."
+> > A plain-HTTP `BASE_URL` previously needed `SETVAULT_ALLOW_INSECURE_COOKIE=1`;
+> > that's now inferred from the scheme. The flag still exists as an explicit
+> > force-off override for unusual proxy setups — it can only relax the flag,
+> > never tighten it.
 
 > **Caveat (bundled mode):** the bundled Postgres is pinned to **PG 18** and
 > its data dir is tied to that major version. A future major upgrade can't
@@ -188,7 +188,7 @@ synthesized at first boot.
 | `SETVAULT_VERSION` | optional | `latest` | Image tag. **Pin to an explicit version in production** (e.g. `0.6.0`) — the default floats on `latest` and an unattended pull can ship a breaking change. |
 | `SETVAULT_HTTP_PORT` | optional | `1970` | Host port the setvault service binds (1970 — year of the first DJ live set) |
 | `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
-| `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | If `1`, drops the `Secure` flag on session cookies so login works over a plain-HTTP origin (VPN/LAN-only — mode B above). Never set on an internet-exposed instance. |
+| `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | Force-off override for the session-cookie `Secure` flag. Normally unnecessary — `Secure` is derived from your `BASE_URL` scheme (mode B above). Only for unusual proxy setups; can relax the flag, never tighten it. Never set on an internet-exposed `https://` instance. |
 | `SETVAULT_FORWARDED_ALLOW_IPS` | optional | — | Upstream IPs trusted to set `X-Forwarded-*` headers (e.g. just your reverse proxy's address). See the forwarded-headers warning below. |
 | `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |
 
