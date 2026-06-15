@@ -18,6 +18,19 @@
       "unknown_error": "unknown error"
     }
   },
+  "setup": {
+    "heading": "Create your admin account",
+    "caption": "first-run setup",
+    "email": "Email",
+    "display_name": "Display name (optional)",
+    "password": "Password",
+    "confirm_password": "Confirm password",
+    "submit": "Create admin",
+    "submitting": "Creating…",
+    "password_too_short": "Password must be at least 12 characters",
+    "password_mismatch": "Passwords do not match",
+    "error_generic": "Setup failed — please try again"
+  },
   "settings": {
     "heading": "Settings",
     "profile": "Profile",
