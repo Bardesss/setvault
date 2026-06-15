@@ -56,3 +56,23 @@ async def test_search_disabled_source_raises(session, monkeypatch):
     await svc.set_enabled(session, "youtube", False)
     with pytest.raises(svc.SourceDisabledError):
         await svc.search_source(session, kind="youtube", query="x")
+
+
+@pytest.mark.asyncio
+async def test_search_seeds_states_on_first_run(session, monkeypatch):
+    # No ensure_seed_states() call — simulate a fresh DB where search is hit first.
+    from setvault_ingest_sources.base import Candidate
+
+    class _Src:
+        kind = "youtube"
+        name = "YouTube"
+
+        def search(self, q, *, limit=20):
+            return [Candidate("youtube", "v1", "T", "U", 60, None, "https://youtu.be/v1")]
+
+    monkeypatch.setattr(svc, "get_source", lambda kind: _Src())
+
+    cands = await svc.search_source(session, kind="youtube", query="x", limit=5)
+    assert cands[0].external_id == "v1"
+    st = await svc.get_state(session, "youtube")
+    assert st is not None and st.enabled is True

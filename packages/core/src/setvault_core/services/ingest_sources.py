@@ -56,6 +56,7 @@ async def set_enabled(session: AsyncSession, kind: str, enabled: bool) -> Ingest
 async def search_source(
     session: AsyncSession, *, kind: str, query: str, limit: int = 20,
 ) -> list[Candidate]:
+    await ensure_seed_states(session)
     st = await get_state(session, kind)
     if st is None or not st.enabled:
         raise SourceDisabledError(kind)
