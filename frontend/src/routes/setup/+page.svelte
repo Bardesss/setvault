@@ -17,7 +17,7 @@
     if (password !== confirm) { error = $_("setup.password_mismatch"); return; }
     busy = true;
     try {
-      await setupFirstAdmin(email, password, displayName || undefined);
+      await setupFirstAdmin(email.trim(), password, displayName || undefined);
       await invalidateAll();
       await goto("/");
     } catch (e) {
