@@ -71,19 +71,35 @@ Or with compose: copy `.env.example` to `.env`, fill the three required vars,
 then `docker compose -f infra/docker/compose.aio.yml up -d`.
 
 The `/data` volume holds the database, Redis, and all media/config — **back it
-up**. Put TLS termination on your own reverse proxy in front (Caddy/nginx/Traefik).
+up**. How you put TLS in front (or whether you need to at all) depends on your
+deployment mode — see below.
 
-> ### ⚠️ You MUST front SetVault with an HTTPS reverse proxy
+> ### 🔒 Pick your deployment mode — it decides the session-cookie setting
 >
-> The bundled Caddy serves **plain HTTP on `:1970`** (`auto_https off`), but
-> session cookies are flagged `Secure` by default. On a plain-HTTP origin the
-> browser **silently drops the session cookie** — login returns `200` but the
-> session never persists, so you appear logged out on the next request. Always
-> terminate TLS at a reverse proxy in front (Caddy / nginx / Traefik) and set
-> `BASE_URL` to the `https://` URL.
+> The bundled Caddy serves **plain HTTP on `:1970`** (`auto_https off`), and
+> session cookies are flagged `Secure` by default. `Secure` means the browser
+> only sends the cookie over a secure-context (HTTPS) origin — so *how you reach
+> SetVault* decides what you need:
 >
-> For local HTTP-only testing **only**, set `SETVAULT_ALLOW_INSECURE_COOKIE=1`
-> to drop the `Secure` flag. Never set it in production.
+> **A — Exposed to the internet.** Terminate TLS at a reverse proxy (Caddy /
+> nginx / Traefik) in front and set `BASE_URL` to the `https://` URL. Keep the
+> `Secure` flag on. This is the only safe mode for a public origin.
+>
+> **B — VPN or LAN-only (no reverse proxy).** Your WireGuard/Tailscale tunnel or
+> local network already isolates the traffic, so app-layer TLS is redundant. But
+> the browser still sees a plain-HTTP origin like `http://10.x.x.x:1970` and
+> **silently drops the `Secure` cookie** — login returns `200`, then you're
+> logged out on the next request. Set `SETVAULT_ALLOW_INSECURE_COOKIE=1` to drop
+> the `Secure` flag. Fine on a trusted network — just never pair it with a port
+> `1970` that's reachable from the internet.
+>
+> **C — Tailscale serve.** `tailscale serve` issues a real Let's Encrypt cert
+> over your tailnet with no reverse proxy; keep `Secure` on and point `BASE_URL`
+> at the `https://…ts.net` name.
+>
+> Note: browsers treat `http://localhost:1970` as a secure context (cookie
+> sticks without the flag) — but a LAN IP or hostname is **not**, which is the
+> usual cause of "logged in, then immediately logged out."
 
 > **Caveat (bundled mode):** the bundled Postgres is pinned to **PG 18** and
 > its data dir is tied to that major version. A future major upgrade can't
@@ -172,6 +188,8 @@ synthesized at first boot.
 | `SETVAULT_VERSION` | optional | `latest` | Image tag. **Pin to an explicit version in production** (e.g. `0.6.0`) — the default floats on `latest` and an unattended pull can ship a breaking change. |
 | `SETVAULT_HTTP_PORT` | optional | `1970` | Host port the setvault service binds (1970 — year of the first DJ live set) |
 | `SETVAULT_DEV_SEED` | optional | unset | If `1`, enables `/api/dev/seed-e2e` for first-admin creation. Unset in production. |
+| `SETVAULT_ALLOW_INSECURE_COOKIE` | optional | unset | If `1`, drops the `Secure` flag on session cookies so login works over a plain-HTTP origin (VPN/LAN-only — mode B above). Never set on an internet-exposed instance. |
+| `SETVAULT_FORWARDED_ALLOW_IPS` | optional | — | Upstream IPs trusted to set `X-Forwarded-*` headers (e.g. just your reverse proxy's address). See the forwarded-headers warning below. |
 | `PUID` / `PGID` | optional | `1000` / `1000` | Container user/group for bind-mount permissions |
 
 ### Reverse-proxy tips
