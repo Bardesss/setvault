@@ -1,5 +1,4 @@
 import pytest
-
 from setvault_core.services import source_rate_limit as srl
 
 
@@ -25,11 +24,13 @@ async def test_under_limit_allows_then_blocks(monkeypatch):
 async def test_separate_kinds_have_separate_buckets(monkeypatch):
     monkeypatch.setattr(srl.time, "time", lambda: 1_000_000.0)
     a, b = "test-rl-a", "test-rl-b"
-    await _purge(a, 60); await _purge(b, 60)
+    await _purge(a, 60)
+    await _purge(b, 60)
     assert await srl.allow(a, limit=1, window_seconds=60) is True
     assert await srl.allow(a, limit=1, window_seconds=60) is False
     assert await srl.allow(b, limit=1, window_seconds=60) is True
-    await _purge(a, 60); await _purge(b, 60)
+    await _purge(a, 60)
+    await _purge(b, 60)
 
 
 @pytest.mark.asyncio

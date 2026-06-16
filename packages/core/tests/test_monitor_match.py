@@ -11,11 +11,15 @@ def test_high_when_all_query_tokens_in_uploader():
 
 
 def test_high_when_all_query_tokens_in_title():
-    assert score_confidence("Boiler Room", uploader="Some Channel", title="Boiler Room: London 2024") == "high"
+    assert score_confidence(
+        "Boiler Room", uploader="Some Channel", title="Boiler Room: London 2024"
+    ) == "high"
 
 
 def test_low_when_only_partial_match():
-    assert score_confidence("Boiler Room", uploader="Boiler Co", title="Boiler maintenance") == "low"
+    assert score_confidence(
+        "Boiler Room", uploader="Boiler Co", title="Boiler maintenance"
+    ) == "low"
 
 
 def test_whole_word_only_no_substring_false_positive():
