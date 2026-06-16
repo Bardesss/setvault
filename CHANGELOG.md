@@ -4,6 +4,19 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2](https://github.com/Bardesss/setvault/compare/v0.11.1...v0.11.2) (2026-06-16)
+
+
+### Bug Fixes
+
+* **web:** hash SvelteKit inline bootstrap so strict CSP allows hydration ([7c2ab3e](https://github.com/Bardesss/setvault/commit/7c2ab3e4bfe2cd60bc7a618528a3949ba52858df))
+* **web:** hash SvelteKit inline bootstrap so strict CSP allows hydration ([dcee0f8](https://github.com/Bardesss/setvault/commit/dcee0f8a8d5b24f4880c893e95b6ae3a68ae5261))
+
+
+### Documentation
+
+* **readme:** note that HTML-rewriting proxies break the hashed CSP ([fcc49c7](https://github.com/Bardesss/setvault/commit/fcc49c7e39f36ecc904e83161920560c72dcf989))
+
 ## [0.11.1](https://github.com/Bardesss/setvault/compare/v0.11.0...v0.11.1) (2026-06-16)
 
 
