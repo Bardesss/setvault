@@ -4,6 +4,49 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0](https://github.com/Bardesss/setvault/compare/v0.10.0...v0.11.0) (2026-06-16)
+
+
+### Features
+
+* **7c:** admin settings — monitors-allow-all + poll interval ([be1ec14](https://github.com/Bardesss/setvault/commit/be1ec14dcb6ef39213df107ef47d54b0da453176))
+* **7c:** deterministic confidence scoring for discoveries ([e0aacd3](https://github.com/Bardesss/setvault/commit/e0aacd355d57017ffe30de8b00dab6391a6f36fa))
+* **7c:** Discoveries inbox page + bell routing for discovery kind ([7044616](https://github.com/Bardesss/setvault/commit/704461620b070adf006417726b38f3a9f3e28191))
+* **7c:** discovery service — dedup, auto-ingest gate, notify ([b1b8282](https://github.com/Bardesss/setvault/commit/b1b828245e3671645ec87801a87044e37e33614a))
+* **7c:** expose + update per-source rate limits via Sources API ([19a1cb8](https://github.com/Bardesss/setvault/commit/19a1cb8071609a56be191a693d74e22cf8296385))
+* **7c:** frontend API clients for monitors + source rate limits ([38b77f6](https://github.com/Bardesss/setvault/commit/38b77f67a2f43b35e180440096c2a23d5ab6b557))
+* **7c:** i18n keys for monitors + discoveries ([ed3b354](https://github.com/Bardesss/setvault/commit/ed3b354a6ea5c5a8c53252287915a269b4b79712))
+* **7c:** migration — monitor tables, source rate limits, config ([65b5f89](https://github.com/Bardesss/setvault/commit/65b5f89f49ed7cd124efcef90d17bfce5b3a88f3))
+* **7c:** monitor + discovery Pydantic schemas ([10da73e](https://github.com/Bardesss/setvault/commit/10da73e95eb0136404bb55e1936b7fd5406660f4))
+* **7c:** Monitor + MonitorDiscovery models + test cleanup fixtures ([da370ee](https://github.com/Bardesss/setvault/commit/da370ee68463a837b99fae2f55ec6bb30a59f773))
+* **7c:** monitor service — CRUD + due-selection ([2c792a1](https://github.com/Bardesss/setvault/commit/2c792a130a270f2d7406f842ccb5f27fd32517f9))
+* **7c:** monitor_dispatch scheduled job + worker registration ([5f8d255](https://github.com/Bardesss/setvault/commit/5f8d255c7506213a9990b690c1f2756e1106b29f))
+* **7c:** monitor_poll RQ job ([41d891c](https://github.com/Bardesss/setvault/commit/41d891ca9f03a1bfe10b4d9a41399a9528c89040))
+* **7c:** monitored entities + discoveries inbox + per-source rate limits ([2f6a611](https://github.com/Bardesss/setvault/commit/2f6a61109d859787df948c31b1a1660f9b58f723))
+* **7c:** Monitors admin tab ([82cdf82](https://github.com/Bardesss/setvault/commit/82cdf82cdbb625c0b32ec8e5792729c586493af9))
+* **7c:** monitors CRUD + discoveries inbox API ([f25bde0](https://github.com/Bardesss/setvault/commit/f25bde0c0a8780da8195a131d68462f07b094e40))
+* **7c:** per-source rate-limit + monitor-settings columns ([33e9fa7](https://github.com/Bardesss/setvault/commit/33e9fa73ab077a0e939d74f8088193f3157db96f))
+* **7c:** per-source Redis rate limiter wired into search ([8acdcec](https://github.com/Bardesss/setvault/commit/8acdceca2973eb08a13243fa6ffbb8ae661b3d9d))
+* **7c:** source rate-limit inputs + monitor settings UI ([086ecd8](https://github.com/Bardesss/setvault/commit/086ecd88a06ffc5286870963648cae7d395ba3ec))
+
+
+### Bug Fixes
+
+* **7c:** owner-scope monitors + discoveries to close IDOR ([aa3d037](https://github.com/Bardesss/setvault/commit/aa3d0376bac200e46f68d47260e212f26a6375a4))
+
+
+### Refactors
+
+* **7c:** address Task 11 review — gate via Depends, harden rip enqueue ([8beab8f](https://github.com/Bardesss/setvault/commit/8beab8fd6f55466125ed00ca85a11ff258ce2a24))
+* **7c:** address Task 5 review — drop redundant _run param, unused import ([8b9ad08](https://github.com/Bardesss/setvault/commit/8b9ad083eda6ea9a6c94b4eece37c48482ea99f4))
+* **7c:** log swallowed auto-ingest failures in discovery service ([bd4bd92](https://github.com/Bardesss/setvault/commit/bd4bd923dcca14e54d80c1b3c2cdbc8e8c363ca4))
+
+
+### Documentation
+
+* **readme:** simplify — trim verbose prose, collapse roadmap ([21266e5](https://github.com/Bardesss/setvault/commit/21266e5c7aaa1431862d0ceb6ac35ac8f93e3230))
+* **readme:** simplify — trim verbose prose, collapse roadmap table ([5cb1ff4](https://github.com/Bardesss/setvault/commit/5cb1ff4d5dc674a2b38debc44fcce4e2a000e923))
+
 ## [0.10.0](https://github.com/Bardesss/setvault/compare/v0.9.0...v0.10.0) (2026-06-15)
 
 
