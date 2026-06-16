@@ -42,7 +42,10 @@ from setvault_web.api import webhooks as webhooks_api
 from setvault_web.api import ws as ws_api
 from setvault_web.config import get_settings
 from setvault_web.middleware.csrf import CsrfMiddleware
-from setvault_web.middleware.security_headers import SecurityHeadersMiddleware
+from setvault_web.middleware.security_headers import (
+    SecurityHeadersMiddleware,
+    compute_inline_script_hashes,
+)
 
 
 def create_app() -> FastAPI:
@@ -50,7 +53,18 @@ def create_app() -> FastAPI:
     init_engine(settings.database_url)
     app = FastAPI(title="SetVault", version=__version__)
 
-    app.add_middleware(SecurityHeadersMiddleware)
+    # SvelteKit's adapter-static index.html bootstraps via an inline <script>;
+    # hash it so the strict `script-src 'self'` CSP admits exactly that script
+    # (no 'unsafe-inline'). The placeholder shell shipped in source has none.
+    static_root = Path(__file__).parent / "static"
+    index_html = static_root / "index.html"
+    script_hashes = (
+        compute_inline_script_hashes(index_html.read_bytes())
+        if index_html.is_file()
+        else []
+    )
+
+    app.add_middleware(SecurityHeadersMiddleware, script_hashes=script_hashes)
     app.add_middleware(CsrfMiddleware)
 
     @app.get("/api/health")
@@ -95,8 +109,8 @@ def create_app() -> FastAPI:
 
     # Static frontend bundle (SvelteKit adapter-static output). The build/
     # contents are dropped here by the Docker frontend stage; only a
-    # placeholder index.html ships in source control.
-    static_root = Path(__file__).parent / "static"
+    # placeholder index.html ships in source control. ``static_root`` was
+    # resolved above for the CSP inline-script hashing.
     if static_root.exists():
         if (static_root / "_app").exists():
             app.mount(
