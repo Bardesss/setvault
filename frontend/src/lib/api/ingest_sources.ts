@@ -18,6 +18,8 @@ export interface SourceState {
   state: string;
   consecutive_failures: number;
   last_error: string | null;
+  rate_limit_max: number;
+  rate_limit_window_seconds: number;
 }
 
 export interface SourceSearchResult {
@@ -43,4 +45,15 @@ export const setSourceEnabled = (kind: string, enabled: boolean) =>
   api<SourceState>(`/api/admin/ingest-sources/${encodeURIComponent(kind)}`, {
     method: "PUT",
     body: JSON.stringify({ enabled }),
+  });
+
+export const setSourceRateLimit = (
+  kind: string,
+  enabled: boolean,
+  rate_limit_max: number,
+  rate_limit_window_seconds: number,
+) =>
+  api<SourceState>(`/api/admin/ingest-sources/${encodeURIComponent(kind)}`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled, rate_limit_max, rate_limit_window_seconds }),
   });
