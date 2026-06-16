@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web import __version__
 from setvault_web.deps import db_session, require_admin
+from setvault_web.schemas.settings import SettingsIn, SettingsOut
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,41 @@ async def system_info(
         "set_count": int(set_count),
         "env": env,
     }
+
+
+def _settings_out(config) -> SettingsOut:
+    return SettingsOut(
+        audit_retention_days=config.audit_retention_days,
+        monitors_allow_all_users=config.monitors_allow_all_users,
+        monitor_interval_seconds=config.monitor_interval_seconds,
+    )
+
+
+@router.get("/settings", response_model=SettingsOut)
+async def get_settings(
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+) -> SettingsOut:
+    """Editable app-wide settings backed by the SystemConfig singleton."""
+    return _settings_out(await get_config(session))
+
+
+@router.put("/settings", response_model=SettingsOut)
+async def update_settings(
+    body: SettingsIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+) -> SettingsOut:
+    config = await get_config(session)
+    if body.audit_retention_days is not None:
+        config.audit_retention_days = body.audit_retention_days
+    if body.monitors_allow_all_users is not None:
+        config.monitors_allow_all_users = body.monitors_allow_all_users
+    if body.monitor_interval_seconds is not None:
+        config.monitor_interval_seconds = body.monitor_interval_seconds
+    await session.flush()
+    await session.commit()
+    return _settings_out(config)
 
 
 def _disk_usage_for(host_path: str) -> dict | None:
@@ -179,6 +215,8 @@ async def health(
             "is_outdated": bool(is_outdated),
         },
         "audit_retention_days": config.audit_retention_days,
+        "monitors_allow_all_users": config.monitors_allow_all_users,
+        "monitor_interval_seconds": config.monitor_interval_seconds,
         "storage_roots": storage_roots,
         "connectors": connectors,
         "providers": providers,
