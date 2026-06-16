@@ -120,6 +120,10 @@ The session cookie's `Secure` flag is derived from your `BASE_URL` scheme, so se
 > `X-Forwarded-For`. Direct exposure lets clients spoof those headers and defeat
 > rate-limiting and the `Secure`-cookie logic. Scope trusted upstreams with `SETVAULT_FORWARDED_ALLOW_IPS`.
 
+> **Don't rewrite the HTML:** the strict CSP pins the app's inline script by hash, so a
+> proxy/CDN that minifies HTML or injects scripts (e.g. Cloudflare Auto Minify or Rocket Loader)
+> breaks hydration — a blank page. Forward the HTML untouched; TLS termination alone is fine.
+
 > **Bundled-mode caveat:** the embedded Postgres is pinned to **PG 18** and its data dir is tied to
 > that major version. Use external mode (or dump/restore) for rolling major upgrades. Bundled mode is homelab-grade.
 
