@@ -7,36 +7,63 @@ though production paths work. The pure ASGI form has no inner task group.
 """
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+import base64
+import hashlib
+import re
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
-# Default CSP for the app: blocks framing entirely.
-_DEFAULT_CSP = (
-    "default-src 'self'; "
-    "img-src 'self' data: blob:; "
-    "media-src 'self' blob:; "
-    "font-src 'self'; "
-    "style-src 'self' 'unsafe-inline'; "
-    "script-src 'self'; "
-    "connect-src 'self' ws: wss:; "
-    "frame-ancestors 'none'; "
-    "base-uri 'self'; "
-    "form-action 'self'"
-)
+# SvelteKit's adapter-static output bootstraps the app from an *inline*
+# <script>. A strict `script-src 'self'` blocks inline scripts, so we hash
+# those scripts at startup and add the digests to script-src — keeping the CSP
+# strict (no 'unsafe-inline') while letting the real app hydrate. The hashes
+# track whatever the build emitted, so they survive every frontend rebuild.
+_INLINE_SCRIPT_RE = re.compile(rb"<script\b([^>]*)>(.*?)</script>", re.DOTALL | re.IGNORECASE)
 
-# CSP for embeddable routes: same as default but allows any parent frame.
-_EMBED_CSP = (
-    "default-src 'self'; "
-    "img-src 'self' data: blob:; "
-    "media-src 'self' blob:; "
-    "font-src 'self'; "
-    "style-src 'self' 'unsafe-inline'; "
-    "script-src 'self'; "
-    "connect-src 'self' ws: wss:; "
-    "frame-ancestors *; "
-    "base-uri 'self'; "
-    "form-action 'self'"
-)
+
+def compute_inline_script_hashes(html: bytes) -> list[str]:
+    """Return ``'sha256-…'`` CSP tokens for every inline <script> in ``html``.
+
+    The digest is taken over the exact bytes between the tags — identical to
+    what a browser hashes for CSP — so the result drops straight into
+    ``script-src``. External scripts (``src=…``) are skipped; they're already
+    covered by ``'self'``. Duplicate bodies collapse to one token.
+    """
+    tokens: list[str] = []
+    seen: set[str] = set()
+    for attrs, body in _INLINE_SCRIPT_RE.findall(html):
+        if b"src=" in attrs.lower():
+            continue
+        token = "sha256-" + base64.b64encode(hashlib.sha256(body).digest()).decode("ascii")
+        if token not in seen:
+            seen.add(token)
+            tokens.append(token)
+    return tokens
+
+
+def _build_csp(frame_ancestors: str, script_hashes: Sequence[str]) -> str:
+    script_src = "script-src 'self'"
+    if script_hashes:
+        script_src += " " + " ".join(f"'{h}'" for h in script_hashes)
+    return (
+        "default-src 'self'; "
+        "img-src 'self' data: blob:; "
+        "media-src 'self' blob:; "
+        "font-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        f"{script_src}; "
+        "connect-src 'self' ws: wss:; "
+        f"frame-ancestors {frame_ancestors}; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+
+
+# Default CSP blocks framing entirely; embed routes allow any parent frame.
+# Module-level values carry no script hashes (the running middleware bakes its
+# own from the built index.html) — kept for tests/legacy importers.
+_DEFAULT_CSP = _build_csp("'none'", ())
+_EMBED_CSP = _build_csp("*", ())
 
 # Public CSP for stream/waveform asset endpoints that an embedded page loads
 # from a third-party origin. The browser only enforces frame-ancestors against
@@ -81,8 +108,15 @@ def _setdefault(headers: list[tuple[bytes, bytes]], name: bytes, value: bytes) -
 
 
 class SecurityHeadersMiddleware:
-    def __init__(self, app: Callable[..., Awaitable[None]]) -> None:
+    def __init__(
+        self,
+        app: Callable[..., Awaitable[None]],
+        script_hashes: Sequence[str] = (),
+    ) -> None:
         self.app = app
+        # Bake the inline-script hashes into both policies once at startup.
+        self._default_csp = _build_csp("'none'", script_hashes).encode("latin-1")
+        self._embed_csp = _build_csp("*", script_hashes).encode("latin-1")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -90,12 +124,12 @@ class SecurityHeadersMiddleware:
             return
 
         embed = _is_embed_route(scope.get("path", "/"))
-        csp = _EMBED_CSP if embed else _DEFAULT_CSP
+        csp = self._embed_csp if embed else self._default_csp
 
         async def send_wrapper(event: dict[str, Any]) -> None:
             if event["type"] == "http.response.start":
                 headers = list(event.get("headers", []))
-                _setdefault(headers, b"content-security-policy", csp.encode("latin-1"))
+                _setdefault(headers, b"content-security-policy", csp)
                 if not embed:
                     _setdefault(headers, b"x-frame-options", b"DENY")
                 for name, value in _DEFAULTS:
