@@ -31,6 +31,8 @@ class SourceStateOut(BaseModel):
     state: str
     consecutive_failures: int
     last_error: str | None
+    rate_limit_max: int
+    rate_limit_window_seconds: int
 
 
 class SourceStatesOut(BaseModel):
@@ -39,3 +41,5 @@ class SourceStatesOut(BaseModel):
 
 class SetEnabledIn(BaseModel):
     enabled: bool
+    rate_limit_max: int | None = None
+    rate_limit_window_seconds: int | None = None
