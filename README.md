@@ -60,14 +60,43 @@ That's it — you're ready to upload a set or paste a URL to rip.
 
 **Going past localhost?** Add `-e BASE_URL=https://sets.example.com` and front a TLS proxy so the session cookie is `Secure` — see the **TLS & `BASE_URL`** section below.
 
-**Prefer Compose?** `docker compose -f infra/docker/compose.aio.yml up -d` (no env vars required) does the same thing.
-
 **Scripted/headless admin** (instead of the wizard): the bundled CLI reads credentials from the environment so the password never hits the command line —
 ```bash
 docker exec -e ADMIN_EMAIL='you@example.com' -e ADMIN_PASSWORD='min-12-chars' \
   setvault python -m setvault_web.create_admin
 ```
 It's idempotent (promotes an existing user to admin; re-running is safe).
+
+### Quick start with Docker Compose
+
+Prefer a declarative file you can version and re-apply? Same bundled image, via Compose:
+
+1. **Install Docker** with the Compose v2 plugin (see step 1 above).
+
+2. **Create `compose.yaml`** in an empty directory:
+   ```yaml
+   services:
+     setvault:
+       image: ghcr.io/bardesss/setvault:latest
+       ports:
+         - "1970:1970"
+       volumes:
+         - setvault-data:/data
+       restart: unless-stopped
+       # Internet-facing? Uncomment and front a TLS proxy:
+       # environment:
+       #   BASE_URL: "https://sets.example.com"
+   volumes:
+     setvault-data:
+   ```
+
+3. **Start it:** `docker compose up -d` (run from that directory).
+
+4. **Open** http://localhost:1970 and complete the first-run wizard.
+
+5. **Update later:** `docker compose pull && docker compose up -d` — migrations run automatically on start.
+
+Back up the `setvault-data` volume the same as above. (The repo also ships ready-made compose files under `infra/docker/` if you'd rather clone it.)
 
 ### External datastores (compose)
 
