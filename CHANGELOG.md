@@ -4,6 +4,15 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1](https://github.com/Bardesss/setvault/compare/v0.11.0...v0.11.1) (2026-06-16)
+
+
+### Documentation
+
+* **readme:** add clear step-by-step deploy walkthrough ([89f4b0a](https://github.com/Bardesss/setvault/commit/89f4b0a83dd7efda17b07ef8446c810aefd74dfe))
+* **readme:** add Docker Compose quick-start steps ([864ed21](https://github.com/Bardesss/setvault/commit/864ed21659a5597d5b978f06910d4da7da59d4b4))
+* **readme:** step-by-step deploy guide + Docker Compose quick-start ([4065675](https://github.com/Bardesss/setvault/commit/4065675a5382f8b453b311d74c0848821d295f1d))
+
 ## [0.11.0](https://github.com/Bardesss/setvault/compare/v0.10.0...v0.11.0) (2026-06-16)
 
 
