@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import type { PageServerLoad } from "./$types";
+import type { PageLoad } from "./$types";
 
 export interface MediaRootRow {
   id: string;
@@ -12,10 +12,7 @@ export interface MediaRootRow {
   last_health_status: string | null;
 }
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
-  if (!cookies.get("session")) {
-    throw error(401, "Not authenticated");
-  }
+export const load: PageLoad = async ({ fetch }) => {
   const response = await fetch("/api/media-roots");
   if (!response.ok) {
     throw error(response.status, "Failed to load media roots");

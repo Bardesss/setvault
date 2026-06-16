@@ -210,6 +210,21 @@ cd frontend && npm install && npm run dev -- --port 4173
 
 `infra/docker/compose.dev.yml` runs Postgres + Redis + tusd locally for the backend to talk to.
 
+### Build & run the image from source
+
+To test the full bundled image from your checkout instead of pulling `ghcr.io/bardesss/setvault`:
+
+```bash
+# Build the all-in-one image (SvelteKit + Python + s6, multi-stage)
+docker build -f infra/docker/Dockerfile -t setvault:local .
+
+# Run it exactly like the published image
+docker run --rm -p 1970:1970 -v setvault-data:/data \
+  -e BASE_URL=http://localhost:1970 setvault:local
+```
+
+Then open `http://localhost:1970`. To test under Compose, point the service's `image:` at `setvault:local`. Rebuild after changing any source (frontend, backend, or `infra/docker/`).
+
 ---
 
 ## 🏛 Architecture

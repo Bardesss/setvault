@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import type { PageServerLoad } from "./$types";
+import type { PageLoad } from "./$types";
 
 export interface ConnectorRow {
   id: string;
@@ -9,10 +9,7 @@ export interface ConnectorRow {
   scope_filter: Record<string, unknown>;
 }
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
-  if (!cookies.get("session")) {
-    throw error(401, "Not authenticated");
-  }
+export const load: PageLoad = async ({ fetch }) => {
   const response = await fetch("/api/connectors");
   if (!response.ok) {
     throw error(response.status, "Failed to load connectors");

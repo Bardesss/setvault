@@ -1,4 +1,4 @@
-import type { PageServerLoad } from "./$types";
+import type { PageLoad } from "./$types";
 
 interface HomeSummary {
   sets_count: number;
@@ -27,7 +27,7 @@ interface RecentSet {
   [k: string]: unknown;
 }
 
-export const load: PageServerLoad = async ({ fetch, parent }) => {
+export const load: PageLoad = async ({ fetch, parent }) => {
   const layout = await parent();
   if (!layout.user) {
     return {
