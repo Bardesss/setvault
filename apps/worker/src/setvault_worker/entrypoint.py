@@ -28,6 +28,7 @@ _SCHEDULE: tuple[tuple[str, int], ...] = (
     ("setvault_core.jobs.recycle_bin_purge.run_purge_recycle_bin", _HOURLY),
     ("setvault_core.jobs.github_version_poll.run_poll_github_releases", _DAILY),
     ("setvault_core.jobs.audit_retention.run_prune_audit_events", _DAILY),
+    ("setvault_core.jobs.monitor_dispatch.run_dispatch_monitors", 5 * 60),
 )
 
 
