@@ -38,30 +38,45 @@ async def create_monitor(
     return m
 
 
-async def list_monitors(session: AsyncSession) -> list[Monitor]:
-    return list((await session.execute(
-        select(Monitor).order_by(Monitor.created_at.desc())
-    )).scalars())
+async def list_monitors(
+    session: AsyncSession, *, owner_user_id: uuid.UUID | None = None,
+) -> list[Monitor]:
+    """List monitors. Pass ``owner_user_id`` to scope to one owner (non-admin
+    callers); ``None`` returns all monitors (admin/curator view)."""
+    q = select(Monitor).order_by(Monitor.created_at.desc())
+    if owner_user_id is not None:
+        q = q.where(Monitor.owner_user_id == owner_user_id)
+    return list((await session.execute(q)).scalars())
 
 
 async def get_monitor(session: AsyncSession, monitor_id: uuid.UUID) -> Monitor | None:
     return await session.get(Monitor, monitor_id)
 
 
+def _owned(m: Monitor | None, owner_user_id: uuid.UUID | None) -> bool:
+    """True if the monitor exists and the caller may act on it. ``None`` owner
+    means an unrestricted (admin) caller."""
+    return m is not None and (owner_user_id is None or m.owner_user_id == owner_user_id)
+
+
 async def set_enabled(
     session: AsyncSession, monitor_id: uuid.UUID, enabled: bool,
+    *, owner_user_id: uuid.UUID | None = None,
 ) -> Monitor | None:
     m = await session.get(Monitor, monitor_id)
-    if m is None:
+    if not _owned(m, owner_user_id):
         return None
     m.enabled = enabled
     await session.flush()
     return m
 
 
-async def delete_monitor(session: AsyncSession, monitor_id: uuid.UUID) -> bool:
+async def delete_monitor(
+    session: AsyncSession, monitor_id: uuid.UUID,
+    *, owner_user_id: uuid.UUID | None = None,
+) -> bool:
     m = await session.get(Monitor, monitor_id)
-    if m is None:
+    if not _owned(m, owner_user_id):
         return False
     await session.delete(m)
     await session.flush()

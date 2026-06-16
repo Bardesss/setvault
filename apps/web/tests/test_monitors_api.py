@@ -56,3 +56,63 @@ async def test_non_admin_blocked_when_setting_off(client):
 
     r = await client.post("/api/monitors", json={"kind": "query", "query_text": "x"})
     assert r.status_code == 403, r.text
+
+
+@pytest.mark.asyncio
+async def test_non_admin_cannot_access_other_users_monitors(client):
+    """In all-users mode, a non-admin must not see/mutate another user's
+    monitors (IDOR guard). Admins are unrestricted; that's covered elsewhere."""
+    from setvault_core.services.system_config import get_config
+
+    init_engine(os.environ["TEST_DATABASE_URL"])
+    async with session_factory()() as s:
+        cfg = await get_config(s)
+        cfg.monitors_allow_all_users = True
+        await s.commit()
+
+    try:
+        async def _seed_user():
+            email = f"u-{uuid.uuid4().hex[:6]}@x.test"
+            pw = "hunter2hunter2"
+            async with session_factory()() as s:
+                s.add(User(
+                    email=email, username=f"u{uuid.uuid4().hex[:6]}", display_name="u",
+                    password_hash=hash_password(pw), role="user",
+                ))
+                await s.commit()
+            return email, pw
+
+        async def _login(email, pw):
+            r = await client.post(
+                "/api/auth/login", json={"email": email, "password": pw}
+            )
+            assert r.status_code == 200, r.text
+            client.cookies = r.cookies
+            client.headers["X-CSRF-Token"] = r.cookies["csrf_token"]
+
+        a_email, a_pw = await _seed_user()
+        b_email, b_pw = await _seed_user()
+
+        await _login(a_email, a_pw)
+        r = await client.post(
+            "/api/monitors", json={"kind": "query", "query_text": "AonlyQ"}
+        )
+        assert r.status_code == 201, r.text
+        a_mid = r.json()["id"]
+
+        # User B must not see, update, or delete A's monitor.
+        await _login(b_email, b_pw)
+        r = await client.get("/api/monitors")
+        assert r.status_code == 200, r.text
+        assert all(m["id"] != a_mid for m in r.json()["items"])
+
+        r = await client.put(f"/api/monitors/{a_mid}", json={"enabled": False})
+        assert r.status_code == 404, r.text
+
+        r = await client.delete(f"/api/monitors/{a_mid}")
+        assert r.status_code == 404, r.text
+    finally:
+        async with session_factory()() as s:
+            cfg = await get_config(s)
+            cfg.monitors_allow_all_users = False
+            await s.commit()

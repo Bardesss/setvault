@@ -31,6 +31,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["monitors"])
 
 
+def _owner_scope(user: User) -> uuid.UUID | None:
+    """Owner filter for a request: ``None`` for admins (see/act on all), else
+    the user's own id so non-admins are confined to their own monitors."""
+    return None if user.role == "admin" else user.id
+
+
 def _enqueue_rip(rip_job_id: uuid.UUID) -> None:
     """Enqueue the url-rip job for a discovery the user accepted. Best-effort:
     a Redis outage is logged but does not fail the request — the RipJob row is
@@ -82,10 +88,10 @@ async def create_monitor(
 
 @router.get("/api/monitors", response_model=MonitorsListOut)
 async def list_monitors(
-    _: Annotated[User, Depends(require_can_monitor)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    rows = await svc.list_monitors(session)
+    rows = await svc.list_monitors(session, owner_user_id=_owner_scope(user))
     return MonitorsListOut(items=[_monitor_out(m) for m in rows])
 
 
@@ -93,10 +99,12 @@ async def list_monitors(
 async def update_monitor(
     monitor_id: str,
     payload: MonitorUpdate,
-    _: Annotated[User, Depends(require_can_monitor)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    m = await svc.set_enabled(session, uuid.UUID(monitor_id), payload.enabled)
+    m = await svc.set_enabled(
+        session, uuid.UUID(monitor_id), payload.enabled, owner_user_id=_owner_scope(user),
+    )
     if m is None:
         raise HTTPException(status_code=404)
     await session.commit()
@@ -106,10 +114,12 @@ async def update_monitor(
 @router.delete("/api/monitors/{monitor_id}", status_code=204)
 async def delete_monitor(
     monitor_id: str,
-    _: Annotated[User, Depends(require_can_monitor)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    ok = await svc.delete_monitor(session, uuid.UUID(monitor_id))
+    ok = await svc.delete_monitor(
+        session, uuid.UUID(monitor_id), owner_user_id=_owner_scope(user),
+    )
     if not ok:
         raise HTTPException(status_code=404)
     await session.commit()
@@ -132,13 +142,34 @@ def _disc_out(d: MonitorDiscovery) -> DiscoveryOut:
     )
 
 
+async def _owned_discovery_or_404(
+    session: AsyncSession, user: User, discovery_id: str,
+) -> MonitorDiscovery:
+    """Load a discovery, enforcing ownership for non-admins. 404 (not 403) when
+    the row is missing or owned by another user, so callers can't probe ids."""
+    d = await session.get(MonitorDiscovery, uuid.UUID(discovery_id))
+    if d is None:
+        raise HTTPException(status_code=404)
+    scope = _owner_scope(user)
+    if scope is not None:
+        m = await session.get(Monitor, d.monitor_id)
+        if m is None or m.owner_user_id != scope:
+            raise HTTPException(status_code=404)
+    return d
+
+
 @router.get("/api/me/discoveries", response_model=DiscoveriesListOut)
 async def list_discoveries(
-    _: Annotated[User, Depends(require_can_monitor)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
     status: str | None = None,
 ):
     q = select(MonitorDiscovery).order_by(MonitorDiscovery.created_at.desc())
+    scope = _owner_scope(user)
+    if scope is not None:
+        q = q.join(Monitor, Monitor.id == MonitorDiscovery.monitor_id).where(
+            Monitor.owner_user_id == scope,
+        )
     if status:
         q = q.where(MonitorDiscovery.status == status)
     rows = (await session.execute(q.limit(200))).scalars().all()
@@ -151,9 +182,7 @@ async def rip_discovery(
     user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    d = await session.get(MonitorDiscovery, uuid.UUID(discovery_id))
-    if d is None:
-        raise HTTPException(status_code=404)
+    d = await _owned_discovery_or_404(session, user, discovery_id)
     if d.status == "pending_review":
         try:
             job = await submit_rip(session, user_id=user.id, url=d.webpage_url)
@@ -169,12 +198,10 @@ async def rip_discovery(
 @router.post("/api/me/discoveries/{discovery_id}/dismiss", status_code=204)
 async def dismiss_discovery(
     discovery_id: str,
-    _: Annotated[User, Depends(require_can_monitor)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    d = await session.get(MonitorDiscovery, uuid.UUID(discovery_id))
-    if d is None:
-        raise HTTPException(status_code=404)
+    d = await _owned_discovery_or_404(session, user, discovery_id)
     d.status = "dismissed"
     d.decided_at = datetime.now(UTC)
     await session.commit()
