@@ -19,3 +19,7 @@ class IngestSourceState(Base, UuidPkMixin, TimestampMixin):
     state: Mapped[str] = mapped_column(String(32), default="healthy", nullable=False)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rate_limit_max: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    rate_limit_window_seconds: Mapped[int] = mapped_column(
+        Integer, default=60, nullable=False
+    )
