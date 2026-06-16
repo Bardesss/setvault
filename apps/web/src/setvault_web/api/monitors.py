@@ -20,24 +20,28 @@ from setvault_core.schemas.monitors import (
     MonitorUpdate,
 )
 from setvault_core.services import monitors as svc
-from setvault_core.services.system_config import get_config
 from setvault_core.services.url_rip import DuplicateRipError, submit_rip
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from setvault_web.deps import current_user, db_session
+from setvault_web.deps import db_session, require_can_monitor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["monitors"])
 
 
-async def _require_can_monitor(user: User, session: AsyncSession) -> None:
-    if user.role == "admin":
-        return
-    config = await get_config(session)
-    if not config.monitors_allow_all_users:
-        raise HTTPException(status_code=403, detail="monitoring is admin-only")
+def _enqueue_rip(rip_job_id: uuid.UUID) -> None:
+    """Enqueue the url-rip job for a discovery the user accepted. Best-effort:
+    a Redis outage is logged but does not fail the request — the RipJob row is
+    already persisted and can be retried, mirroring api/url_rip.py."""
+    try:
+        redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+        Queue("default", connection=redis).enqueue(
+            "setvault_core.jobs.url_rip_job.run_rip_job", rip_job_id=str(rip_job_id),
+        )
+    except Exception:
+        logger.exception("failed to enqueue rip job %s from discovery", rip_job_id)
 
 
 def _monitor_out(m: Monitor) -> MonitorOut:
@@ -57,10 +61,9 @@ def _monitor_out(m: Monitor) -> MonitorOut:
 @router.post("/api/monitors", response_model=MonitorOut, status_code=201)
 async def create_monitor(
     payload: MonitorCreate,
-    user: Annotated[User, Depends(current_user)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     try:
         m = await svc.create_monitor(
             session,
@@ -79,10 +82,9 @@ async def create_monitor(
 
 @router.get("/api/monitors", response_model=MonitorsListOut)
 async def list_monitors(
-    user: Annotated[User, Depends(current_user)],
+    _: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     rows = await svc.list_monitors(session)
     return MonitorsListOut(items=[_monitor_out(m) for m in rows])
 
@@ -91,10 +93,9 @@ async def list_monitors(
 async def update_monitor(
     monitor_id: str,
     payload: MonitorUpdate,
-    user: Annotated[User, Depends(current_user)],
+    _: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     m = await svc.set_enabled(session, uuid.UUID(monitor_id), payload.enabled)
     if m is None:
         raise HTTPException(status_code=404)
@@ -105,10 +106,9 @@ async def update_monitor(
 @router.delete("/api/monitors/{monitor_id}", status_code=204)
 async def delete_monitor(
     monitor_id: str,
-    user: Annotated[User, Depends(current_user)],
+    _: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     ok = await svc.delete_monitor(session, uuid.UUID(monitor_id))
     if not ok:
         raise HTTPException(status_code=404)
@@ -134,11 +134,10 @@ def _disc_out(d: MonitorDiscovery) -> DiscoveryOut:
 
 @router.get("/api/me/discoveries", response_model=DiscoveriesListOut)
 async def list_discoveries(
-    user: Annotated[User, Depends(current_user)],
+    _: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
     status: str | None = None,
 ):
-    await _require_can_monitor(user, session)
     q = select(MonitorDiscovery).order_by(MonitorDiscovery.created_at.desc())
     if status:
         q = q.where(MonitorDiscovery.status == status)
@@ -149,10 +148,9 @@ async def list_discoveries(
 @router.post("/api/me/discoveries/{discovery_id}/rip", status_code=204)
 async def rip_discovery(
     discovery_id: str,
-    user: Annotated[User, Depends(current_user)],
+    user: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     d = await session.get(MonitorDiscovery, uuid.UUID(discovery_id))
     if d is None:
         raise HTTPException(status_code=404)
@@ -160,12 +158,7 @@ async def rip_discovery(
         try:
             job = await submit_rip(session, user_id=user.id, url=d.webpage_url)
             d.url_rip_id = job.id
-            redis = Redis.from_url(
-                os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-            )
-            Queue("default", connection=redis).enqueue(
-                "setvault_core.jobs.url_rip_job.run_rip_job", rip_job_id=str(job.id)
-            )
+            _enqueue_rip(job.id)
         except DuplicateRipError as exc:
             d.url_rip_id = exc.existing.id
         d.status = "ingested"
@@ -176,10 +169,9 @@ async def rip_discovery(
 @router.post("/api/me/discoveries/{discovery_id}/dismiss", status_code=204)
 async def dismiss_discovery(
     discovery_id: str,
-    user: Annotated[User, Depends(current_user)],
+    _: Annotated[User, Depends(require_can_monitor)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
-    await _require_can_monitor(user, session)
     d = await session.get(MonitorDiscovery, uuid.UUID(discovery_id))
     if d is None:
         raise HTTPException(status_code=404)
