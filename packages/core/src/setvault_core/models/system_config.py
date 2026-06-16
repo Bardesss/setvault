@@ -34,6 +34,12 @@ class SystemConfig(Base):
     audit_retention_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=90,
     )
+    monitors_allow_all_users: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+    )
+    monitor_interval_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3600,
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

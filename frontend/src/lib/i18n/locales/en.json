@@ -63,7 +63,10 @@
       "email": "Email",
       "both": "Both",
       "off": "Off"
-    }
+    },
+    "monitors_allow_all_users": "Allow all users to create monitors",
+    "monitor_interval_seconds": "Poll interval (seconds)",
+    "save": "Save"
   },
   "nav": {
     "home": "Home",
@@ -148,7 +151,10 @@
     "search_failed": "Search failed.",
     "search_submit": "Search",
     "ingest_failed": "Ingest failed.",
-    "admin_empty": "No ingest sources."
+    "admin_empty": "No ingest sources.",
+    "col_rate_max": "Rate limit",
+    "col_rate_window": "Window (s)",
+    "save": "Save"
   },
   "comments": {
     "heading": "Comments",
@@ -180,7 +186,37 @@
     "mark_all_read": "Mark all read",
     "empty": "Nothing here.",
     "mentioned_you": "mentioned you",
-    "replied_to_you": "replied to your comment"
+    "replied_to_you": "replied to your comment",
+    "discovery_summary": "New discoveries for"
+  },
+  "monitors": {
+    "admin_title": "Monitors",
+    "query_placeholder": "Artist, party, or venue name",
+    "source_optional": "Source (optional)",
+    "all_sources": "all sources",
+    "add": "Add monitor",
+    "empty": "No monitors yet.",
+    "col_query": "Query",
+    "col_source": "Source",
+    "col_last_checked": "Last checked",
+    "col_enabled": "Enabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete"
+  },
+  "discoveries": {
+    "title": "Discoveries",
+    "empty": "No discoveries yet.",
+    "col_title": "Title",
+    "col_source": "Source",
+    "col_confidence": "Confidence",
+    "col_status": "Status",
+    "rip": "Rip",
+    "dismiss": "Dismiss",
+    "status_auto_ingested": "Auto-ingested",
+    "status_pending_review": "To review",
+    "status_ingested": "Ingested",
+    "status_dismissed": "Dismissed"
   },
   "url_rip": {
     "tab_label": "URL",

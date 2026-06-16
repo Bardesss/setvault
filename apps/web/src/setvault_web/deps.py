@@ -8,6 +8,7 @@ from fastapi import Cookie, Depends, HTTPException, status
 from setvault_core.db import session_factory
 from setvault_core.models.identity import User
 from setvault_core.services.sessions import SESSION_COOKIE, SessionSigner
+from setvault_core.services.system_config import get_config
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.config import Settings, get_settings
@@ -47,4 +48,20 @@ async def current_user(
 async def require_admin(user: Annotated[User, Depends(current_user)]) -> User:
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin only")
+    return user
+
+
+async def require_can_monitor(
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+) -> User:
+    """Gate for monitor + discovery endpoints. Admins always pass; other users
+    pass only when the global ``monitors_allow_all_users`` setting is on."""
+    if user.role == "admin":
+        return user
+    config = await get_config(session)
+    if not config.monitors_allow_all_users:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="monitoring is admin-only"
+        )
     return user

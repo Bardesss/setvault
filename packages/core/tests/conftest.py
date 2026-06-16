@@ -6,9 +6,11 @@ from setvault_core.db import init_engine, session_factory
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.identity import User
 from setvault_core.models.ingest_sources import IngestSourceState
+from setvault_core.models.monitors import Monitor, MonitorDiscovery
 from setvault_core.models.tracklist import TracklistEntry
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -122,3 +124,33 @@ async def _cleanup_ingest_source_state():
     async with session_factory()() as s:
         await s.execute(delete(IngestSourceState))
         await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_monitors():
+    """Delete MonitorDiscovery + Monitor rows so monitor tests can rerun.
+
+    MonitorDiscovery.monitor_id has ondelete=CASCADE, but discoveries are
+    cleared first explicitly anyway. The monitor / monitor_discovery tables
+    don't exist until the Phase 7C migration (Task 3) is applied; until then
+    the delete raises a missing-table error, which we tolerate.
+    """
+    init_engine(os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        try:
+            await s.execute(delete(MonitorDiscovery))
+            await s.execute(delete(Monitor))
+            await s.commit()
+        except ProgrammingError:
+            await s.rollback()  # 7C: tolerate pre-migration absence
+    yield
+    async with session_factory()() as s:
+        try:
+            await s.execute(delete(MonitorDiscovery))
+            await s.execute(delete(Monitor))
+            await s.commit()
+        except ProgrammingError:
+            await s.rollback()  # 7C: tolerate pre-migration absence

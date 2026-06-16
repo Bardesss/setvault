@@ -9,12 +9,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_core.models.ingest_sources import IngestSourceState
+from setvault_core.services.source_rate_limit import allow as _source_allow
 
 AUTO_DISABLE_AFTER = 5
 
 
 class SourceDisabledError(Exception):
     """The requested source is disabled (manually or auto)."""
+
+
+class SourceRateLimitedError(Exception):
+    """The per-source rate limit budget for this kind is exhausted. NOT a
+    health failure — retry next poll."""
 
 
 @dataclass
@@ -88,6 +94,10 @@ async def search_source(
     source = get_source(kind)
     if source is None:
         raise SourceDisabledError(kind)
+    if not await _source_allow(
+        kind, limit=st.rate_limit_max, window_seconds=st.rate_limit_window_seconds,
+    ):
+        raise SourceRateLimitedError(kind)
     try:
         results = source.search(query, limit=limit)
     except SourceError as e:
@@ -104,16 +114,20 @@ async def search_all_sources(
 ) -> SearchAllResult:
     states = await list_states(session)  # seeds + returns all, ordered by kind
     enabled = [
-        (s, src)
-        for s in states
-        if s.enabled and (src := get_source(s.kind)) is not None
+        (st, src)
+        for st in states
+        if st.enabled and (src := get_source(st.kind)) is not None
     ]
 
-    async def _run(src: IngestSource) -> list[Candidate]:
+    async def _run(src: IngestSource, st: IngestSourceState) -> list[Candidate]:
+        if not await _source_allow(
+            st.kind, limit=st.rate_limit_max, window_seconds=st.rate_limit_window_seconds,
+        ):
+            return []  # budget exhausted this window; try next poll
         return await asyncio.to_thread(src.search, query, limit=limit_per_source)
 
     results = await asyncio.gather(
-        *[_run(src) for _, src in enabled], return_exceptions=True
+        *[_run(src, st) for st, src in enabled], return_exceptions=True
     )
     candidates: list[Candidate] = []
     errored: list[str] = []

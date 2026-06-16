@@ -14,6 +14,7 @@
     { href: "/admin/connectors", label: "Connectors" },
     { href: "/admin/providers", label: "Providers" },
     { href: "/admin/sources", label: "Sources" },
+    { href: "/admin/monitors", label: "Monitors" },
     { href: "/admin/storage", label: "Storage" },
     { href: "/admin/watch-folders", label: "Watch folders" },
     { href: "/admin/unmatched", label: "Unmatched" },

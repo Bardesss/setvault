@@ -38,6 +38,8 @@ def _state_out(st, source) -> SourceStateOut:
         state=st.state,
         consecutive_failures=st.consecutive_failures,
         last_error=st.last_error,
+        rate_limit_max=st.rate_limit_max,
+        rate_limit_window_seconds=st.rate_limit_window_seconds,
     )
 
 
@@ -117,5 +119,10 @@ async def admin_set_enabled(
     if source is None:
         raise HTTPException(status_code=404, detail="unknown source")
     st = await set_enabled(session, kind, body.enabled)
+    if body.rate_limit_max is not None:
+        st.rate_limit_max = body.rate_limit_max
+    if body.rate_limit_window_seconds is not None:
+        st.rate_limit_window_seconds = body.rate_limit_window_seconds
+    await session.flush()
     await session.commit()
     return _state_out(st, source)

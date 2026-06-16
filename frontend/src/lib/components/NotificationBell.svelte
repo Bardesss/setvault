@@ -37,7 +37,14 @@
     if (open) await refresh();
   }
 
-  type NotifPayload = { set_slug?: string; author_username?: string; excerpt?: string };
+  type NotifPayload = {
+    set_slug?: string;
+    author_username?: string;
+    excerpt?: string;
+    monitor_label?: string;
+    auto_ingested?: number;
+    pending_review?: number;
+  };
 
   function getPayload(n: InAppNotification): NotifPayload {
     return n.payload as NotifPayload;
@@ -53,6 +60,10 @@
     items = items.map((x) =>
       x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x,
     );
+    if (n.kind === "discovery") {
+      location.href = "/discoveries";
+      return;
+    }
     const slug = getPayload(n).set_slug;
     if (slug) location.href = `/sets/${slug}`;
   }
@@ -79,11 +90,15 @@
           {@const payload = getPayload(n)}
           <li class:unread={!n.read_at}>
             <button class="item" on:click={() => clickItem(n)}>
-              <strong>{payload.author_username ?? ""}</strong>
-              <span>
-                {$_(n.kind === "mention" ? "notifications.mentioned_you" : "notifications.replied_to_you")}
-              </span>
-              <em>{payload.excerpt ?? ""}</em>
+              {#if n.kind === "discovery"}
+                <span>{$_("notifications.discovery_summary")} {payload.monitor_label ?? ""}</span>
+              {:else}
+                <strong>{payload.author_username ?? ""}</strong>
+                <span>
+                  {$_(n.kind === "mention" ? "notifications.mentioned_you" : "notifications.replied_to_you")}
+                </span>
+                <em>{payload.excerpt ?? ""}</em>
+              {/if}
             </button>
           </li>
         {/each}

@@ -29,6 +29,7 @@ from setvault_core.models.enrichment import ProviderConfig, ProviderResponse, Re
 from setvault_core.models.identity import EmailToken, User
 from setvault_core.models.ingest_sources import IngestSourceState
 from setvault_core.models.library_webhook import LibraryWebhook
+from setvault_core.models.monitors import Monitor, MonitorDiscovery
 from setvault_core.models.system import AuditEvent, NotificationConnector
 from setvault_core.models.tracklist import (
     Label,
@@ -41,6 +42,7 @@ from setvault_core.models.url_rip import RipJob
 from setvault_core.models.watch_folder import UnmatchedFile, WatchFolder
 from setvault_core.services.passwords import hash_password
 from sqlalchemy import delete, select
+from sqlalchemy.exc import ProgrammingError
 
 
 @pytest.fixture(autouse=True)
@@ -488,3 +490,33 @@ async def _cleanup_catalog():
         await s.execute(delete(Artist))
         await s.execute(delete(Tag))
         await s.commit()
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup_monitors():
+    """Delete MonitorDiscovery + Monitor rows so monitor tests can rerun.
+
+    MonitorDiscovery.monitor_id has ondelete=CASCADE, but discoveries are
+    cleared first explicitly anyway. The monitor / monitor_discovery tables
+    don't exist until the Phase 7C migration (Task 3) is applied; until then
+    the delete raises a missing-table error, which we tolerate.
+    """
+    init_engine(__import__("os").environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://setvault:setvault@localhost:5432/setvault",
+    ))
+    async with session_factory()() as s:
+        try:
+            await s.execute(delete(MonitorDiscovery))
+            await s.execute(delete(Monitor))
+            await s.commit()
+        except ProgrammingError:
+            await s.rollback()  # 7C: tolerate pre-migration absence
+    yield
+    async with session_factory()() as s:
+        try:
+            await s.execute(delete(MonitorDiscovery))
+            await s.execute(delete(Monitor))
+            await s.commit()
+        except ProgrammingError:
+            await s.rollback()  # 7C: tolerate pre-migration absence
