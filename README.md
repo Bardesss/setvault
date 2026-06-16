@@ -36,21 +36,67 @@ Full feature list and release notes: [CHANGELOG.md](CHANGELOG.md).
 
 One image, two ways to run it. **Prereqs:** Docker 24+, Compose v2, ~2 GB RAM, and disk for your library.
 
-### Bundled (single container) — recommended
+### Quick start (single container) — recommended
 
-Postgres, Redis, tusd, and a Caddy proxy run inside the image. One data volume, no secrets to set.
+The all-in-one image bundles Postgres, Redis, tusd, and a Caddy proxy. Five steps from zero to running:
 
+1. **Install Docker.** [Docker Engine](https://docs.docker.com/engine/install/) 24+ with the Compose v2 plugin (Docker Desktop includes both).
+
+2. **Start SetVault:**
+   ```bash
+   docker run -d --name setvault -p 1970:1970 \
+     -v setvault-data:/data \
+     ghcr.io/bardesss/setvault:latest
+   ```
+   No secrets to set — on first boot it generates its own, runs database migrations, and starts every service under s6-overlay.
+
+3. **Open the app** at **http://localhost:1970** (or `http://<server-ip>:1970`). Allow ~10–20 s on the very first boot while the database initializes.
+
+4. **Create your admin account.** A first-run wizard appears on a fresh install — fill it in and you're logged in.
+
+5. **Back up the `/data` volume.** That single volume holds the database, Redis, and all your media — snapshot it regularly.
+
+That's it — you're ready to upload a set or paste a URL to rip.
+
+**Going past localhost?** Add `-e BASE_URL=https://sets.example.com` and front a TLS proxy so the session cookie is `Secure` — see the **TLS & `BASE_URL`** section below.
+
+**Scripted/headless admin** (instead of the wizard): the bundled CLI reads credentials from the environment so the password never hits the command line —
 ```bash
-docker run -d --name setvault -p 1970:1970 \
-  -v setvault-data:/data \
-  ghcr.io/bardesss/setvault:latest
+docker exec -e ADMIN_EMAIL='you@example.com' -e ADMIN_PASSWORD='min-12-chars' \
+  setvault python -m setvault_web.create_admin
 ```
+It's idempotent (promotes an existing user to admin; re-running is safe).
 
-On first boot SetVault generates and persists its secrets, runs migrations, and starts
-everything under s6-overlay. Open the app and a **first-run wizard** creates your admin
-account. The `/data` volume holds the database, Redis, and all media — **back it up**.
+### Quick start with Docker Compose
 
-Compose alternative: `docker compose -f infra/docker/compose.aio.yml up -d` (no env vars required).
+Prefer a declarative file you can version and re-apply? Same bundled image, via Compose:
+
+1. **Install Docker** with the Compose v2 plugin (see step 1 above).
+
+2. **Create `compose.yaml`** in an empty directory:
+   ```yaml
+   services:
+     setvault:
+       image: ghcr.io/bardesss/setvault:latest
+       ports:
+         - "1970:1970"
+       volumes:
+         - setvault-data:/data
+       restart: unless-stopped
+       # Internet-facing? Uncomment and front a TLS proxy:
+       # environment:
+       #   BASE_URL: "https://sets.example.com"
+   volumes:
+     setvault-data:
+   ```
+
+3. **Start it:** `docker compose up -d` (run from that directory).
+
+4. **Open** http://localhost:1970 and complete the first-run wizard.
+
+5. **Update later:** `docker compose pull && docker compose up -d` — migrations run automatically on start.
+
+Back up the `setvault-data` volume the same as above. (The repo also ships ready-made compose files under `infra/docker/` if you'd rather clone it.)
 
 ### External datastores (compose)
 
