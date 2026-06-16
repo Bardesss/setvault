@@ -7,6 +7,7 @@ one `discovery` InAppNotification summarizing the poll.
 """
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from datetime import UTC, datetime
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from setvault_core.models.engagement_3c import InAppNotification
 from setvault_core.models.monitors import Monitor, MonitorDiscovery
 from setvault_core.services.monitor_match import score_confidence
+
+logger = logging.getLogger(__name__)
 
 
 async def _existing_keys(session: AsyncSession, monitor_id: uuid.UUID) -> set[tuple[str, str]]:
@@ -43,6 +46,9 @@ async def _ingest_candidate(
     except DuplicateRipError as e:
         return e.existing.id
     except Exception:
+        logger.exception(
+            "monitor %s: auto-ingest failed for %s", monitor.id, candidate.webpage_url,
+        )
         return None
     redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
     Queue("default", connection=redis).enqueue(
