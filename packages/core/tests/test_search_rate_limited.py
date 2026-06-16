@@ -1,7 +1,5 @@
 import pytest
-
 from setvault_core.services import ingest_sources as svc
-from setvault_core.services import source_rate_limit as srl
 
 
 @pytest.mark.asyncio

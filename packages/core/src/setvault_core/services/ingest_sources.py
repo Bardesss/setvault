@@ -114,20 +114,20 @@ async def search_all_sources(
 ) -> SearchAllResult:
     states = await list_states(session)  # seeds + returns all, ordered by kind
     enabled = [
-        (s, src)
-        for s in states
-        if s.enabled and (src := get_source(s.kind)) is not None
+        (st, src)
+        for st in states
+        if st.enabled and (src := get_source(st.kind)) is not None
     ]
 
-    async def _run(kind: str, src: IngestSource, st: IngestSourceState) -> list[Candidate]:
+    async def _run(src: IngestSource, st: IngestSourceState) -> list[Candidate]:
         if not await _source_allow(
-            kind, limit=st.rate_limit_max, window_seconds=st.rate_limit_window_seconds,
+            st.kind, limit=st.rate_limit_max, window_seconds=st.rate_limit_window_seconds,
         ):
             return []  # budget exhausted this window; try next poll
         return await asyncio.to_thread(src.search, query, limit=limit_per_source)
 
     results = await asyncio.gather(
-        *[_run(s.kind, src, s) for s, src in enabled], return_exceptions=True
+        *[_run(src, st) for st, src in enabled], return_exceptions=True
     )
     candidates: list[Candidate] = []
     errored: list[str] = []
