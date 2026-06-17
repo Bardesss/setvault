@@ -4,6 +4,15 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3](https://github.com/Bardesss/setvault/compare/v0.11.2...v0.11.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* **frontend:** convert server loads to universal loads for static SPA ([bd80639](https://github.com/Bardesss/setvault/commit/bd80639e676de92aa50e9ffe0f8d3490a4f12a09))
+* **frontend:** convert server loads to universal loads for static SPA ([a0a0cb7](https://github.com/Bardesss/setvault/commit/a0a0cb77af6a2c64c08ff6f72cd84f2bb7370c40))
+* **pwa:** cache /api GETs network-first so SPA pages work offline ([9788f52](https://github.com/Bardesss/setvault/commit/9788f5283cb8b29e30fb8ee3e8b77eaa7c1c1f11))
+
 ## [0.11.2](https://github.com/Bardesss/setvault/compare/v0.11.1...v0.11.2) (2026-06-16)
 
 
