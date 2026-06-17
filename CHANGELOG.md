@@ -4,6 +4,14 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1](https://github.com/Bardesss/setvault/compare/v0.14.0...v0.14.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* **url-rip:** debuggable failures + waveform handles AAC; retry replaces row ([9bb9493](https://github.com/Bardesss/setvault/commit/9bb9493ce4bda79b07d0716c1bcc7684eba5ab56))
+* **url-rip:** debuggable failures + waveform handles AAC; retry replaces row ([c3f46cd](https://github.com/Bardesss/setvault/commit/c3f46cd49c3fe56e3b5056130f01d55fcf26ac16))
+
 ## [0.14.0](https://github.com/Bardesss/setvault/compare/v0.13.0...v0.14.0) (2026-06-17)
 
 
