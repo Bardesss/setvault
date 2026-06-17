@@ -32,7 +32,7 @@ describe("chooseStrategy", () => {
     expect(chooseStrategy("/api/sets/seeded-set-abc123/stream", PRECACHED)).toBe("audio");
   });
 
-  it("returns 'api' for non-audio /api/ calls (network-only, no stale auth)", () => {
+  it("returns 'api' for non-audio /api/ calls (network-first, offline fallback)", () => {
     expect(chooseStrategy("/api/sets/seeded-set/waveform", PRECACHED)).toBe("api");
     expect(chooseStrategy("/api/me/rss-tokens", PRECACHED)).toBe("api");
     expect(chooseStrategy("/api/health", PRECACHED)).toBe("api");
