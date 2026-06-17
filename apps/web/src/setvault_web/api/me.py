@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet
@@ -269,9 +269,12 @@ def _token_out_without_urls(row: ApiToken) -> RssTokenOut:
 
 @router.get("/rss-tokens", response_model=RssTokensListOut)
 async def list_my_rss_tokens(
+    response: Response,
     user: Annotated[User, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(db_session)],
 ):
+    # Token metadata is per-user and must never land in a shared offline cache.
+    response.headers["Cache-Control"] = "no-store"
     rows = (await session.execute(
         select(ApiToken).where(
             ApiToken.user_id == user.id,

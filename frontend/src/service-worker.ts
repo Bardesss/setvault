@@ -90,13 +90,24 @@ async function networkFirst(request: Request, cacheName: string): Promise<Respon
   const cache = await caches.open(cacheName);
   try {
     const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
+    if (response.ok && isCacheable(response)) {
+      await cache.put(request, response.clone());
+    }
     return response;
   } catch (err) {
     const cached = await cache.match(request);
     if (cached) return cached;
     throw err;
   }
+}
+
+// Honour the server's intent: never persist a response the backend marks
+// non-cacheable (no-store / no-cache / private). Lets sensitive endpoints
+// (e.g. /api/me/rss-tokens) opt out of the offline runtime cache.
+function isCacheable(response: Response): boolean {
+  const cc = response.headers.get("Cache-Control");
+  if (!cc) return true;
+  return !/(?:^|[\s,])(?:no-store|no-cache|private)(?:[\s,;]|$)/i.test(cc);
 }
 
 // Audio-cap state. Main thread sends `{type: "set-cap", bytes}` via

@@ -1,3 +1,4 @@
+import { clearScopedCaches } from "../stores/offline";
 import { api } from "./client";
 
 export interface CurrentUser {
@@ -15,8 +16,13 @@ export function login(email: string, password: string) {
   });
 }
 
-export function logout() {
-  return api<void>("/api/auth/logout", { method: "POST" });
+export async function logout() {
+  try {
+    await api<void>("/api/auth/logout", { method: "POST" });
+  } finally {
+    // Purge cached user-scoped data so it can't bleed to the next session.
+    await clearScopedCaches();
+  }
 }
 
 export function me() {
