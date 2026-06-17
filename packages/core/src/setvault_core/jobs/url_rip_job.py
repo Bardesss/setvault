@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 import uuid
 from datetime import UTC, datetime
@@ -36,26 +37,38 @@ logger = logging.getLogger(__name__)
 DATABASE_URL_ENV = "DATABASE_URL"
 
 
-def _sanitize_error(exc: BaseException) -> str:
-    """Map an exception to a user-safe error_text string.
+_ERROR_TEXT_MAX = 500
 
-    Raw exception text can leak internal paths, Redis/Postgres connection
-    strings, yt-dlp's debug-style messages, etc. Surface a coarse category
-    instead; the full traceback is preserved in server logs.
+
+def _error_text(exc: BaseException) -> str:
+    """Build the user-visible error_text for a failed rip.
+
+    SetVault is self-hosted and single-user, so the only person who sees this
+    string is the operator debugging their own instance. We surface the real
+    exception (type + message, truncated) instead of a coarse category — a bare
+    "error during rip" leaves nothing to act on. The full traceback is still
+    written to the worker log via logger.exception.
     """
-    # UnsupportedUrlError carries no PII — its message is constant and useful.
+    # UnsupportedUrlError's message is constant and already user-friendly.
     try:
         from setvault_core.services.url_rip import UnsupportedUrlError
         if isinstance(exc, UnsupportedUrlError):
             return "URL is not on the supported-platforms allowlist"
     except Exception:  # noqa: S110 — best-effort import; fall through if unavailable
         pass
-    name = exc.__class__.__name__.lower()
-    if "download" in name or "ydl" in name or "extractor" in name:
-        return "download failed"
-    if "timeout" in name:
-        return "request timed out"
-    return "error during rip"
+    # subprocess failures (ffmpeg/ffprobe/audiowaveform) carry the actionable
+    # detail in stderr, not in str(exc) ("returned non-zero exit status 1").
+    if isinstance(exc, subprocess.CalledProcessError):
+        stderr = exc.stderr
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", "replace")
+        cmd = exc.cmd[0] if isinstance(exc.cmd, (list, tuple)) and exc.cmd else exc.cmd
+        tail = (stderr or "").strip()[-_ERROR_TEXT_MAX:]
+        return f"{cmd} failed (exit {exc.returncode}): {tail or '(no stderr)'}"[:_ERROR_TEXT_MAX]
+    detail = str(exc).strip()
+    label = exc.__class__.__name__
+    text = f"{label}: {detail}" if detail else label
+    return text[:_ERROR_TEXT_MAX]
 
 
 async def _set_status(
@@ -175,10 +188,13 @@ async def _run_rip_job(session: AsyncSession, job_id: uuid.UUID) -> None:
         downloaded = await _download(job, tmp_dir)
 
         # Move the file into the originals/ subtree under the default root.
+        # shutil.move (not Path.replace) because the OS temp dir and the media
+        # root are frequently on different mounts (container fs vs. /data
+        # volume), where an atomic rename raises OSError(EXDEV).
         originals_dir = Path(root.host_path) / "originals" / str(job.id)
         originals_dir.mkdir(parents=True, exist_ok=True)
         final_original = originals_dir / downloaded.name
-        downloaded.replace(final_original)
+        shutil.move(str(downloaded), str(final_original))
         audio_relpath = str(final_original.relative_to(root.host_path)).replace("\\", "/")
 
         live = await _create_draft_live_set(
@@ -216,12 +232,12 @@ async def _run_rip_job(session: AsyncSession, job_id: uuid.UUID) -> None:
         await _set_status(session, job, "ready", progress_pct=100,
                           message="published")
     except Exception as exc:
-        # Generic message in the user-visible error_text; the raw exception
-        # (paths, hostnames, yt-dlp internals) only lands in server logs.
+        # Surface the real exception in error_text (self-hosted, owner-only);
+        # the full traceback still lands in server logs.
         logger.exception("rip job %s failed", job_id)
         try:
-            job.error_text = _sanitize_error(exc)
-            await _set_status(session, job, "failed", message="error during rip")
+            job.error_text = _error_text(exc)
+            await _set_status(session, job, "failed", message="rip failed")
         except Exception:
             logger.exception("rip job %s: failed to record failure status", job_id)
     finally:

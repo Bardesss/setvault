@@ -38,6 +38,15 @@ export const hasActiveRips = (jobs: RipJob[]): boolean => jobs.some(isRipActive)
  * is allowed because dedup explicitly excludes failed jobs). */
 export const canRetry = (job: RipJob): boolean => job.status === "failed";
 
+/** Replace a retried job in the list: drop the old (failed) row by id and put
+ * the freshly-submitted job at the front. Retry re-submits as a new job, so
+ * without this the failed row would linger alongside the new one. */
+export const replaceRipJob = (
+  jobs: RipJob[],
+  previousId: string,
+  fresh: RipJob,
+): RipJob[] => [fresh, ...jobs.filter((j) => j.id !== previousId)];
+
 export const submitUrl = (url: string) =>
   api<RipJob>("/api/sets/url-rip", {
     method: "POST",

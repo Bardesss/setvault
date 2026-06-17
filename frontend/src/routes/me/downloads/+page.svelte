@@ -7,6 +7,7 @@
     listMyRipJobs,
     hasActiveRips,
     isRipActive,
+    replaceRipJob,
     deleteRipJob,
     clearFinishedRipJobs,
     type RipJob,
@@ -51,8 +52,8 @@
     if (pollTimer) clearInterval(pollTimer);
   });
 
-  function onRetried(fresh: RipJob) {
-    jobs = [fresh, ...jobs];
+  function onRetried(previousId: string, fresh: RipJob) {
+    jobs = replaceRipJob(jobs, previousId, fresh);
   }
 </script>
 
@@ -73,7 +74,7 @@
   <ul class="downloads-list">
     {#each jobs as job (job.id)}
       <li class="download-item">
-        <RipJobRow {job} on:retried={(e) => onRetried(e.detail)} />
+        <RipJobRow {job} on:retried={(e) => onRetried(e.detail.previousId, e.detail.job)} />
         <button
           type="button"
           class="remove"

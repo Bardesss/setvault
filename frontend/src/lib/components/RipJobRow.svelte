@@ -7,7 +7,9 @@
   export let job: RipJob;
   $: title = (job.probed_metadata?.title as string) ?? job.source_url;
 
-  const dispatch = createEventDispatcher<{ retried: RipJob }>();
+  const dispatch = createEventDispatcher<{
+    retried: { previousId: string; job: RipJob };
+  }>();
   let retrying = false;
   let retryError: string | null = null;
 
@@ -16,7 +18,7 @@
     retryError = null;
     try {
       const fresh = await submitUrl(job.source_url);
-      dispatch("retried", fresh);
+      dispatch("retried", { previousId: job.id, job: fresh });
     } catch (e) {
       retryError = e instanceof ApiError ? e.detail : $_("url_rip.retry_failed");
     } finally {
