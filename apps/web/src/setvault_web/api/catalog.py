@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from setvault_core.models.catalog import Artist, LiveSet, Party, Series, Venue
+from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import (
     ArtistIn,
     ArtistOut,
@@ -19,6 +20,7 @@ from setvault_core.schemas.catalog import (
     VenueOut,
     VenuePatchIn,
 )
+from setvault_core.services.audit import log as audit_log
 from setvault_core.services.catalog import list_sets_for_entity, slugify
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -256,12 +258,29 @@ async def edit_artist(
     slug: str,
     body: ArtistPatchIn,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    user: Annotated[User, Depends(current_user)],
 ):
     row = await _get_by_slug(session, Artist, slug)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        if field == "aliases" and value is None:
+            continue  # treat null as "no change" — column is NOT NULL
         setattr(row, field, value)
-    await session.commit()
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="artist.edited",
+        target_type=Artist.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
     return _artist_out(row)
 
 
@@ -270,12 +289,27 @@ async def edit_venue(
     slug: str,
     body: VenuePatchIn,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    user: Annotated[User, Depends(current_user)],
 ):
     row = await _get_by_slug(session, Venue, slug)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
         setattr(row, field, value)
-    await session.commit()
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="venue.edited",
+        target_type=Venue.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
     return _venue_out(row)
 
 
@@ -284,12 +318,27 @@ async def edit_series(
     slug: str,
     body: SeriesPatchIn,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    user: Annotated[User, Depends(current_user)],
 ):
     row = await _get_by_slug(session, Series, slug)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
         setattr(row, field, value)
-    await session.commit()
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="series.edited",
+        target_type=Series.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
     return _series_out(row)
 
 
@@ -298,17 +347,36 @@ async def edit_party(
     slug: str,
     body: PartyPatchIn,
     session: Annotated[AsyncSession, Depends(db_session)],
-    _: Annotated[object, Depends(current_user)],
+    user: Annotated[User, Depends(current_user)],
 ):
     row = await _get_by_slug(session, Party, slug)
-    data = body.model_dump(exclude_unset=True)
-    for field in ("venue_id", "series_id"):
-        if field in data and data[field] is not None:
-            data[field] = uuid.UUID(data[field])
-    for field, value in data.items():
+    patch = body.model_dump(exclude_unset=True)
+    try:
+        for field in ("venue_id", "series_id"):
+            if field in patch and patch[field] is not None:
+                patch[field] = uuid.UUID(patch[field])
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="invalid venue_id or series_id"
+        ) from exc
+    for field, value in patch.items():
         setattr(row, field, value)
-    await session.commit()
-    await session.refresh(row)
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="party.edited",
+        target_type=Party.__name__,
+        target_id=str(row.id),
+        after=body.model_dump(exclude_unset=True),
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
+    await session.refresh(row, attribute_names=["venue", "series"])
     return _party_out(row)
 
 
