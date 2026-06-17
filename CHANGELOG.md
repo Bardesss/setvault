@@ -4,6 +4,14 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.4](https://github.com/Bardesss/setvault/compare/v0.11.3...v0.11.4) (2026-06-17)
+
+
+### Bug Fixes
+
+* **pwa:** don't bleed user-scoped cache across sessions ([76dfe2d](https://github.com/Bardesss/setvault/commit/76dfe2d9dc647b4ba0b35099ccfde941339bb2ea))
+* **pwa:** isolate user-scoped cache across sessions ([d5d9afe](https://github.com/Bardesss/setvault/commit/d5d9afe30b9f62a6d38f0c8d3832a6f9dabba0f3))
+
 ## [0.11.3](https://github.com/Bardesss/setvault/compare/v0.11.2...v0.11.3) (2026-06-17)
 
 
