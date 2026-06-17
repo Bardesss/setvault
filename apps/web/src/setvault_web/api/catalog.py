@@ -8,12 +8,16 @@ from setvault_core.models.catalog import Artist, LiveSet, Party, Series, Venue
 from setvault_core.schemas.catalog import (
     ArtistIn,
     ArtistOut,
+    ArtistPatchIn,
     PartyIn,
     PartyOut,
+    PartyPatchIn,
     SeriesIn,
     SeriesOut,
+    SeriesPatchIn,
     VenueIn,
     VenueOut,
+    VenuePatchIn,
 )
 from setvault_core.services.catalog import list_sets_for_entity, slugify
 from sqlalchemy import select
@@ -231,6 +235,80 @@ async def get_party(
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="party not found")
+    return _party_out(row)
+
+
+# -------- Helpers --------
+
+
+async def _get_by_slug(session, model, slug):
+    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return row
+
+
+# -------- Entity edits --------
+
+
+@router.patch("/artists/{slug}", response_model=ArtistOut)
+async def edit_artist(
+    slug: str,
+    body: ArtistPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Artist, slug)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(row, field, value)
+    await session.commit()
+    return _artist_out(row)
+
+
+@router.patch("/venues/{slug}", response_model=VenueOut)
+async def edit_venue(
+    slug: str,
+    body: VenuePatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Venue, slug)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(row, field, value)
+    await session.commit()
+    return _venue_out(row)
+
+
+@router.patch("/series/{slug}", response_model=SeriesOut)
+async def edit_series(
+    slug: str,
+    body: SeriesPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Series, slug)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(row, field, value)
+    await session.commit()
+    return _series_out(row)
+
+
+@router.patch("/parties/{slug}", response_model=PartyOut)
+async def edit_party(
+    slug: str,
+    body: PartyPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Party, slug)
+    data = body.model_dump(exclude_unset=True)
+    for field in ("venue_id", "series_id"):
+        if field in data and data[field] is not None:
+            data[field] = uuid.UUID(data[field])
+    for field, value in data.items():
+        setattr(row, field, value)
+    await session.commit()
+    await session.refresh(row)
     return _party_out(row)
 
 
