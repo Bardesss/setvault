@@ -4,6 +4,20 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0](https://github.com/Bardesss/setvault/compare/v0.12.0...v0.13.0) (2026-06-17)
+
+
+### Features
+
+* **auth:** optional single-user auto-login ([149593f](https://github.com/Bardesss/setvault/commit/149593fc497c3ac5a73c32d7c04c8db990014ff7))
+* **downloads:** clear individual or finished downloads ([addaa18](https://github.com/Bardesss/setvault/commit/addaa184701aa6eee11a8f870954b09370b3e6d5))
+* login redirect, clear-downloads, and single-user auto-login ([8d48af7](https://github.com/Bardesss/setvault/commit/8d48af7bdc7a71f86f183463452409108e52e9e8))
+
+
+### Bug Fixes
+
+* **frontend:** redirect logged-out users to /login ([8a19922](https://github.com/Bardesss/setvault/commit/8a199220d1f6b55c28cc65ed0b60c79666ee87ba))
+
 ## [0.12.0](https://github.com/Bardesss/setvault/compare/v0.11.4...v0.12.0) (2026-06-17)
 
 
