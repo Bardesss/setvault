@@ -4,6 +4,20 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0](https://github.com/Bardesss/setvault/compare/v0.11.4...v0.12.0) (2026-06-17)
+
+
+### Features
+
+* **frontend:** add a downloads page with live progress and retry ([315289c](https://github.com/Bardesss/setvault/commit/315289cf4e2c64b98ee91ede3b67c69a56a84d0c))
+* **ingest:** auto-provision default media root from mounted folder ([7886c6f](https://github.com/Bardesss/setvault/commit/7886c6f967758da83e74c315d0450f80d5568c53))
+* mounted livesets folder, downloads page, and thumbnail proxy ([a5e1eec](https://github.com/Bardesss/setvault/commit/a5e1eeca25ba54bd6c1fca6e8f05ad5e45e03190))
+
+
+### Bug Fixes
+
+* **search:** proxy external thumbnails so the CSP can render them ([4d6f63e](https://github.com/Bardesss/setvault/commit/4d6f63e139d077d39a8411b2a06781f63c3d4f0a))
+
 ## [0.11.4](https://github.com/Bardesss/setvault/compare/v0.11.3...v0.11.4) (2026-06-17)
 
 
