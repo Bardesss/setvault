@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import subprocess
 import uuid
 from datetime import UTC, datetime
 
 import pytest
-from setvault_core.jobs.url_rip_job import _run_rip_job, _set_status
+from setvault_core.jobs.url_rip_job import _error_text, _run_rip_job, _set_status
 from setvault_core.models.identity import User
 from setvault_core.models.url_rip import RipJob
 from setvault_core.services.passwords import hash_password
@@ -20,6 +21,18 @@ async def _make_user(session):
     session.add(user)
     await session.flush()
     return user
+
+
+def test_error_text_surfaces_subprocess_stderr():
+    """A failing ffmpeg/audiowaveform step must surface its stderr, not just
+    'returned non-zero exit status 1' — that's what makes a rip debuggable."""
+    exc = subprocess.CalledProcessError(
+        1, ["audiowaveform", "--input-format", "wav", "-i", "-"],
+        stderr=b"Error: Unknown input format\n",
+    )
+    text = _error_text(exc)
+    assert "audiowaveform" in text
+    assert "Unknown input format" in text
 
 
 @pytest.mark.asyncio
@@ -71,6 +84,8 @@ async def test_run_rip_job_failure_captures_error(session, monkeypatch):
     await _run_rip_job(session, job_id)
     await session.refresh(job)
     assert job.status == "failed"
-    # error_text is sanitized — raw "yt-dlp boom" must not leak to the client.
-    assert "yt-dlp boom" not in (job.error_text or "")
-    assert job.error_text  # but some user-safe text is set
+    # This is a self-hosted single-user app: surface the real exception (type +
+    # message) so failures are debuggable from the UI. Full traceback still goes
+    # to the worker log.
+    assert "yt-dlp boom" in (job.error_text or "")
+    assert "RuntimeError" in (job.error_text or "")

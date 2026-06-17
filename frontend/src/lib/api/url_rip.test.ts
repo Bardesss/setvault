@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isRipActive, hasActiveRips, canRetry, type RipJob } from "./url_rip";
+import { isRipActive, hasActiveRips, canRetry, replaceRipJob, type RipJob } from "./url_rip";
 
 function job(status: string): RipJob {
   return {
@@ -57,5 +57,29 @@ describe("canRetry", () => {
     expect(canRetry(job("ready"))).toBe(false);
     expect(canRetry(job("downloading"))).toBe(false);
     expect(canRetry(job("queued"))).toBe(false);
+  });
+});
+
+describe("replaceRipJob", () => {
+  it("drops the retried (old) job and puts the fresh one at the front", () => {
+    const failed = { ...job("failed"), id: "old" };
+    const other = { ...job("ready"), id: "other" };
+    const fresh = { ...job("queued"), id: "new" };
+
+    const result = replaceRipJob([failed, other], "old", fresh);
+
+    expect(result.map((j) => j.id)).toEqual(["new", "other"]);
+    // the old failed row is gone — Retry shows one row, not two
+    expect(result.some((j) => j.id === "old")).toBe(false);
+  });
+
+  it("still prepends the fresh job when the old id is not present", () => {
+    const other = { ...job("ready"), id: "other" };
+    const fresh = { ...job("queued"), id: "new" };
+
+    expect(replaceRipJob([other], "missing", fresh).map((j) => j.id)).toEqual([
+      "new",
+      "other",
+    ]);
   });
 });
