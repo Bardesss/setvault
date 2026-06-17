@@ -64,3 +64,43 @@ def verify_stream_sig(
         return False
     expected, _ = sign_stream_url(secret_key=secret_key, slug=slug, exp=exp)
     return hmac.compare_digest(expected, sig)
+
+
+# --- image-proxy signing -------------------------------------------------
+#
+# The image proxy fetches external thumbnails server-side so the strict CSP
+# (``img-src 'self'``) can keep blocking third-party hosts. Signing the target
+# URL means the proxy will only fetch URLs *we* issued — it can't be turned
+# into an open SSRF proxy for arbitrary attacker-supplied URLs.
+
+# Default TTL is generous: a cached search-results page should still render
+# its thumbnails a while later without re-signing.
+DEFAULT_IMAGE_TTL_SECONDS = 7 * 24 * 3600
+
+# Domain-separation prefix so an image signature can never be replayed as a
+# stream signature (or vice-versa) for the same string.
+_IMAGE_PREFIX = "img:"
+
+
+def sign_image_url(
+    *, secret_key: str, url: str, exp: int | None = None,
+    ttl_seconds: int = DEFAULT_IMAGE_TTL_SECONDS,
+) -> tuple[str, int]:
+    """Return ``(sig, exp)`` committing to the external image ``url``."""
+    if exp is None:
+        exp = _now() + int(ttl_seconds)
+    msg = f"{_IMAGE_PREFIX}{url}:{exp}".encode("utf-8")
+    digest = hmac.new(secret_key.encode("utf-8"), msg, hashlib.sha256).digest()
+    sig = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return sig, exp
+
+
+def verify_image_sig(*, secret_key: str, url: str, exp: int, sig: str) -> bool:
+    """Constant-time verification. Fails closed on stale ``exp``, mismatch, or
+    malformed input. Never raises."""
+    if not sig or not url:
+        return False
+    if exp < _now():
+        return False
+    expected, _ = sign_image_url(secret_key=secret_key, url=url, exp=exp)
+    return hmac.compare_digest(expected, sig)

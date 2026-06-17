@@ -15,6 +15,7 @@ from setvault_ingest_sources.registry import get_source
 from sqlalchemy import false, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.api.images import build_proxied_image_url
 from setvault_web.deps import current_user, db_session, require_admin
 from setvault_web.schemas.ingest_sources import (
     CandidateOut,
@@ -88,7 +89,8 @@ async def search(
             CandidateOut(
                 source_kind=c.source_kind, external_id=c.external_id, title=c.title,
                 uploader=c.uploader, duration_seconds=c.duration_seconds,
-                thumbnail_url=c.thumbnail_url, webpage_url=c.webpage_url,
+                thumbnail_url=build_proxied_image_url(c.thumbnail_url),
+                webpage_url=c.webpage_url,
                 already_in_library=_in_lib(c),
             )
             for c in cands
