@@ -40,6 +40,12 @@ class SystemConfig(Base):
     monitor_interval_seconds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=3600,
     )
+    # When true AND exactly one active user exists, the app auto-authenticates
+    # as that sole user (skips the login page). For trusted local/VPN use only;
+    # the admin toggle is gated to the single-user case (see api/admin.py).
+    single_user_auto_login: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
