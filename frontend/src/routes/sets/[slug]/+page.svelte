@@ -30,8 +30,13 @@
           {set.title}<span class="by"> — {artistNames}</span>
         </h1>
         <div class="set-meta">
-          <a href="/search?q={encodeURIComponent(artistNames)}">{artistNames}</a>
-          {#if set.venue}<span class="sep">@</span><span>{set.venue.name}</span>{/if}
+          {#if set.artists.length === 1}
+            <a href={`/artists/${set.artists[0].slug}`}>{set.artists[0].name}</a>
+          {:else}
+            <a href="/search?q={encodeURIComponent(artistNames)}">{artistNames}</a>
+          {/if}
+          {#if set.venue}<span class="sep">@</span><a href={`/venues/${set.venue.slug}`}>{set.venue.name}</a>{/if}
+          {#if set.party}<span class="sep">·</span><a href={`/parties/${set.party.slug}`}>{set.party.name}</a>{/if}
           {#if set.date}<span class="sep">·</span><span>{set.date}</span>{/if}
         </div>
       </div>
