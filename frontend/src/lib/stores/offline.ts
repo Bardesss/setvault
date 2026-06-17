@@ -93,6 +93,20 @@ export function setCap(bytes: number): void {
   offline.update((s) => ({ ...s, capBytes: bytes }));
 }
 
+// Drop every user-scoped cache (runtime API/page data + downloaded audio) so a
+// logout can't serve the prior session's data to the next user on a shared
+// browser. Static build chunks are not user-scoped and are left intact.
+export async function clearScopedCaches(): Promise<void> {
+  if (!browser || !("caches" in self)) return;
+  const names = await caches.keys();
+  await Promise.all(
+    names
+      .filter((n) => n.endsWith("-runtime") || n.endsWith("-audio"))
+      .map((n) => caches.delete(n)),
+  );
+  offline.update((s) => ({ ...s, usedBytes: 0 }));
+}
+
 export async function clearAudioCache(): Promise<void> {
   if (!browser) return;
   const cache = await findAudioCache();
