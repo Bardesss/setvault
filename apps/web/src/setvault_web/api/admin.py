@@ -6,7 +6,7 @@ import re
 import shutil
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from setvault_core.models.api_token import ApiToken
 from setvault_core.models.catalog import LiveSet, MediaRoot
 from setvault_core.models.enrichment import ProviderConfig
@@ -93,6 +93,7 @@ def _settings_out(config) -> SettingsOut:
         audit_retention_days=config.audit_retention_days,
         monitors_allow_all_users=config.monitors_allow_all_users,
         monitor_interval_seconds=config.monitor_interval_seconds,
+        single_user_auto_login=config.single_user_auto_login,
     )
 
 
@@ -118,6 +119,19 @@ async def update_settings(
         config.monitors_allow_all_users = body.monitors_allow_all_users
     if body.monitor_interval_seconds is not None:
         config.monitor_interval_seconds = body.monitor_interval_seconds
+    if body.single_user_auto_login is not None:
+        if body.single_user_auto_login:
+            # Only offerable in the single-user case: enabling it on a
+            # multi-user instance would silently drop auth for everyone.
+            active = (await session.execute(
+                select(func.count()).select_from(User).where(User.disabled_at.is_(None))
+            )).scalar_one()
+            if int(active) != 1:
+                raise HTTPException(
+                    status_code=422,
+                    detail="single-user auto-login requires exactly one active user",
+                )
+        config.single_user_auto_login = body.single_user_auto_login
     await session.flush()
     await session.commit()
     return _settings_out(config)

@@ -42,6 +42,26 @@
       settingsBusy = false;
     }
   }
+
+  // Auto-login is only meaningful (and only accepted by the API) when this is
+  // the sole account — hide the toggle otherwise.
+  $: singleUser = data.info.user_count === 1;
+
+  async function saveAutoLogin() {
+    if (!settings) return;
+    settingsBusy = true;
+    settingsError = null;
+    try {
+      settings = await updateSettings({
+        single_user_auto_login: settings.single_user_auto_login,
+      });
+    } catch (e) {
+      settingsError = e instanceof Error ? e.message : "failed";
+      if (settings) settings.single_user_auto_login = !settings.single_user_auto_login;
+    } finally {
+      settingsBusy = false;
+    }
+  }
 </script>
 
 <h2>System</h2>
@@ -90,6 +110,21 @@
     </div>
   {/if}
 </StatusBlock>
+
+{#if singleUser && settings}
+  <StatusBlock title={$_("settings.access_title")}>
+    <label class="settings-row">
+      <input
+        type="checkbox"
+        bind:checked={settings.single_user_auto_login}
+        disabled={settingsBusy}
+        on:change={saveAutoLogin}
+      />
+      {$_("settings.single_user_auto_login")}
+    </label>
+    <p class="hint">{$_("settings.single_user_auto_login_warning")}</p>
+  </StatusBlock>
+{/if}
 
 <StatusBlock title="Backup">
   <p class="hint">

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import secrets as _secrets
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from setvault_core.models.identity import User
 from setvault_core.services.passwords import verify_password
 from setvault_core.services.sessions import SESSION_COOKIE, SESSION_TTL, SessionSigner
+from setvault_core.services.single_user import single_user_auto_login_candidate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,10 +62,16 @@ async def login(
         )
     if user.disabled_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="account disabled")
-    cookie = signer.issue(str(user.id))
+    _issue_session(response, signer, user)
+    return LoginOut(user=UserOut.from_model(user))
+
+
+def _issue_session(response: Response, signer: SessionSigner, user: User) -> None:
+    """Set the signed session cookie + a fresh CSRF cookie for ``user``. Shared
+    by the password login and the single-user auto-login path."""
     secure = _cookie_secure()
     response.set_cookie(
-        SESSION_COOKIE, cookie,
+        SESSION_COOKIE, signer.issue(str(user.id)),
         httponly=True, secure=secure, samesite="lax",
         max_age=int(SESSION_TTL.total_seconds()), path="/",
     )
@@ -71,7 +79,25 @@ async def login(
         CSRF_COOKIE, _secrets.token_urlsafe(32),
         httponly=False, secure=secure, samesite="lax", path="/",
     )
-    return LoginOut(user=UserOut.from_model(user))
+
+
+async def _user_from_session(
+    session: AsyncSession, signer: SessionSigner, session_cookie: str | None,
+) -> User | None:
+    """Resolve the session user without raising (None when logged out)."""
+    if not session_cookie:
+        return None
+    data = signer.read(session_cookie)
+    if not data:
+        return None
+    try:
+        user_id = uuid.UUID(data.user_id)
+    except ValueError:
+        return None
+    user = await session.get(User, user_id)
+    if user is None or user.disabled_at is not None:
+        return None
+    return user
 
 
 @router.post("/logout", status_code=204)
@@ -82,5 +108,22 @@ async def logout(response: Response, _: Annotated[User, Depends(current_user)]):
 
 
 @router.get("/me", response_model=UserOut)
-async def me(user: Annotated[User, Depends(current_user)]):
+async def me(
+    response: Response,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    signer: Annotated[SessionSigner, Depends(get_signer)],
+    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+):
+    user = await _user_from_session(session, signer, session_cookie)
+    if user is None:
+        # Single-user auto-login: when enabled and exactly one active user
+        # exists, transparently establish a session as that sole user so the
+        # SPA never shows a login page.
+        user = await single_user_auto_login_candidate(session)
+        if user is not None:
+            _issue_session(response, signer, user)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="not authenticated"
+        )
     return UserOut.from_model(user)

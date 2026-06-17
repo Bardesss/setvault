@@ -4,6 +4,7 @@ export interface AdminSettings {
   audit_retention_days: number;
   monitors_allow_all_users: boolean;
   monitor_interval_seconds: number;
+  single_user_auto_login: boolean;
 }
 
 export function getSettings(): Promise<AdminSettings> {

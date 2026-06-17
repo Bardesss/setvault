@@ -66,7 +66,10 @@
     },
     "monitors_allow_all_users": "Allow all users to create monitors",
     "monitor_interval_seconds": "Poll interval (seconds)",
-    "save": "Save"
+    "save": "Save",
+    "access_title": "Access",
+    "single_user_auto_login": "Skip login (auto-sign-in as the only user)",
+    "single_user_auto_login_warning": "Only for trusted local/VPN use: while on, anyone who can reach this instance is signed in as you, with no password. Disabled automatically once a second user is added."
   },
   "nav": {
     "home": "Home",
@@ -175,7 +178,9 @@
   },
   "downloads": {
     "title": "My downloads",
-    "empty": "No downloads yet. Add a set from a URL to start one."
+    "empty": "No downloads yet. Add a set from a URL to start one.",
+    "clear_finished": "Clear finished",
+    "remove": "Remove from list"
   },
   "notes": {
     "heading": "Private notes",
