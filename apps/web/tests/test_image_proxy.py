@@ -47,7 +47,9 @@ async def test_requires_authentication(client):
 async def test_rejects_non_image_upstream(authed_admin_client, monkeypatch):
     monkeypatch.setattr("setvault_web.api.images._is_blocked_host", lambda h: False)
     respx.get(REMOTE).mock(
-        return_value=httpx.Response(200, content=b"<html>nope", headers={"content-type": "text/html"})
+        return_value=httpx.Response(
+            200, content=b"<html>nope", headers={"content-type": "text/html"}
+        )
     )
     r = await authed_admin_client.get(build_proxied_image_url(REMOTE))
     assert r.status_code == 502

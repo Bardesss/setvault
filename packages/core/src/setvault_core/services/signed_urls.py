@@ -89,7 +89,7 @@ def sign_image_url(
     """Return ``(sig, exp)`` committing to the external image ``url``."""
     if exp is None:
         exp = _now() + int(ttl_seconds)
-    msg = f"{_IMAGE_PREFIX}{url}:{exp}".encode("utf-8")
+    msg = f"{_IMAGE_PREFIX}{url}:{exp}".encode()
     digest = hmac.new(secret_key.encode("utf-8"), msg, hashlib.sha256).digest()
     sig = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
     return sig, exp
