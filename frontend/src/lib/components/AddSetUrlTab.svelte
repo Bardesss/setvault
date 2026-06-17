@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { _ } from "svelte-i18n";
   import { ApiError } from "$lib/api/client";
-  import { submitUrl, listMyRipJobs, type RipJob } from "$lib/api/url_rip";
+  import { submitUrl, listMyRipJobs, hasActiveRips, type RipJob } from "$lib/api/url_rip";
   import RipJobRow from "./RipJobRow.svelte";
 
   let url = "";
@@ -20,9 +20,7 @@
     }
   }
 
-  $: hasActive = jobs.some(
-    (j) => j.status !== "ready" && j.status !== "failed",
-  );
+  $: hasActive = hasActiveRips(jobs);
 
   onMount(async () => {
     disclaimerDismissed =
@@ -89,7 +87,7 @@
     <h3>{$_("url_rip.recent_rips")}</h3>
     <ul>
       {#each jobs as job (job.id)}
-        <li><RipJobRow {job} /></li>
+        <li><RipJobRow {job} on:retried={(e) => (jobs = [e.detail, ...jobs])} /></li>
       {/each}
     </ul>
   {/if}

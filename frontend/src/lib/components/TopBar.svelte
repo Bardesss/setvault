@@ -51,6 +51,11 @@
         <path d="M4 2h8v12l-4-3-4 3V2z" />
       </svg>
     </a>
+    <a class="btn btn-ghost btn-icon" href="/me/downloads" aria-label="Downloads">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 14h12" />
+      </svg>
+    </a>
     <div class="user-pip" aria-label="Account">{initial}</div>
   </div>
 </header>
