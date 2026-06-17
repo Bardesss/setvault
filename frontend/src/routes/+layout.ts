@@ -1,4 +1,5 @@
 import { redirect } from "@sveltejs/kit";
+import { isPublicRoute } from "$lib/auth/routes";
 import type { LayoutLoad } from "./$types";
 
 // Pure client-side SPA: the bundled image serves the static build via FastAPI,
@@ -28,7 +29,16 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
   }
 
   // No httpOnly cookie access on the client — ask the API. 401 ⇒ logged out.
+  // (When single-user auto-login is enabled, /api/auth/me establishes the
+  // session server-side and returns the user, so this won't 401.)
   const response = await fetch("/api/auth/me");
-  if (!response.ok) return { user: null };
+  if (!response.ok) {
+    // Logged out on a protected route → send them to the login page instead of
+    // rendering a bare logged-out shell.
+    if (!isPublicRoute(url.pathname)) {
+      throw redirect(303, "/login");
+    }
+    return { user: null };
+  }
   return { user: await response.json() };
 };
