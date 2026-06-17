@@ -52,6 +52,12 @@
       </svg>
       Bookmarks
     </a>
+    <a class="rail-link" class:active={active("/me/downloads")} href="/me/downloads">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
+        <path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2 14h12" />
+      </svg>
+      Downloads
+    </a>
     <a class="rail-link" class:active={active("/settings")} href="/settings">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true">
         <circle cx="8" cy="8" r="2" />

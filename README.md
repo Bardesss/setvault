@@ -48,7 +48,7 @@ The all-in-one image bundles Postgres, Redis, tusd, and a Caddy proxy. Five step
      -v setvault-data:/data \
      ghcr.io/bardesss/setvault:latest
    ```
-   No secrets to set — on first boot it generates its own, runs database migrations, and starts every service under s6-overlay.
+   No secrets to set — on first boot it generates its own, runs database migrations, creates the media library uploads and rips are stored in, and starts every service under s6-overlay.
 
 3. **Open the app** at **http://localhost:1970** (or `http://<server-ip>:1970`). Allow ~10–20 s on the very first boot while the database initializes.
 
@@ -82,6 +82,10 @@ Prefer a declarative file you can version and re-apply? Same bundled image, via 
          - "1970:1970"
        volumes:
          - setvault-data:/data
+         # Live sets are stored in the media library, created automatically on
+         # first boot inside the volume. To keep them on a separate disk instead,
+         # bind-mount it here:
+         # - /path/on/host:/data/media
        restart: unless-stopped
        # Internet-facing? Uncomment and front a TLS proxy:
        # environment:

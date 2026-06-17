@@ -52,3 +52,11 @@ until s6-setuidgid "${PUID:-1000}:${PGID:-1000}" /srv/.venv/bin/alembic upgrade 
   sleep 2
 done
 echo "[setvault] migrations up-to-date" >&2
+
+# 4) Seed the default media root from the mounted storage folder (both modes).
+# Radarr/Sonarr style: the volume bound at ${SETVAULT_MEDIA_PATH} is the library
+# and the app uses it with no Settings step. Idempotent — only seeds when no
+# media root exists yet, so an admin's own roots are never overridden.
+s6-setuidgid "${PUID:-1000}:${PGID:-1000}" \
+  /srv/.venv/bin/python -m setvault_core.jobs.seed_media_root \
+  || echo "[setvault] default media-root seed skipped (non-fatal)" >&2

@@ -81,6 +81,30 @@ async def test_search_merges_and_flags_in_library(
 
 
 @pytest.mark.asyncio
+async def test_search_proxies_external_thumbnails(authed_admin_client):
+    """Candidate thumbnails are rewritten to the same-origin signed proxy so the
+    strict CSP can keep blocking third-party image hosts; a missing thumbnail
+    passes through as null."""
+    from urllib.parse import unquote
+
+    cands = [
+        Candidate("youtube", "thumbed", "YT", "U", 60,
+                  "https://i.ytimg.com/vi/thumbed/hqdefault.jpg",
+                  "https://youtu.be/thumbed"),
+        Candidate("youtube", "nothumb", "YT2", "U", 60, None, "https://youtu.be/nothumb"),
+    ]
+    result = SimpleNamespace(candidates=cands, errored_kinds=[])
+    with patch("setvault_web.api.ingest_sources.search_all_sources", return_value=result):
+        r = await authed_admin_client.post("/api/ingest-sources/search", json={"q": "x"})
+    assert r.status_code == 200
+    items = {c["external_id"]: c for c in r.json()["items"]}
+    proxied = items["thumbed"]["thumbnail_url"]
+    assert proxied.startswith("/api/images/proxy")
+    assert "i.ytimg.com/vi/thumbed/hqdefault.jpg" in unquote(proxied)
+    assert items["nothumb"]["thumbnail_url"] is None
+
+
+@pytest.mark.asyncio
 async def test_admin_can_list_and_toggle_sources(authed_admin_client):
     r = await authed_admin_client.get("/api/admin/ingest-sources")
     assert r.status_code == 200

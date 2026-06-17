@@ -1,8 +1,28 @@
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
   import { _ } from "svelte-i18n";
-  import type { RipJob } from "$lib/api/url_rip";
+  import { ApiError } from "$lib/api/client";
+  import { submitUrl, canRetry, type RipJob } from "$lib/api/url_rip";
+
   export let job: RipJob;
   $: title = (job.probed_metadata?.title as string) ?? job.source_url;
+
+  const dispatch = createEventDispatcher<{ retried: RipJob }>();
+  let retrying = false;
+  let retryError: string | null = null;
+
+  async function retry() {
+    retrying = true;
+    retryError = null;
+    try {
+      const fresh = await submitUrl(job.source_url);
+      dispatch("retried", fresh);
+    } catch (e) {
+      retryError = e instanceof ApiError ? e.detail : $_("url_rip.retry_failed");
+    } finally {
+      retrying = false;
+    }
+  }
 </script>
 
 <article class="rip-row" data-status={job.status}>
@@ -17,6 +37,14 @@
   {/if}
   {#if job.status === "failed" && job.error_text}
     <p class="error">{job.error_text}</p>
+  {/if}
+  {#if canRetry(job)}
+    <div class="actions">
+      <button type="button" class="btn btn-ghost" on:click={retry} disabled={retrying}>
+        {retrying ? $_("url_rip.retrying") : $_("url_rip.retry")}
+      </button>
+      {#if retryError}<span class="error">{retryError}</span>{/if}
+    </div>
   {/if}
 </article>
 
@@ -37,4 +65,9 @@
   }
   progress { width: 100%; }
   .error { color: #c33; font-size: var(--ts-sm); }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
 </style>

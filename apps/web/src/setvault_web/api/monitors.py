@@ -24,6 +24,7 @@ from setvault_core.services.url_rip import DuplicateRipError, submit_rip
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from setvault_web.api.images import build_proxied_image_url
 from setvault_web.deps import db_session, require_can_monitor
 
 logger = logging.getLogger(__name__)
@@ -135,7 +136,7 @@ def _disc_out(d: MonitorDiscovery) -> DiscoveryOut:
         uploader=d.uploader,
         webpage_url=d.webpage_url,
         duration_seconds=d.duration_seconds,
-        thumbnail_url=d.thumbnail_url,
+        thumbnail_url=build_proxied_image_url(d.thumbnail_url),
         confidence=d.confidence,
         status=d.status,
         created_at=d.created_at,

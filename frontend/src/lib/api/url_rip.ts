@@ -22,6 +22,22 @@ interface RipJobsList {
   items: RipJob[];
 }
 
+/** Terminal rip statuses — a job in one of these is done and won't change. */
+const TERMINAL_STATUSES = new Set(["ready", "failed"]);
+
+/** True while a rip is still in flight (queued/probing/downloading/…), i.e.
+ * worth polling for updates. */
+export const isRipActive = (job: RipJob): boolean =>
+  !TERMINAL_STATUSES.has(job.status);
+
+/** True if any job in the list is still in flight — drives whether to keep
+ * polling the rip list. */
+export const hasActiveRips = (jobs: RipJob[]): boolean => jobs.some(isRipActive);
+
+/** True if a rip can be retried — only failed jobs (re-submitting the same URL
+ * is allowed because dedup explicitly excludes failed jobs). */
+export const canRetry = (job: RipJob): boolean => job.status === "failed";
+
 export const submitUrl = (url: string) =>
   api<RipJob>("/api/sets/url-rip", {
     method: "POST",

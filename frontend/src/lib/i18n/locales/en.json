@@ -173,6 +173,10 @@
     "remove": "Remove bookmark",
     "empty": "No bookmarks yet."
   },
+  "downloads": {
+    "title": "My downloads",
+    "empty": "No downloads yet. Add a set from a URL to start one."
+  },
   "notes": {
     "heading": "Private notes",
     "placeholder": "Notes — only you can see these. Markdown supported.",
@@ -226,6 +230,9 @@
     "submitting": "Submitting…",
     "recent_rips": "Recent rips",
     "open_set": "Open set →",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "retry_failed": "Retry failed",
     "dismiss": "Got it",
     "disclaimer": "yt-dlp downloads audio from third-party sites. Make sure you have the right to keep what you ingest — for personal use, public-domain works, or content you have a license for. SetVault doesn't enforce platform ToS.",
     "status": {
