@@ -4,18 +4,23 @@
   import EntitySetsGrid from "$lib/components/EntitySetsGrid.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import { patchSeries } from "$lib/api/catalog";
+  import { ApiError } from "$lib/api/client";
   import type { PageData } from "./$types";
 
   export let data: PageData;
   $: series = data.series;
   let editing = false, busy = false;
+  let saveError: string | null = null;
   let form = { name: "", description: "" };
   function startEdit() { form = { name: series.name, description: series.description ?? "" }; editing = true; }
   async function save() {
+    saveError = null;
     busy = true;
     try {
       series = await patchSeries(series.slug, { name: form.name, description: form.description || null });
       editing = false;
+    } catch (e) {
+      saveError = e instanceof ApiError ? e.detail : "Save failed";
     } finally { busy = false; }
   }
 </script>
@@ -31,6 +36,7 @@
     <form class="entity-edit" on:submit|preventDefault={save}>
       <label>{$_("catalog.name")}<input bind:value={form.name} required /></label>
       <label>{$_("catalog.description")}<textarea bind:value={form.description}></textarea></label>
+      {#if saveError}<p class="error" role="alert">{saveError}</p>{/if}
       <div class="actions">
         <button class="btn btn-primary" type="submit" disabled={busy}>{$_("catalog.save")}</button>
         <button class="btn btn-ghost" type="button" on:click={() => (editing = false)}>{$_("catalog.cancel")}</button>
@@ -47,4 +53,5 @@
   .entity-edit { display: grid; gap: var(--sp-3); max-width: 480px; }
   .entity-edit label { display: grid; gap: var(--sp-1); }
   .actions { display: flex; gap: var(--sp-2); }
+  .error { color: #c33; font-size: var(--ts-sm); }
 </style>

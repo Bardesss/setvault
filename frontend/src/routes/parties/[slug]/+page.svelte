@@ -4,18 +4,23 @@
   import EntitySetsGrid from "$lib/components/EntitySetsGrid.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import { patchParty } from "$lib/api/catalog";
+  import { ApiError } from "$lib/api/client";
   import type { PageData } from "./$types";
 
   export let data: PageData;
   $: party = data.party;
   let editing = false, busy = false;
+  let saveError: string | null = null;
   let form = { name: "", date: "", description: "" };
   function startEdit() { form = { name: party.name, date: party.date ?? "", description: party.description ?? "" }; editing = true; }
   async function save() {
+    saveError = null;
     busy = true;
     try {
       party = await patchParty(party.slug, { name: form.name, date: form.date || null, description: form.description || null });
       editing = false;
+    } catch (e) {
+      saveError = e instanceof ApiError ? e.detail : "Save failed";
     } finally { busy = false; }
   }
 </script>
@@ -32,6 +37,7 @@
       <label>{$_("catalog.name")}<input bind:value={form.name} required /></label>
       <label>{$_("catalog.date")}<input type="date" bind:value={form.date} /></label>
       <label>{$_("catalog.description")}<textarea bind:value={form.description}></textarea></label>
+      {#if saveError}<p class="error" role="alert">{saveError}</p>{/if}
       <div class="actions">
         <button class="btn btn-primary" type="submit" disabled={busy}>{$_("catalog.save")}</button>
         <button class="btn btn-ghost" type="button" on:click={() => (editing = false)}>{$_("catalog.cancel")}</button>
@@ -56,4 +62,5 @@
   .entity-edit label { display: grid; gap: var(--sp-1); }
   .actions { display: flex; gap: var(--sp-2); }
   .muted { color: var(--text-faint); }
+  .error { color: #c33; font-size: var(--ts-sm); }
 </style>
