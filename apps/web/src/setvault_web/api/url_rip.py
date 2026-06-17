@@ -14,7 +14,7 @@ from setvault_core.models.url_rip import RipJob
 from setvault_core.schemas.url_rip import RipJobOut, RipJobsListOut, RipSubmitIn
 from setvault_core.services import url_rip as _service
 from setvault_core.services.audit import log as audit_log
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from setvault_web.deps import current_user, db_session
@@ -141,3 +141,38 @@ async def my_rip_jobs(
         _to_out(r, live_set_slug=sets_by_id.get(r.live_set_id) if r.live_set_id else None)
         for r in rows
     ])
+
+
+_TERMINAL_STATUSES = ("ready", "failed")
+
+
+@router.delete("/api/me/rip-jobs", status_code=204)
+async def clear_my_finished_rip_jobs(
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    """Clear the caller's finished (ready/failed) rips from their history.
+    In-progress jobs are left alone so a running worker job is never orphaned.
+    Removes only the RipJob rows — any resulting LiveSet is untouched."""
+    await session.execute(
+        delete(RipJob).where(
+            RipJob.submitted_by == user.id,
+            RipJob.status.in_(_TERMINAL_STATUSES),
+        )
+    )
+    await session.commit()
+
+
+@router.delete("/api/me/rip-jobs/{job_id}", status_code=204)
+async def delete_my_rip_job(
+    job_id: uuid.UUID,
+    user: Annotated[User, Depends(current_user)],
+    session: Annotated[AsyncSession, Depends(db_session)],
+):
+    """Remove one of the caller's rips from their history. 404 (not 403) when
+    the job is missing or owned by another user, so ids can't be probed."""
+    job = await session.get(RipJob, job_id)
+    if job is None or job.submitted_by != user.id:
+        raise HTTPException(status_code=404, detail="not found")
+    await session.delete(job)
+    await session.commit()

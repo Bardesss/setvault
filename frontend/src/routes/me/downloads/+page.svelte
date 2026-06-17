@@ -3,11 +3,30 @@
   import { _ } from "svelte-i18n";
   import RipJobRow from "$lib/components/RipJobRow.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
-  import { listMyRipJobs, hasActiveRips, type RipJob } from "$lib/api/url_rip";
+  import {
+    listMyRipJobs,
+    hasActiveRips,
+    isRipActive,
+    deleteRipJob,
+    clearFinishedRipJobs,
+    type RipJob,
+  } from "$lib/api/url_rip";
 
   let jobs: RipJob[] = [];
   let loaded = false;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  $: hasFinished = jobs.some((j) => !isRipActive(j));
+
+  async function remove(id: string) {
+    await deleteRipJob(id);
+    jobs = jobs.filter((j) => j.id !== id);
+  }
+
+  async function clearFinished() {
+    await clearFinishedRipJobs();
+    jobs = jobs.filter(isRipActive);
+  }
 
   async function refresh() {
     try {
@@ -39,19 +58,41 @@
 
 <svelte:head><title>{$_("downloads.title")} — SetVault</title></svelte:head>
 
-<h2>{$_("downloads.title")}</h2>
+<header class="downloads-head">
+  <h2>{$_("downloads.title")}</h2>
+  {#if hasFinished}
+    <button type="button" class="btn btn-ghost" on:click={clearFinished}>
+      {$_("downloads.clear_finished")}
+    </button>
+  {/if}
+</header>
 
 {#if loaded && jobs.length === 0}
   <EmptyState message={$_("downloads.empty")} />
 {:else}
   <ul class="downloads-list">
     {#each jobs as job (job.id)}
-      <li><RipJobRow {job} on:retried={(e) => onRetried(e.detail)} /></li>
+      <li class="download-item">
+        <RipJobRow {job} on:retried={(e) => onRetried(e.detail)} />
+        <button
+          type="button"
+          class="remove"
+          aria-label={$_("downloads.remove")}
+          title={$_("downloads.remove")}
+          on:click={() => remove(job.id)}
+        >×</button>
+      </li>
     {/each}
   </ul>
 {/if}
 
 <style>
+  .downloads-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+  }
   .downloads-list {
     list-style: none;
     margin: 0;
@@ -59,4 +100,20 @@
     display: grid;
     gap: var(--sp-2);
   }
+  .download-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: var(--sp-2);
+  }
+  .remove {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: var(--ts-lg);
+    line-height: 1;
+    cursor: pointer;
+    padding: var(--sp-1);
+  }
+  .remove:hover { color: var(--text-default); }
 </style>

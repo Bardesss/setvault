@@ -49,3 +49,11 @@ export const listMyRipJobs = async (status?: "active" | "all"): Promise<RipJob[]
   const r = await api<RipJobsList>(`/api/me/rip-jobs${qs}`);
   return r.items;
 };
+
+/** Remove one rip from the caller's history. */
+export const deleteRipJob = (id: string) =>
+  api<void>(`/api/me/rip-jobs/${id}`, { method: "DELETE" });
+
+/** Clear the caller's finished (ready/failed) rips; in-progress jobs are kept. */
+export const clearFinishedRipJobs = () =>
+  api<void>("/api/me/rip-jobs", { method: "DELETE" });
