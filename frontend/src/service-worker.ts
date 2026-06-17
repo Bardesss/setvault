@@ -44,13 +44,18 @@ sw.addEventListener("fetch", (event) => {
   if (url.origin !== sw.location.origin) return;  // skip cross-origin
 
   const strategy = chooseStrategy(url.pathname, PRECACHE_URLS);
-  if (strategy === "api" || strategy === "bypass") return;
+  if (strategy === "bypass") return;
 
   if (strategy === "static") {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
   } else if (strategy === "audio") {
     event.respondWith(audioCacheFirst(request));
   } else {
+    // "navigation" + "api": network-first. Online always wins (auth/data stay
+    // fresh); the runtime cache is an offline fallback only. As an SPA, page
+    // content comes from /api GETs, so they need the same offline fallback the
+    // page documents already get — otherwise an offline reload renders an
+    // empty shell.
     event.respondWith(networkFirst(request, RUNTIME_CACHE));
   }
 });

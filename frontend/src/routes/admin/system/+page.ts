@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import type { PageServerLoad } from "./$types";
+import type { PageLoad } from "./$types";
 
 export interface SystemInfo {
   version: string;
@@ -8,10 +8,7 @@ export interface SystemInfo {
   env: Record<string, string>;
 }
 
-export const load: PageServerLoad = async ({ fetch, cookies }) => {
-  if (!cookies.get("session")) {
-    throw error(401, "Not authenticated");
-  }
+export const load: PageLoad = async ({ fetch }) => {
   const response = await fetch("/api/admin/system");
   if (!response.ok) {
     throw error(response.status, "Failed to load system info");
