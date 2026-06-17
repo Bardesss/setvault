@@ -4,7 +4,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from setvault_core.models.catalog import Artist, Party, Series, Venue
+from setvault_core.models.catalog import Artist, LiveSet, Party, Series, Venue
 from setvault_core.schemas.catalog import (
     ArtistIn,
     ArtistOut,
@@ -15,7 +15,7 @@ from setvault_core.schemas.catalog import (
     VenueIn,
     VenueOut,
 )
-from setvault_core.services.catalog import slugify
+from setvault_core.services.catalog import list_sets_for_entity, slugify
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -232,3 +232,45 @@ async def get_party(
     if row is None:
         raise HTTPException(status_code=404, detail="party not found")
     return _party_out(row)
+
+
+# -------- Sets by entity --------
+
+_KIND_MODEL = {"artists": Artist, "venues": Venue, "parties": Party, "series": Series}
+_KIND_NAME = {"artists": "artist", "venues": "venue", "parties": "party", "series": "series"}
+
+
+def _set_summary_dict(ls: LiveSet) -> dict:
+    """Return a minimal set summary dict for the sets-by-entity endpoint.
+
+    SetSummaryOut lacks venue; SetDetailOut is too heavy to build here (needs
+    stream URLs). We return a plain dict with the fields the frontend needs.
+    """
+    return {
+        "slug": ls.slug,
+        "title": ls.title,
+        "artists": [
+            {"id": str(la.artist.id), "name": la.artist.name, "slug": la.artist.slug}
+            for la in ls.artists
+        ],
+        "venue": {"name": ls.venue.name, "slug": ls.venue.slug} if ls.venue else None,
+        "date": ls.date.isoformat() if ls.date else None,
+        "duration_seconds": ls.duration_seconds,
+    }
+
+
+@router.get("/{kind}/{slug}/sets")
+async def entity_sets(
+    kind: str,
+    slug: str,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    model = _KIND_MODEL.get(kind)
+    if model is None:
+        raise HTTPException(status_code=404, detail="unknown entity kind")
+    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="not found")
+    sets = await list_sets_for_entity(session, kind=_KIND_NAME[kind], entity_id=row.id)
+    return {"items": [_set_summary_dict(s) for s in sets]}
