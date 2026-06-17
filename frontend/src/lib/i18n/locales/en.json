@@ -274,5 +274,19 @@
       "quota": "device limit",
       "clear": "Clear cache"
     }
+  },
+  "catalog": {
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "name": "Name",
+    "country": "Country",
+    "city": "City / area",
+    "website": "Website",
+    "bio": "Bio",
+    "description": "Description",
+    "date": "Date",
+    "sets": "Sets",
+    "no_sets": "No sets reference this yet."
   }
 }

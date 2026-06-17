@@ -68,3 +68,34 @@ class PartyOut(BaseModel):
     series: SeriesOut | None
     date: _date | None
     description: str | None
+
+
+class ArtistPatchIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    country: str | None = Field(default=None, max_length=8)
+    bio: str | None = None
+    aliases: list[str] | None = None
+    image_url: str | None = None
+
+
+class VenuePatchIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    kind: VenueKind | None = None
+    city_or_area: str | None = None
+    country: str | None = None
+    capacity: int | None = None
+    website: str | None = None
+
+
+class SeriesPatchIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    image_url: str | None = None
+
+
+class PartyPatchIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    venue_id: str | None = None
+    series_id: str | None = None
+    date: _date | None = None
+    description: str | None = None

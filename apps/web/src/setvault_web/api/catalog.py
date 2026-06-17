@@ -4,18 +4,24 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from setvault_core.models.catalog import Artist, Party, Series, Venue
+from setvault_core.models.catalog import Artist, LiveSet, Party, Series, Venue
+from setvault_core.models.identity import User
 from setvault_core.schemas.catalog import (
     ArtistIn,
     ArtistOut,
+    ArtistPatchIn,
     PartyIn,
     PartyOut,
+    PartyPatchIn,
     SeriesIn,
     SeriesOut,
+    SeriesPatchIn,
     VenueIn,
     VenueOut,
+    VenuePatchIn,
 )
-from setvault_core.services.catalog import slugify
+from setvault_core.services.audit import log as audit_log
+from setvault_core.services.catalog import list_sets_for_entity, slugify
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -232,3 +238,185 @@ async def get_party(
     if row is None:
         raise HTTPException(status_code=404, detail="party not found")
     return _party_out(row)
+
+
+# -------- Helpers --------
+
+
+async def _get_by_slug(session, model, slug):
+    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return row
+
+
+# -------- Entity edits --------
+
+
+@router.patch("/artists/{slug}", response_model=ArtistOut)
+async def edit_artist(
+    slug: str,
+    body: ArtistPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    user: Annotated[User, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Artist, slug)
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        if field == "aliases" and value is None:
+            continue  # treat null as "no change" — column is NOT NULL
+        setattr(row, field, value)
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="artist.edited",
+        target_type=Artist.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
+    return _artist_out(row)
+
+
+@router.patch("/venues/{slug}", response_model=VenueOut)
+async def edit_venue(
+    slug: str,
+    body: VenuePatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    user: Annotated[User, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Venue, slug)
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        setattr(row, field, value)
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="venue.edited",
+        target_type=Venue.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
+    return _venue_out(row)
+
+
+@router.patch("/series/{slug}", response_model=SeriesOut)
+async def edit_series(
+    slug: str,
+    body: SeriesPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    user: Annotated[User, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Series, slug)
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        setattr(row, field, value)
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="series.edited",
+        target_type=Series.__name__,
+        target_id=str(row.id),
+        after=patch,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
+    return _series_out(row)
+
+
+@router.patch("/parties/{slug}", response_model=PartyOut)
+async def edit_party(
+    slug: str,
+    body: PartyPatchIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    user: Annotated[User, Depends(current_user)],
+):
+    row = await _get_by_slug(session, Party, slug)
+    patch = body.model_dump(exclude_unset=True)
+    try:
+        for field in ("venue_id", "series_id"):
+            if field in patch and patch[field] is not None:
+                patch[field] = uuid.UUID(patch[field])
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="invalid venue_id or series_id"
+        ) from exc
+    for field, value in patch.items():
+        setattr(row, field, value)
+    await audit_log(
+        session,
+        actor_user_id=user.id,
+        action="party.edited",
+        target_type=Party.__name__,
+        target_id=str(row.id),
+        after=body.model_dump(exclude_unset=True),
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="could not save — conflicting or invalid value"
+        ) from exc
+    await session.refresh(row, attribute_names=["venue", "series"])
+    return _party_out(row)
+
+
+# -------- Sets by entity --------
+
+_KIND_MODEL = {"artists": Artist, "venues": Venue, "parties": Party, "series": Series}
+_KIND_NAME = {"artists": "artist", "venues": "venue", "parties": "party", "series": "series"}
+
+
+def _set_summary_dict(ls: LiveSet) -> dict:
+    """Return a minimal set summary dict for the sets-by-entity endpoint.
+
+    SetSummaryOut lacks venue; SetDetailOut is too heavy to build here (needs
+    stream URLs). We return a plain dict with the fields the frontend needs.
+    """
+    return {
+        "slug": ls.slug,
+        "title": ls.title,
+        "artists": [
+            {"id": str(la.artist.id), "name": la.artist.name, "slug": la.artist.slug}
+            for la in ls.artists
+        ],
+        "venue": {"name": ls.venue.name, "slug": ls.venue.slug} if ls.venue else None,
+        "date": ls.date.isoformat() if ls.date else None,
+        "duration_seconds": ls.duration_seconds,
+    }
+
+
+@router.get("/{kind}/{slug}/sets")
+async def entity_sets(
+    kind: str,
+    slug: str,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(current_user)],
+):
+    model = _KIND_MODEL.get(kind)
+    if model is None:
+        raise HTTPException(status_code=404, detail="unknown entity kind")
+    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="not found")
+    sets = await list_sets_for_entity(session, kind=_KIND_NAME[kind], entity_id=row.id)
+    return {"items": [_set_summary_dict(s) for s in sets]}
