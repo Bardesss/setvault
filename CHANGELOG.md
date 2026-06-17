@@ -4,6 +4,28 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0](https://github.com/Bardesss/setvault/compare/v0.13.0...v0.14.0) (2026-06-17)
+
+
+### Features
+
+* catalog entity pages + edit (D1) ([f1ba73e](https://github.com/Bardesss/setvault/commit/f1ba73e04d353b2acb0947e29e65ec0a0b980920))
+* **catalog:** artist detail page with edit ([ea17aae](https://github.com/Bardesss/setvault/commit/ea17aae694d9a3beb98b93a3d21b02508fd6ff86))
+* **catalog:** EntitySetsGrid component ([d919f24](https://github.com/Bardesss/setvault/commit/d919f2403809c3fa88d654c8ca1e69d2a72ee580))
+* **catalog:** frontend catalog API client ([441470e](https://github.com/Bardesss/setvault/commit/441470e8a633b511cd55d47cd3225f37521da795))
+* **catalog:** GET /{kind}/{slug}/sets endpoint ([03c6420](https://github.com/Bardesss/setvault/commit/03c64204faeb54a55fd18cc46064478d63513c09))
+* **catalog:** link entity names to detail pages + i18n ([3138b89](https://github.com/Bardesss/setvault/commit/3138b89fc612aab8ba7dfcfcdb77ba7b34bf49e2))
+* **catalog:** list_sets_for_entity service ([4ce7ec1](https://github.com/Bardesss/setvault/commit/4ce7ec14f884c640c617d7959eb40db390616315))
+* **catalog:** member edit (PATCH) for entities ([af6da1d](https://github.com/Bardesss/setvault/commit/af6da1dd3c49eb1aea61a538ed83462fff31524a))
+* **catalog:** partial-update patch schemas ([de83b8c](https://github.com/Bardesss/setvault/commit/de83b8c4c51f386b93dddd8afb66f5061cb68ed6))
+* **catalog:** venue, party, series detail pages with edit ([963db2c](https://github.com/Bardesss/setvault/commit/963db2c861f78a64d5c067888e1dda02ae60f715))
+
+
+### Bug Fixes
+
+* **catalog:** robust edit endpoints (409/422 on bad input) + audit-log edits ([7400a16](https://github.com/Bardesss/setvault/commit/7400a16293d3d7302c73da75cad76772bef7a9b0))
+* **catalog:** surface edit-save errors on entity pages ([454a0bc](https://github.com/Bardesss/setvault/commit/454a0bc7709365b5bb5314ff2362900cc3e0103a))
+
 ## [0.13.0](https://github.com/Bardesss/setvault/compare/v0.12.0...v0.13.0) (2026-06-17)
 
 
