@@ -4,6 +4,33 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0](https://github.com/Bardesss/setvault/compare/v0.14.1...v0.15.0) (2026-06-18)
+
+
+### Features
+
+* catalog curation — merge/dedup/delete + artist enrich (D2) ([a88df20](https://github.com/Bardesss/setvault/commit/a88df2092ed57218a9cc8f45ca48ea94c73d208f))
+* **catalog:** admin catalog API client ([e7a681e](https://github.com/Bardesss/setvault/commit/e7a681e570532123dfb0cfa0cbde7edc46b9b51a))
+* **catalog:** admin Catalog tab (browse, dedup, merge, delete) ([22967b1](https://github.com/Bardesss/setvault/commit/22967b1f906bc41a39648bfe50775fe76c18448c))
+* **catalog:** admin list + duplicate-suggestions API ([b6136c7](https://github.com/Bardesss/setvault/commit/b6136c7fede8ce13490b4ff5d6a4295c1cc969be))
+* **catalog:** artist enrich button + admin merge e2e ([a20979c](https://github.com/Bardesss/setvault/commit/a20979c7076d52f2e077fe3d08621db659467eda))
+* **catalog:** artist enrichment service (locking-aware) ([b3654de](https://github.com/Bardesss/setvault/commit/b3654de7df0bb8086f33ecc745f8b0936d39c9f6))
+* **catalog:** duplicate-cluster detection by normalized name ([2706cb3](https://github.com/Bardesss/setvault/commit/2706cb332f70c4ffc91948378ba803c0466fab76))
+* **catalog:** hide tombstoned entities from reads ([90bf192](https://github.com/Bardesss/setvault/commit/90bf192e1b6a1661ba2cebdc652b7f7beefb3b00))
+* **catalog:** list merged entities + Unmerge action in admin tab ([c0ff787](https://github.com/Bardesss/setvault/commit/c0ff787dec3e64f141622fc3871d696fd4c28169))
+* **catalog:** merge/unmerge/delete + artist enrich endpoints ([910a3cb](https://github.com/Bardesss/setvault/commit/910a3cb28eab3436372d37de7c0ceefe6af48777))
+* **catalog:** reversible entity merge service ([f06cecf](https://github.com/Bardesss/setvault/commit/f06cecfbebc6fa02ba11d355cdfa68e5cd5d7056))
+* **catalog:** reversible-merge tombstone columns ([ccda3f0](https://github.com/Bardesss/setvault/commit/ccda3f0a9e9bb2142bf9ed841b0baded48679e1a))
+* **catalog:** unmerge replays the merge manifest ([3b42d6e](https://github.com/Bardesss/setvault/commit/3b42d6e5db5397d0a801978f455797dabd83d34e))
+
+
+### Bug Fixes
+
+* **catalog:** merge raises ValueError on unknown kind ([f4a3dc6](https://github.com/Bardesss/setvault/commit/f4a3dc665a9559b4a0a21b2125dd2df7d7a1d1bc))
+* **catalog:** surface artist enrich failures to the user ([44bfc2a](https://github.com/Bardesss/setvault/commit/44bfc2ac86be904cd289ccee8500ab1aeefa08e8))
+* **catalog:** unmerge compares artist_id as UUID not str ([41ee9ef](https://github.com/Bardesss/setvault/commit/41ee9efd748ad240453c50140d0568885c76e8b7))
+* **catalog:** unmerge round-trip tests for venue + dropped-join; 400 on bad survivor_id ([87a5842](https://github.com/Bardesss/setvault/commit/87a58426a060b444b30fda8046cd9ae9f6e44c12))
+
 ## [0.14.1](https://github.com/Bardesss/setvault/compare/v0.14.0...v0.14.1) (2026-06-17)
 
 
