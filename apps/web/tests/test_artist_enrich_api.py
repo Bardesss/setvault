@@ -28,3 +28,10 @@ async def test_enrich_endpoint_returns_written(authed_admin_client, an_artist):
         r = await authed_admin_client.post(f"/api/catalog/artists/{an_artist}/enrich")
     assert r.status_code == 200
     assert r.json()["written"] == ["bio"]
+
+
+@pytest.mark.asyncio
+async def test_enrich_requires_auth(client, an_artist):
+    # enrich is member-level (current_user); an anonymous caller must be rejected
+    r = await client.post(f"/api/catalog/artists/{an_artist}/enrich")
+    assert r.status_code in (401, 403)
