@@ -97,6 +97,8 @@ async def merge_entities(
 ):
     if survivor_id == loser_id:
         raise ValueError("cannot merge an entity into itself")
+    if kind not in _MODEL:
+        raise ValueError(f"unknown kind: {kind!r}")
     model = _MODEL[kind]
     survivor = await session.get(model, survivor_id)
     loser = await session.get(model, loser_id)

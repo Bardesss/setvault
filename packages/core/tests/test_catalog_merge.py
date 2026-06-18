@@ -104,3 +104,13 @@ async def test_merge_rejects_same_id(session):
     await s.commit()
     with pytest.raises(ValueError):
         await merge_entities(s, kind="artist", survivor_id=a.id, loser_id=a.id, actor_id=None)
+
+
+async def test_merge_rejects_unknown_kind(session):
+    s = session
+    a = Artist(name="K", slug=f"k-{uuid.uuid4().hex[:6]}")
+    b = Artist(name="K2", slug=f"k2-{uuid.uuid4().hex[:6]}")
+    s.add_all([a, b])
+    await s.commit()
+    with pytest.raises(ValueError):
+        await merge_entities(s, kind="bogus", survivor_id=a.id, loser_id=b.id, actor_id=None)
