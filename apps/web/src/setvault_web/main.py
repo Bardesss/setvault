@@ -12,6 +12,7 @@ from setvault_web.api import backup as backup_api
 from setvault_web.api import bookmarks as bookmarks_api
 from setvault_web.api import bulk_action as bulk_action_api
 from setvault_web.api import catalog as catalog_api
+from setvault_web.api import catalog_admin as catalog_admin_api
 from setvault_web.api import comments as comments_api
 from setvault_web.api import connectors as connectors_api
 from setvault_web.api import dev_seed as dev_seed_api
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(media_roots_api.router)
     app.include_router(uploads_api.router)
     app.include_router(catalog_api.router)
+    app.include_router(catalog_admin_api.router)
     app.include_router(sets_api.router)
     app.include_router(tracklist_api.router)
     app.include_router(enrichment_api.router)
