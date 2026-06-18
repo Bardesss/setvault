@@ -155,7 +155,7 @@ async def unmerge_entity(
             await session.execute(
                 update(LiveSetArtist)
                 .where(LiveSetArtist.live_set_id.in_([uuid.UUID(i) for i in ids]),
-                       LiveSetArtist.artist_id == manifest["survivor_id"])
+                       LiveSetArtist.artist_id == uuid.UUID(manifest["survivor_id"]))
                 .values(artist_id=loser_id)
             )
         elif table_col == "tracks.primary_artist_id":
