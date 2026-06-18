@@ -4,6 +4,14 @@ All notable changes to SetVault are documented here. Format adheres to
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1](https://github.com/Bardesss/setvault/compare/v0.15.0...v0.15.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **transcode:** force opus muxer so .opus.tmp output works ([f0b9cbb](https://github.com/Bardesss/setvault/commit/f0b9cbb4df307da9bf462a49308253766fb475c4))
+* **transcode:** force opus muxer so .opus.tmp output works ([aab9655](https://github.com/Bardesss/setvault/commit/aab96557633a14b425c91311b16573aad30ae54e))
+
 ## [0.15.0](https://github.com/Bardesss/setvault/compare/v0.14.1...v0.15.0) (2026-06-18)
 
 
