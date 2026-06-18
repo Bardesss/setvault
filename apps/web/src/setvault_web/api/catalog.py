@@ -451,7 +451,10 @@ async def merge_entity_endpoint(
     model = _KIND_MODEL.get(kind)
     if name is None or model is None:
         raise HTTPException(status_code=404, detail="unknown kind")
-    survivor_id = uuid.UUID(body.survivor_id)
+    try:
+        survivor_id = uuid.UUID(body.survivor_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid survivor_id") from exc
     if dry_run:
         survivor = await session.get(model, survivor_id)
         loser = await session.get(model, loser_id)
