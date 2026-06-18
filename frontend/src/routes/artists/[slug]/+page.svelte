@@ -3,6 +3,7 @@
   import EntitySetsGrid from "$lib/components/EntitySetsGrid.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import { patchArtist } from "$lib/api/catalog";
+  import { enrichArtist } from "$lib/api/catalog_admin";
   import { ApiError } from "$lib/api/client";
   import type { PageData } from "./$types";
 
@@ -33,6 +34,13 @@
       busy = false;
     }
   }
+
+  let enriching = false;
+  async function enrich() {
+    enriching = true;
+    try { await enrichArtist(artist.slug); location.reload(); }
+    finally { enriching = false; }
+  }
 </script>
 
 <svelte:head><title>{artist.name} — SetVault</title></svelte:head>
@@ -42,6 +50,7 @@
     <h1>{artist.name}</h1>
     {#if !editing}
       <button class="btn btn-ghost" on:click={startEdit}>{$_("catalog.edit")}</button>
+      <button class="btn btn-ghost" on:click={enrich} disabled={enriching}>{$_("catalog.enrich")}</button>
     {/if}
   </header>
 
