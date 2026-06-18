@@ -111,7 +111,9 @@ async def get_artist(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Artist).where(Artist.slug == slug))
+        await session.execute(
+            select(Artist).where(Artist.slug == slug, Artist.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="artist not found")
@@ -152,7 +154,9 @@ async def get_venue(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Venue).where(Venue.slug == slug))
+        await session.execute(
+            select(Venue).where(Venue.slug == slug, Venue.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="venue not found")
@@ -190,7 +194,9 @@ async def get_series(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Series).where(Series.slug == slug))
+        await session.execute(
+            select(Series).where(Series.slug == slug, Series.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="series not found")
@@ -233,7 +239,9 @@ async def get_party(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Party).where(Party.slug == slug))
+        await session.execute(
+            select(Party).where(Party.slug == slug, Party.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="party not found")
@@ -244,7 +252,9 @@ async def get_party(
 
 
 async def _get_by_slug(session, model, slug):
-    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    row = (await session.execute(
+        select(model).where(model.slug == slug, model.merged_into_id.is_(None))
+    )).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
     return row
@@ -415,7 +425,9 @@ async def entity_sets(
     model = _KIND_MODEL.get(kind)
     if model is None:
         raise HTTPException(status_code=404, detail="unknown entity kind")
-    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    row = (await session.execute(
+        select(model).where(model.slug == slug, model.merged_into_id.is_(None))
+    )).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
     sets = await list_sets_for_entity(session, kind=_KIND_NAME[kind], entity_id=row.id)
