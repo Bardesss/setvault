@@ -4,8 +4,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from setvault_core.models.catalog import Artist, LiveSet, Party, Series, Venue
+from pydantic import BaseModel
+from setvault_core.models.catalog import Artist, LiveSet, LiveSetArtist, Party, Series, Venue
+from setvault_core.models.enrichment import ProviderConfig
 from setvault_core.models.identity import User
+from setvault_core.models.tracklist import Track
 from setvault_core.schemas.catalog import (
     ArtistIn,
     ArtistOut,
@@ -20,13 +23,18 @@ from setvault_core.schemas.catalog import (
     VenueOut,
     VenuePatchIn,
 )
+from setvault_core.services.artist_enrich import enrich_artist_entity
 from setvault_core.services.audit import log as audit_log
 from setvault_core.services.catalog import list_sets_for_entity, slugify
+from setvault_core.services.catalog_merge import merge_entities, unmerge_entity
+from setvault_core.services.enrichment import select_providers_for_capability
+from setvault_providers.base import Capability
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from setvault_web.deps import current_user, db_session
+from setvault_web.config import get_settings
+from setvault_web.deps import current_user, db_session, require_admin
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -111,7 +119,9 @@ async def get_artist(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Artist).where(Artist.slug == slug))
+        await session.execute(
+            select(Artist).where(Artist.slug == slug, Artist.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="artist not found")
@@ -152,7 +162,9 @@ async def get_venue(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Venue).where(Venue.slug == slug))
+        await session.execute(
+            select(Venue).where(Venue.slug == slug, Venue.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="venue not found")
@@ -190,7 +202,9 @@ async def get_series(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Series).where(Series.slug == slug))
+        await session.execute(
+            select(Series).where(Series.slug == slug, Series.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="series not found")
@@ -233,7 +247,9 @@ async def get_party(
     _: Annotated[object, Depends(current_user)],
 ):
     row = (
-        await session.execute(select(Party).where(Party.slug == slug))
+        await session.execute(
+            select(Party).where(Party.slug == slug, Party.merged_into_id.is_(None))
+        )
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="party not found")
@@ -244,7 +260,9 @@ async def get_party(
 
 
 async def _get_by_slug(session, model, slug):
-    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    row = (await session.execute(
+        select(model).where(model.slug == slug, model.merged_into_id.is_(None))
+    )).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
     return row
@@ -380,10 +398,131 @@ async def edit_party(
     return _party_out(row)
 
 
-# -------- Sets by entity --------
+# -------- Merge / unmerge / delete / enrich --------
 
 _KIND_MODEL = {"artists": Artist, "venues": Venue, "parties": Party, "series": Series}
 _KIND_NAME = {"artists": "artist", "venues": "venue", "parties": "party", "series": "series"}
+
+_OUT = {
+    "artists": _artist_out,
+    "venues": _venue_out,
+    "parties": _party_out,
+    "series": _series_out,
+}
+
+_DELETE_GUARDS: dict[str, list] = {
+    "artists": [(LiveSetArtist, LiveSetArtist.artist_id), (Track, Track.primary_artist_id)],
+    "venues": [(LiveSet, LiveSet.venue_id), (Party, Party.venue_id)],
+    "parties": [(LiveSet, LiveSet.party_id)],
+    "series": [(Party, Party.series_id)],
+}
+
+
+class MergeIn(BaseModel):
+    survivor_id: str
+
+
+@router.post("/artists/{slug}/enrich")
+async def enrich_artist_endpoint(
+    slug: str,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[User, Depends(current_user)],
+):
+    artist = await _get_by_slug(session, Artist, slug)
+    configs = (await session.execute(select(ProviderConfig))).scalars().all()
+    providers = select_providers_for_capability(
+        configs, Capability.ENRICH_ARTIST, secret_key=get_settings().secret_key,
+    )
+    written = await enrich_artist_entity(session, artist=artist, providers=providers)
+    await session.commit()
+    return {"written": written}
+
+
+@router.post("/{kind}/{loser_id}/merge")
+async def merge_entity_endpoint(
+    kind: str,
+    loser_id: uuid.UUID,
+    body: MergeIn,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(require_admin)],
+    dry_run: bool = False,
+):
+    name = _KIND_NAME.get(kind)
+    model = _KIND_MODEL.get(kind)
+    if name is None or model is None:
+        raise HTTPException(status_code=404, detail="unknown kind")
+    try:
+        survivor_id = uuid.UUID(body.survivor_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid survivor_id") from exc
+    if dry_run:
+        survivor = await session.get(model, survivor_id)
+        loser = await session.get(model, loser_id)
+        if survivor is None or loser is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return {"preview": {"survivor": survivor.name, "loser": loser.name}}
+    try:
+        survivor = await merge_entities(
+            session, kind=name, survivor_id=survivor_id, loser_id=loser_id, actor_id=admin.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await session.commit()
+    if kind == "parties":
+        await session.refresh(survivor, attribute_names=["venue", "series"])
+    return _OUT[kind](survivor)
+
+
+@router.post("/{kind}/{loser_id}/unmerge", status_code=204)
+async def unmerge_entity_endpoint(
+    kind: str,
+    loser_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(require_admin)],
+):
+    name = _KIND_NAME.get(kind)
+    if name is None:
+        raise HTTPException(status_code=404, detail="unknown kind")
+    try:
+        await unmerge_entity(session, kind=name, loser_id=loser_id, actor_id=admin.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await session.commit()
+
+
+@router.delete("/{kind}/{slug}", status_code=204)
+async def delete_entity(
+    kind: str,
+    slug: str,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    admin: Annotated[User, Depends(require_admin)],
+):
+    model = _KIND_MODEL.get(kind)
+    if model is None:
+        raise HTTPException(status_code=404, detail="unknown kind")
+    row = await _get_by_slug(session, model, slug)
+    guards = _DELETE_GUARDS.get(kind, [])
+    for ref_model, ref_col in guards:
+        in_use = (await session.execute(
+            select(ref_model).where(ref_col == row.id).limit(1)
+        )).first()
+        if in_use is not None:
+            raise HTTPException(
+                status_code=409, detail="entity is referenced — merge it instead"
+            )
+    await audit_log(
+        session,
+        actor_user_id=admin.id,
+        action=f"{_KIND_NAME[kind]}.deleted",
+        target_type=model.__name__,
+        target_id=str(row.id),
+        before={"name": row.name},
+    )
+    await session.delete(row)
+    await session.commit()
+
+
+# -------- Sets by entity --------
 
 
 def _set_summary_dict(ls: LiveSet) -> dict:
@@ -415,7 +554,9 @@ async def entity_sets(
     model = _KIND_MODEL.get(kind)
     if model is None:
         raise HTTPException(status_code=404, detail="unknown entity kind")
-    row = (await session.execute(select(model).where(model.slug == slug))).scalar_one_or_none()
+    row = (await session.execute(
+        select(model).where(model.slug == slug, model.merged_into_id.is_(None))
+    )).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
     sets = await list_sets_for_entity(session, kind=_KIND_NAME[kind], entity_id=row.id)
