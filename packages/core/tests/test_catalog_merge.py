@@ -9,6 +9,9 @@ from setvault_core.models.catalog import (
     LiveSet,
     LiveSetArtist,
     MediaRoot,
+    Party,
+    Series,
+    Venue,
 )
 from setvault_core.models.identity import User
 from setvault_core.models.tracklist import Track
@@ -114,3 +117,42 @@ async def test_merge_rejects_unknown_kind(session):
     await s.commit()
     with pytest.raises(ValueError):
         await merge_entities(s, kind="bogus", survivor_id=a.id, loser_id=b.id, actor_id=None)
+
+
+async def test_merge_venue_repoints_sets_and_parties(session):
+    s = session
+    root_id, uid = await _scaffold(s)
+    keep = Venue(name="Club", slug=f"c-{uuid.uuid4().hex[:6]}", kind="club")
+    dup = Venue(name="Club dup", slug=f"cd-{uuid.uuid4().hex[:6]}", kind="club")
+    s.add_all([keep, dup])
+    await s.flush()
+    ls = LiveSet(slug=f"s-{uuid.uuid4().hex[:8]}", title="t", media_root_id=root_id,
+                 audio_path="a/b.flac", status="published", source_type="upload",
+                 uploaded_by=uid, venue_id=dup.id)
+    party = Party(name="P", slug=f"p-{uuid.uuid4().hex[:6]}", venue_id=dup.id)
+    s.add_all([ls, party])
+    await s.commit()
+    keep_id, dup_id, ls_id, party_id = keep.id, dup.id, ls.id, party.id
+
+    await merge_entities(s, kind="venue", survivor_id=keep_id, loser_id=dup_id, actor_id=uid)
+    await s.commit()
+    assert (await s.get(LiveSet, ls_id)).venue_id == keep_id
+    assert (await s.get(Party, party_id)).venue_id == keep_id
+    assert (await s.get(Venue, dup_id)).merged_into_id == keep_id
+
+
+async def test_merge_series_repoints_parties(session):
+    s = session
+    keep = Series(name="Ser", slug=f"ser-{uuid.uuid4().hex[:6]}")
+    dup = Series(name="Ser dup", slug=f"serd-{uuid.uuid4().hex[:6]}")
+    s.add_all([keep, dup])
+    await s.flush()
+    party = Party(name="P", slug=f"p-{uuid.uuid4().hex[:6]}", series_id=dup.id)
+    s.add(party)
+    await s.commit()
+    keep_id, dup_id, party_id = keep.id, dup.id, party.id
+
+    await merge_entities(s, kind="series", survivor_id=keep_id, loser_id=dup_id, actor_id=None)
+    await s.commit()
+    assert (await s.get(Party, party_id)).series_id == keep_id
+    assert (await s.get(Series, dup_id)).merged_into_id == keep_id
