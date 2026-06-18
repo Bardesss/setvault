@@ -15,7 +15,7 @@ from setvault_core.models.catalog import (
 )
 from setvault_core.models.identity import User
 from setvault_core.models.tracklist import Track
-from setvault_core.services.catalog_merge import merge_entities
+from setvault_core.services.catalog_merge import merge_entities, unmerge_entity
 from setvault_core.services.passwords import hash_password
 
 
@@ -156,3 +156,31 @@ async def test_merge_series_repoints_parties(session):
     await s.commit()
     assert (await s.get(Party, party_id)).series_id == keep_id
     assert (await s.get(Series, dup_id)).merged_into_id == keep_id
+
+
+async def test_unmerge_restores_references(session):
+    s = session
+    root_id, uid = await _scaffold(s)
+    survivor = Artist(name="DJ X", slug=f"x-{uuid.uuid4().hex[:6]}")
+    loser = Artist(name="DJ X alt", slug=f"xa-{uuid.uuid4().hex[:6]}")
+    s.add_all([survivor, loser])
+    await s.flush()
+    ls = LiveSet(slug=f"s-{uuid.uuid4().hex[:8]}", title="t", media_root_id=root_id,
+                 audio_path="a/b.flac", status="published", source_type="upload", uploaded_by=uid)
+    s.add(ls)
+    await s.flush()
+    s.add(LiveSetArtist(live_set_id=ls.id, artist_id=loser.id, position=0))
+    await s.commit()
+    sid, lid, ls_id = survivor.id, loser.id, ls.id
+
+    await merge_entities(s, kind="artist", survivor_id=sid, loser_id=lid, actor_id=uid)
+    await s.commit()
+    await unmerge_entity(s, kind="artist", loser_id=lid, actor_id=uid)
+    await s.commit()
+
+    revived = await s.get(Artist, lid)
+    assert revived.merged_into_id is None and revived.merge_manifest is None
+    lsa = (await s.execute(
+        LiveSetArtist.__table__.select().where(LiveSetArtist.live_set_id == ls_id)
+    )).first()
+    assert lsa.artist_id == lid  # reference moved back to the revived entity

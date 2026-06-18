@@ -137,3 +137,50 @@ async def merge_entities(
     )
     await session.flush()
     return survivor
+
+
+async def unmerge_entity(
+    session: AsyncSession, *, kind: EntityKind, loser_id: uuid.UUID, actor_id: uuid.UUID | None,
+):
+    model = _MODEL[kind]
+    loser = await session.get(model, loser_id)
+    if loser is None or loser.merged_into_id is None or loser.merge_manifest is None:
+        raise ValueError("entity is not a merged tombstone")
+    manifest = loser.merge_manifest
+
+    for table_col, ids in manifest.get("moved", {}).items():
+        if not ids:
+            continue
+        if table_col == "live_set_artists":
+            await session.execute(
+                update(LiveSetArtist)
+                .where(LiveSetArtist.live_set_id.in_([uuid.UUID(i) for i in ids]),
+                       LiveSetArtist.artist_id == manifest["survivor_id"])
+                .values(artist_id=loser_id)
+            )
+        elif table_col == "tracks.primary_artist_id":
+            await session.execute(update(Track).where(Track.id.in_([uuid.UUID(i) for i in ids]))
+                                  .values(primary_artist_id=loser_id))
+        elif table_col == "live_sets.venue_id":
+            await session.execute(update(LiveSet).where(LiveSet.id.in_([uuid.UUID(i) for i in ids]))
+                                  .values(venue_id=loser_id))
+        elif table_col == "parties.venue_id":
+            await session.execute(update(Party).where(Party.id.in_([uuid.UUID(i) for i in ids]))
+                                  .values(venue_id=loser_id))
+        elif table_col == "live_sets.party_id":
+            await session.execute(update(LiveSet).where(LiveSet.id.in_([uuid.UUID(i) for i in ids]))
+                                  .values(party_id=loser_id))
+        elif table_col == "parties.series_id":
+            await session.execute(update(Party).where(Party.id.in_([uuid.UUID(i) for i in ids]))
+                                  .values(series_id=loser_id))
+    # recreate join rows that were dropped on PK collision
+    for ls_id, _aid in manifest.get("deleted_join", []):
+        session.add(LiveSetArtist(live_set_id=uuid.UUID(ls_id), artist_id=loser_id))
+
+    loser.merged_into_id = None
+    loser.merged_at = None
+    loser.merge_manifest = None
+    await audit_log(session, actor_user_id=actor_id, action=f"{kind}.unmerged",
+                    target_type=model.__name__, target_id=str(loser_id))
+    await session.flush()
+    return loser
