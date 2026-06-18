@@ -297,6 +297,10 @@
     "delete": "Delete",
     "enrich": "Enrich",
     "confirm_merge": "Merge the others into \"{name}\"? References move to it; this is reversible.",
-    "confirm_delete": "Delete this entity? It must have no references."
+    "confirm_delete": "Delete this entity? It must have no references.",
+    "merged_title": "Merged entities",
+    "no_merged": "Nothing merged yet.",
+    "unmerge": "Unmerge",
+    "confirm_unmerge": "Unmerge this entity? References move back to it (field values set during the merge are not reverted)."
   }
 }

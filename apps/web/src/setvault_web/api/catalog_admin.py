@@ -66,6 +66,49 @@ async def list_duplicates(
     return {"clusters": out}
 
 
+@router.get("/{kind}/merged")
+async def list_merged(
+    kind: str,
+    session: Annotated[AsyncSession, Depends(db_session)],
+    _: Annotated[object, Depends(require_admin)],
+):
+    model = _MODEL.get(kind)
+    if model is None:
+        raise HTTPException(status_code=404, detail="unknown kind")
+    rows = (
+        await session.execute(
+            select(model)
+            .where(model.merged_into_id.is_not(None))
+            .order_by(model.merged_at.desc())
+            .limit(500)
+        )
+    ).scalars().all()
+
+    # Batch-load survivor names in one query
+    survivor_ids = {r.merged_into_id for r in rows if r.merged_into_id is not None}
+    survivor_name_map: dict = {}
+    if survivor_ids:
+        survivor_rows = (
+            await session.execute(
+                select(model.id, model.name).where(model.id.in_(survivor_ids))
+            )
+        ).all()
+        survivor_name_map = {r.id: r.name for r in survivor_rows}
+
+    items = [
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "slug": r.slug,
+            "merged_at": r.merged_at.isoformat() if r.merged_at is not None else None,
+            "survivor_id": str(r.merged_into_id),
+            "survivor_name": survivor_name_map.get(r.merged_into_id),
+        }
+        for r in rows
+    ]
+    return {"items": items}
+
+
 @router.get("/{kind}")
 async def list_entities(
     kind: str,

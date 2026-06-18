@@ -3,7 +3,7 @@
   import { _ } from "svelte-i18n";
   import AdminTable from "$lib/components/AdminTable.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
-  import { mergeEntities, deleteEntity } from "$lib/api/catalog_admin";
+  import { mergeEntities, deleteEntity, unmergeEntity } from "$lib/api/catalog_admin";
   import type { EntityKind } from "$lib/api/catalog";
   import type { PageData } from "./$types";
 
@@ -47,6 +47,20 @@
       busy = false;
     }
   }
+
+  async function unmerge(loserId: string) {
+    if (!confirm($_("catalog.confirm_unmerge"))) return;
+    busy = true;
+    error = null;
+    try {
+      await unmergeEntity(data.kind, loserId);
+      await invalidateAll();
+    } catch (e) {
+      error = e instanceof Error ? e.message : "failed";
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
 <svelte:head><title>{$_("catalog.admin_title")} - SetVault</title></svelte:head>
@@ -80,6 +94,20 @@
           on:click={() => mergeCluster(cluster)}
         >
           {$_("catalog.merge_into_first")}
+        </button>
+      </div>
+    {/each}
+  {/if}
+
+  <h3>{$_("catalog.merged_title")}</h3>
+  {#if data.merged.length === 0}
+    <EmptyState message={$_("catalog.no_merged")} />
+  {:else}
+    {#each data.merged as m (m.id)}
+      <div class="cluster">
+        <span>{m.name} → {m.survivor_name ?? "?"}</span>
+        <button class="btn btn-ghost btn-sm" type="button" disabled={busy} on:click={() => unmerge(m.id)}>
+          {$_("catalog.unmerge")}
         </button>
       </div>
     {/each}
