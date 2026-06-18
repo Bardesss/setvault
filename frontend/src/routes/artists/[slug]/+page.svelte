@@ -36,10 +36,18 @@
   }
 
   let enriching = false;
+  let enrichError: string | null = null;
   async function enrich() {
+    enrichError = null;
     enriching = true;
-    try { await enrichArtist(artist.slug); location.reload(); }
-    finally { enriching = false; }
+    try {
+      await enrichArtist(artist.slug);
+      location.reload();
+    } catch (e) {
+      enrichError = e instanceof ApiError ? e.detail : "Enrich failed";
+    } finally {
+      enriching = false;
+    }
   }
 </script>
 
@@ -53,6 +61,8 @@
       <button class="btn btn-ghost" on:click={enrich} disabled={enriching}>{$_("catalog.enrich")}</button>
     {/if}
   </header>
+
+  {#if enrichError}<p class="error" role="alert">{enrichError}</p>{/if}
 
   {#if editing}
     <form class="entity-edit" on:submit|preventDefault={save}>
