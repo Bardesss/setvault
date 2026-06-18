@@ -36,6 +36,11 @@ class Artist(Base, UuidPkMixin, TimestampMixin):
     socials: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     external_ids: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     enrichment_status: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("artists.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class Venue(Base, UuidPkMixin, TimestampMixin):
@@ -49,6 +54,11 @@ class Venue(Base, UuidPkMixin, TimestampMixin):
     lon: Mapped[float | None] = mapped_column(Float, nullable=True)
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     website: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("venues.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class Series(Base, UuidPkMixin, TimestampMixin):
@@ -57,6 +67,11 @@ class Series(Base, UuidPkMixin, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("series.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class Party(Base, UuidPkMixin, TimestampMixin):
@@ -71,6 +86,11 @@ class Party(Base, UuidPkMixin, TimestampMixin):
     )
     date: Mapped[date | None] = mapped_column(Date, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("parties.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     venue: Mapped[Venue | None] = relationship(lazy="joined")
     series: Mapped[Series | None] = relationship(lazy="joined")
