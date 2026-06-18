@@ -39,7 +39,7 @@ async def transcode_audio(live_set_id: str) -> None:
                 "-c:a", "libopus", "-b:a", "128k", "-vbr", "on",
                 "-application", "audio",
                 "-ac", "2", "-ar", "48000",
-                str(tmp),
+                "-f", "opus", str(tmp),
             ],
             check=True, capture_output=True,
         )
